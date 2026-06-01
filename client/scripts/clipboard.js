@@ -26,7 +26,7 @@ if (!navigator.clipboard) {
             try {
                 success = win.document.execCommand('copy');
             } catch (err) {
-                return Promise.error();
+                return Promise.reject();
             }
 
             selection.removeAllRanges();

@@ -130,7 +130,7 @@ class SnapdropServer {
 
     _send(peer, message) {
         if (!peer) return;
-        if (this._wss.readyState !== this._wss.OPEN) return;
+        if (peer.socket.readyState !== 1) return; // 1 = WebSocket.OPEN
         message = JSON.stringify(message);
         peer.socket.send(message, error => '');
     }
@@ -196,8 +196,11 @@ class Peer {
     _setPeerId(request) {
         if (request.peerId) {
             this.id = request.peerId;
+        } else if (request.headers.cookie) {
+            const match = request.headers.cookie.match(/peerid=([^;]+)/);
+            this.id = match ? match[1] : Peer.uuid();
         } else {
-            this.id = request.headers.cookie.replace('peerid=', '');
+            this.id = Peer.uuid();
         }
     }
 
