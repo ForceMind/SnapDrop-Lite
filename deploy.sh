@@ -25,7 +25,7 @@ warn()  { echo -e "${YELLOW}[提示]${NC} $1"; }
 error() { echo -e "${RED}[错误]${NC} $1"; }
 step()  { echo -e "${CYAN}[$1/$TOTAL_STEPS]${NC} $2"; }
 
-TOTAL_STEPS=6
+TOTAL_STEPS=7
 
 # 检测 Linux 发行版
 detect_distro() {
@@ -195,7 +195,7 @@ setup_nginx() {
     cat > "${nginx_conf_dir}/${APP_NAME}.conf" << NGINX_EOF
 server {
     listen ${WEB_PORT};
-    server_name _;
+    server_name ${DOMAIN_NAME:-_};
 
     root ${APP_DIR}/client;
     index index.html;
@@ -204,10 +204,12 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options DENY;
 
+    # 支持域名和IP访问
     location / {
         try_files \$uri \$uri/ =404;
     }
 
+    # WebSocket 代理 (支持局域网和公网转发)
     location /server {
         proxy_pass http://127.0.0.1:${WS_PORT};
         proxy_http_version 1.1;
@@ -215,8 +217,16 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+    }
+
+    # 健康检查端点
+    location /health {
+        access_log off;
+        return 200 "ok";
+        add_header Content-Type text/plain;
     }
 }
 NGINX_EOF
@@ -224,13 +234,30 @@ NGINX_EOF
     # 如果使用 sites-available 模式，创建软链接
     if [ "$nginx_conf_dir" != "$nginx_sites_dir" ]; then
         ln -sf "${nginx_conf_dir}/${APP_NAME}.conf" "${nginx_sites_dir}/"
-        # 移除默认站点 (如果存在)
-        rm -f "${nginx_sites_dir}/default"
+        # 移除默认站点 (如果存在且有冲突)
+        if [ -f "${nginx_sites_dir}/default" ]; then
+            # 检查默认站点是否监听相同端口
+            if grep -q "listen.*${WEB_PORT}" "${nginx_sites_dir}/default" 2>/dev/null; then
+                echo ""
+                warn "检测到 Nginx 默认站点也监听端口 ${WEB_PORT}"
+                echo -e "  将要执行的操作:"
+                echo -e "    ${CYAN}rm -f ${nginx_sites_dir}/default${NC}"
+                echo ""
+                read -p "是否移除默认站点？(y/N): " confirm
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    rm -f "${nginx_sites_dir}/default"
+                    info "已移除默认站点"
+                else
+                    warn "已跳过，如果 Nginx 启动失败请手动处理端口冲突"
+                fi
+            fi
+        fi
     fi
 
     # 测试配置
     if ! nginx -t 2>&1; then
         error "Nginx 配置测试失败！"
+        error "可能是端口冲突，请检查: nginx -t"
         exit 1
     fi
 }
@@ -249,6 +276,7 @@ ExecStart=$(which node) ${APP_DIR}/server/index.js
 Restart=always
 RestartSec=3
 Environment=PORT=${WS_PORT}
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
@@ -257,6 +285,65 @@ EOF
     systemctl daemon-reload
     systemctl enable ${APP_NAME} --quiet 2>/dev/null || systemctl enable ${APP_NAME}
     systemctl restart ${APP_NAME}
+}
+
+# 配置防火墙
+setup_firewall() {
+    # 检测防火墙类型
+    if command -v ufw &>/dev/null && ufw status | grep -q "active"; then
+        echo ""
+        warn "检测到 UFW 防火墙处于活动状态"
+        echo -e "  将要执行的操作:"
+        echo -e "    ${CYAN}ufw allow ${WEB_PORT}/tcp${NC}"
+        echo -e "    ${CYAN}ufw allow ${WS_PORT}/tcp${NC}"
+        echo ""
+        read -p "是否放行端口？(y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            ufw allow ${WEB_PORT}/tcp > /dev/null 2>&1
+            ufw allow ${WS_PORT}/tcp > /dev/null 2>&1
+            info "UFW 防火墙已放行端口 ${WEB_PORT} 和 ${WS_PORT}"
+        else
+            warn "已跳过防火墙配置，请手动放行端口"
+        fi
+    elif command -v firewall-cmd &>/dev/null && firewall-cmd --state 2>/dev/null | grep -q "running"; then
+        echo ""
+        warn "检测到 firewalld 防火墙处于活动状态"
+        echo -e "  将要执行的操作:"
+        echo -e "    ${CYAN}firewall-cmd --permanent --add-port=${WEB_PORT}/tcp${NC}"
+        echo -e "    ${CYAN}firewall-cmd --permanent --add-port=${WS_PORT}/tcp${NC}"
+        echo -e "    ${CYAN}firewall-cmd --reload${NC}"
+        echo ""
+        read -p "是否放行端口？(y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            firewall-cmd --permanent --add-port=${WEB_PORT}/tcp > /dev/null 2>&1
+            firewall-cmd --permanent --add-port=${WS_PORT}/tcp > /dev/null 2>&1
+            firewall-cmd --reload > /dev/null 2>&1
+            info "firewalld 已放行端口 ${WEB_PORT} 和 ${WS_PORT}"
+        else
+            warn "已跳过防火墙配置，请手动放行端口"
+        fi
+    elif command -v iptables &>/dev/null && iptables -L INPUT -n 2>/dev/null | grep -q "DROP\|REJECT"; then
+        echo ""
+        warn "检测到 iptables 防火墙存在限制规则"
+        echo -e "  将要执行的操作:"
+        echo -e "    ${CYAN}iptables -I INPUT -p tcp --dport ${WEB_PORT} -j ACCEPT${NC}"
+        echo -e "    ${CYAN}iptables -I INPUT -p tcp --dport ${WS_PORT} -j ACCEPT${NC}"
+        echo ""
+        read -p "是否放行端口？(y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            iptables -I INPUT -p tcp --dport ${WEB_PORT} -j ACCEPT > /dev/null 2>&1 || true
+            iptables -I INPUT -p tcp --dport ${WS_PORT} -j ACCEPT > /dev/null 2>&1 || true
+            # 尝试持久化规则
+            if command -v iptables-save &>/dev/null; then
+                iptables-save > /etc/iptables.rules 2>/dev/null || true
+            fi
+            info "iptables 已放行端口 ${WEB_PORT} 和 ${WS_PORT}"
+        else
+            warn "已跳过防火墙配置，请手动放行端口"
+        fi
+    else
+        info "未检测到限制性防火墙规则，跳过配置"
+    fi
 }
 
 # ========== 主流程 ==========
@@ -277,30 +364,47 @@ fi
 detect_distro
 get_package_names
 
+# ---------- 停止旧服务（避免自己和自己冲突） ----------
+if systemctl is-active --quiet ${APP_NAME} 2>/dev/null; then
+    info "检测到旧版 Snapdrop 服务正在运行，正在停止..."
+    systemctl stop ${APP_NAME}
+    sleep 1
+fi
+
 # ---------- 端口检测与自动分配 ----------
 step 1 "检测端口..."
 
 WEB_CONFLICT=false
 WS_CONFLICT=false
 
+# 检测 Web 端口（排除 nginx 自身占用的情况）
 if check_port $WEB_PORT; then
-    WEB_CONFLICT=true
-    warn "端口 ${WEB_PORT} (Web) 已被占用:"
-    (ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null) | grep ":${WEB_PORT} " | head -3
-    NEW_WEB_PORT=$(find_available_port $WEB_PORT)
-    if [ -n "$NEW_WEB_PORT" ]; then
-        info "自动分配 Web 端口: ${WEB_PORT} -> ${GREEN}${NEW_WEB_PORT}${NC}"
-        WEB_PORT=$NEW_WEB_PORT
+    # 检查是否是 nginx 占用（nginx 配置会被覆盖，不算冲突）
+    PORT_OWNER=$(ss -tlnp 2>/dev/null | grep ":${WEB_PORT} " | grep -o 'users:(([^)]*' | head -1 || true)
+    if echo "$PORT_OWNER" | grep -q "nginx"; then
+        info "端口 ${WEB_PORT} 被 Nginx 占用，配置将自动覆盖"
     else
-        error "无法找到可用的 Web 端口 (已尝试 ${WEB_PORT}-$((WEB_PORT+100)))"
-        exit 1
+        WEB_CONFLICT=true
+        warn "端口 ${WEB_PORT} (Web) 已被其他服务占用:"
+        (ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null) | grep ":${WEB_PORT} " | head -3
+        echo ""
+        NEW_WEB_PORT=$(find_available_port $WEB_PORT)
+        if [ -n "$NEW_WEB_PORT" ]; then
+            info "自动分配 Web 端口: ${WEB_PORT} -> ${GREEN}${NEW_WEB_PORT}${NC}"
+            WEB_PORT=$NEW_WEB_PORT
+        else
+            error "无法找到可用的 Web 端口 (已尝试 ${WEB_PORT}-$((WEB_PORT+100)))"
+            exit 1
+        fi
     fi
 fi
 
+# 检测 WebSocket 端口
 if check_port $WS_PORT; then
     WS_CONFLICT=true
-    warn "端口 ${WS_PORT} (WebSocket) 已被占用:"
+    warn "端口 ${WS_PORT} (WebSocket) 已被其他服务占用:"
     (ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null) | grep ":${WS_PORT} " | head -3
+    echo ""
     NEW_WS_PORT=$(find_available_port $WS_PORT)
     if [ -n "$NEW_WS_PORT" ]; then
         info "自动分配 WebSocket 端口: ${WS_PORT} -> ${GREEN}${NEW_WS_PORT}${NC}"
@@ -315,8 +419,26 @@ if [ "$WEB_CONFLICT" = false ] && [ "$WS_CONFLICT" = false ]; then
     info "端口 ${WEB_PORT} (Web) 和 ${WS_PORT} (WebSocket) 均可用"
 fi
 
+# ---------- 域名配置 ----------
+step 2 "配置域名..."
+
+echo -e "${CYAN}域名配置说明:${NC}"
+echo -e "  - 有域名: 输入你的域名 (如 snapdrop.example.com)"
+echo -e "  - 无域名: 直接回车，使用 IP 地址访问"
+echo -e "  - 内网转发: 直接回车，通过 localhost 转发"
+echo ""
+read -p "请输入域名 (直接回车跳过): " DOMAIN_NAME
+
+if [ -n "$DOMAIN_NAME" ]; then
+    info "域名设置为: ${GREEN}${DOMAIN_NAME}${NC}"
+    DOMAIN_NAME="$DOMAIN_NAME"
+else
+    info "使用 IP 地址或 localhost 访问"
+    DOMAIN_NAME="_"
+fi
+
 # ---------- 安装依赖 ----------
-step 2 "安装依赖 (nginx + nodejs)..."
+step 3 "安装依赖 (nginx + nodejs)..."
 
 install_packages $PKG_NGINX $PKG_NODEJS $PKG_CURL
 
@@ -335,13 +457,24 @@ NGINX_VER=$(nginx -v 2>&1 | grep -oP '[\d.]+' || echo "未知")
 info "Node.js: ${NODE_VER}  |  Nginx: ${NGINX_VER}"
 
 # ---------- 部署文件 ----------
-step 3 "部署文件到 ${APP_DIR} ..."
+step 4 "部署文件到 ${APP_DIR} ..."
 
 # 备份旧版本 (如果存在)
 if [ -d "$APP_DIR" ]; then
     BACKUP_DIR="${APP_DIR}.bak.$(date +%Y%m%d%H%M%S)"
-    warn "检测到旧版本，已备份到 ${BACKUP_DIR}"
+    echo ""
+    warn "检测到旧版本目录: ${APP_DIR}"
+    echo -e "  将要执行的操作:"
+    echo -e "    ${CYAN}mv ${APP_DIR} ${BACKUP_DIR}${NC}"
+    echo -e "    ${CYAN}（旧文件将备份到 ${BACKUP_DIR}）${NC}"
+    echo ""
+    read -p "是否备份并覆盖？(Y/n): " confirm
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        error "已取消部署"
+        exit 1
+    fi
     mv "$APP_DIR" "$BACKUP_DIR"
+    info "旧版本已备份到 ${BACKUP_DIR}"
 fi
 
 mkdir -p "$APP_DIR"
@@ -350,20 +483,21 @@ cp -r "$(dirname "$0")/server" "$APP_DIR/"
 info "文件已部署"
 
 # ---------- 安装 Node 依赖 ----------
-step 4 "安装 Node.js 依赖..."
+step 5 "安装 Node.js 依赖..."
 cd "$APP_DIR/server"
 npm install --production --quiet 2>&1 | tail -1
 info "Node 依赖安装完成"
 
 # ---------- 配置服务 ----------
-step 5 "配置系统服务..."
+step 6 "配置系统服务..."
 setup_nginx
 setup_systemd
+setup_firewall
 info "WebSocket 服务已启动 (端口 ${WS_PORT})"
 info "Nginx 已配置并启动 (端口 ${WEB_PORT})"
 
 # ---------- 完成 ----------
-step 6 "部署完成!"
+step 7 "部署完成!"
 
 # 获取服务器 IP
 SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -375,7 +509,16 @@ echo -e "${GREEN}╔════════════════════
 echo -e "${GREEN}║           部署成功!                    ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "  访问地址: ${GREEN}http://${SERVER_IP}:${WEB_PORT}${NC}"
+echo -e "  ${YELLOW}─── 访问地址 ───${NC}"
+if [ "$DOMAIN_NAME" = "_" ]; then
+    echo -e "  IP 访问:    ${GREEN}http://${SERVER_IP}:${WEB_PORT}${NC}"
+    echo -e "  本地访问:   ${GREEN}http://localhost:${WEB_PORT}${NC}"
+    echo -e "  内网转发:   ${GREEN}http://127.0.0.1:${WEB_PORT}${NC}"
+else
+    echo -e "  域名访问:   ${GREEN}http://${DOMAIN_NAME}:${WEB_PORT}${NC}"
+    echo -e "  IP 访问:    ${GREEN}http://${SERVER_IP}:${WEB_PORT}${NC}"
+    echo -e "  本地访问:   ${GREEN}http://localhost:${WEB_PORT}${NC}"
+fi
 echo ""
 echo -e "  ${YELLOW}─── 端口配置 ───${NC}"
 echo -e "  Web 端口:       ${GREEN}${WEB_PORT}${NC}"
@@ -383,19 +526,31 @@ echo -e "  WebSocket 端口: ${GREEN}${WS_PORT}${NC}"
 echo -e "  ${CYAN}(如需修改端口，编辑 ${APP_DIR}/server/index.js 和 Nginx 配置)${NC}"
 echo ""
 echo -e "  ${YELLOW}─── 常用命令 ───${NC}"
-echo -e "  查看状态:  ${GREEN}systemctl status ${APP_NAME}${NC}"
-echo -e "  查看日志:  ${GREEN}journalctl -u ${APP_NAME} -f${NC}"
-echo -e "  重启服务:  ${GREEN}systemctl restart ${APP_NAME}${NC}"
-echo -e "  重启Nginx: ${GREEN}systemctl restart nginx${NC}"
+echo -e "  查看状态:    ${GREEN}systemctl status ${APP_NAME}${NC}"
+echo -e "  查看日志:    ${GREEN}journalctl -u ${APP_NAME} -f${NC}"
+echo -e "  重启服务:    ${GREEN}systemctl restart ${APP_NAME}${NC}"
+echo -e "  重启Nginx:   ${GREEN}systemctl restart nginx${NC}"
+echo -e "  健康检查:    ${GREEN}curl http://localhost:${WEB_PORT}/health${NC}"
 echo ""
-echo -e "  ${YELLOW}─── 配置域名 (可选) ───${NC}"
-echo -e "  1. 将域名 A 记录指向 ${SERVER_IP}"
-echo -e "  2. 修改 Nginx 配置:"
-echo -e "     ${GREEN}nano /etc/nginx/conf.d/${APP_NAME}.conf${NC}"
-echo -e "     将 server_name _ 改为你的域名"
-echo -e "  3. 如需 HTTPS, 安装 certbot:"
-echo -e "     ${GREEN}apt install certbot python3-certbot-nginx${NC}  (Debian/Ubuntu)"
-echo -e "     ${GREEN}yum install certbot python3-certbot-nginx${NC}  (CentOS/RHEL)"
-echo -e "     ${GREEN}certbot --nginx -d your-domain.com${NC}"
-echo -e "  4. 重载 Nginx: ${GREEN}systemctl reload nginx${NC}"
+echo -e "  ${YELLOW}─── 内网转发配置 (可选) ───${NC}"
+echo -e "  如果使用 frp/ngrok 等工具转发，配置要点:"
+echo -e "  1. 转发端口 ${WEB_PORT} 的 HTTP 流量"
+echo -e "  2. 确保 WebSocket 路径 /server 能正确升级"
+echo -e "  3. 域名解析到转发后的公网地址"
+echo ""
+echo -e "  ${YELLOW}─── 配置 HTTPS (可选) ───${NC}"
+if [ "$DOMAIN_NAME" != "_" ]; then
+    echo -e "  1. 确保域名已解析到服务器"
+    echo -e "  2. 安装 certbot:"
+    echo -e "     ${GREEN}apt install certbot python3-certbot-nginx${NC}  (Debian/Ubuntu)"
+    echo -e "     ${GREEN}yum install certbot python3-certbot-nginx${NC}  (CentOS/RHEL)"
+    echo -e "  3. 获取证书:"
+    echo -e "     ${GREEN}certbot --nginx -d ${DOMAIN_NAME}${NC}"
+    echo -e "  4. 重载 Nginx: ${GREEN}systemctl reload nginx${NC}"
+else
+    echo -e "  配置域名后才能启用 HTTPS"
+    echo -e "  1. 将域名 A 记录指向 ${SERVER_IP}"
+    echo -e "  2. 修改 Nginx 配置中的 server_name"
+    echo -e "  3. 安装 certbot 并获取证书"
+fi
 echo ""

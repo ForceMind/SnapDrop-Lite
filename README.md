@@ -12,6 +12,7 @@
 - 支持拖拽、粘贴图片发送
 - PWA 支持，手机可添加到桌面
 - 一键部署脚本，支持主流 Linux 发行版
+- 支持域名访问、IP 访问、localhost 内网转发
 
 ## 架构
 
@@ -47,8 +48,9 @@ sudo bash deploy.sh
 脚本会自动：
 1. 检测 Linux 发行版并安装对应依赖（nginx + nodejs）
 2. 检测端口冲突，自动分配可用端口
-3. 部署文件到 `/opt/snapdrop`
-4. 配置 systemd 服务和 Nginx 反向代理
+3. 配置域名（可选）
+4. 部署文件到 `/opt/snapdrop`
+5. 配置 systemd 服务、Nginx 反向代理和防火墙
 
 ### 自定义端口
 
@@ -58,6 +60,27 @@ sudo WEB_PORT=9090 WS_PORT=3002 bash deploy.sh
 ```
 
 默认端口：Web `8080`，WebSocket `3001`。
+
+## 访问方式
+
+### 1. IP 直接访问（默认）
+```
+http://服务器IP:8080
+http://localhost:8080
+```
+
+### 2. 域名访问
+部署时输入域名，或手动修改 Nginx 配置：
+```bash
+nano /etc/nginx/conf.d/snapdrop.conf
+# 修改 server_name 为你的域名
+```
+
+### 3. 内网转发（frp/ngrok 等）
+配置转发时注意：
+- 转发端口 `8080` 的 HTTP 流量
+- 确保 WebSocket 路径 `/server` 能正确升级
+- 域名解析到转发后的公网地址
 
 ## 手动部署
 
@@ -88,6 +111,7 @@ systemctl status snapdrop     # 查看服务状态
 journalctl -u snapdrop -f     # 查看实时日志
 systemctl restart snapdrop    # 重启服务
 systemctl restart nginx       # 重启 Nginx
+curl http://localhost:8080/health  # 健康检查
 ```
 
 ## 目录结构
