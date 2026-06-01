@@ -260,6 +260,15 @@ NGINX_EOF
         error "可能是端口冲突，请检查: nginx -t"
         exit 1
     fi
+
+    # 重载 Nginx 配置
+    if systemctl is-active --quiet nginx 2>/dev/null; then
+        systemctl reload nginx
+        info "Nginx 配置已重载"
+    else
+        systemctl start nginx
+        info "Nginx 已启动"
+    fi
 }
 
 # 创建 systemd 服务
