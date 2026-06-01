@@ -1,0 +1,145 @@
+# Snapdrop Lite
+
+精简版局域网文件传输工具，基于 [Snapdrop](https://github.com/RobinLinus/snapdrop) 精简而来。
+
+无需注册、无需安装，同一网络下的设备打开浏览器即可互传文件。
+
+## 特性
+
+- 同局域网设备自动发现，无需手动输入地址
+- WebRTC 点对点传输，文件不经服务器，速度快且保护隐私
+- 支持发送文件和文本消息
+- 支持拖拽、粘贴图片发送
+- PWA 支持，手机可添加到桌面
+- 一键部署脚本，支持主流 Linux 发行版
+
+## 架构
+
+```
+┌──────────┐   WebSocket (信令)   ┌──────────────┐   WebSocket (信令)   ┌──────────┐
+│  设备 A  │ ◄──────────────────► │   服务器     │ ◄──────────────────► │  设备 B  │
+│          │                      │  (Node.js)   │                      │          │
+└────┬─────┘                      └──────────────┘                      └────┬─────┘
+     │                                                                       │
+     │                    WebRTC DataChannel (文件数据)                       │
+     └───────────────────────────────────────────────────────────────────────┘
+                            局域网直连，不经服务器
+```
+
+**服务器只负责设备发现和信令交换，文件传输走局域网 P2P 直连。**
+
+当浏览器不支持 WebRTC 或 P2P 失败时，自动降级为 WebSocket 中转。
+
+## 快速部署
+
+### 服务器要求
+
+- Linux 系统（Ubuntu/Debian/CentOS/Fedora/Alpine/Arch）
+- root 权限
+
+### 一键部署
+
+```bash
+# 上传项目到服务器后执行
+sudo bash deploy.sh
+```
+
+脚本会自动：
+1. 检测 Linux 发行版并安装对应依赖（nginx + nodejs）
+2. 检测端口冲突，自动分配可用端口
+3. 部署文件到 `/opt/snapdrop`
+4. 配置 systemd 服务和 Nginx 反向代理
+
+### 自定义端口
+
+```bash
+# 通过环境变量指定端口
+sudo WEB_PORT=9090 WS_PORT=3002 bash deploy.sh
+```
+
+默认端口：Web `8080`，WebSocket `3001`。
+
+## 手动部署
+
+如果不使用一键脚本，可以手动操作：
+
+```bash
+# 1. 安装依赖
+apt install nginx nodejs npm   # Debian/Ubuntu
+yum install nginx nodejs npm   # CentOS/RHEL
+
+# 2. 复制文件
+cp -r client/ /opt/snapdrop/client/
+cp -r server/ /opt/snapdrop/server/
+
+# 3. 安装 Node 依赖
+cd /opt/snapdrop/server && npm install --production
+
+# 4. 启动服务
+PORT=3001 node /opt/snapdrop/server/index.js &
+
+# 5. 配置 Nginx 反向代理（参考 deploy.sh 中的配置）
+```
+
+## 常用命令
+
+```bash
+systemctl status snapdrop     # 查看服务状态
+journalctl -u snapdrop -f     # 查看实时日志
+systemctl restart snapdrop    # 重启服务
+systemctl restart nginx       # 重启 Nginx
+```
+
+## 目录结构
+
+```
+Snapdrop-Lite/
+├── client/               # 前端静态文件
+│   ├── index.html        # 主页面
+│   ├── styles.css        # 样式
+│   ├── manifest.json     # PWA 配置
+│   ├── service-worker.js # 离线缓存
+│   ├── scripts/
+│   │   ├── network.js    # WebSocket + WebRTC 通信
+│   │   ├── ui.js         # 界面交互
+│   │   └── clipboard.js  # 剪贴板兼容
+│   ├── images/           # 图标资源
+│   └── sounds/           # 提示音
+├── server/
+│   ├── index.js          # WebSocket 信令服务器
+│   └── package.json
+├── deploy.sh             # 一键部署脚本
+└── README.md
+```
+
+## 数据传输说明
+
+| 场景 | 数据路径 | 说明 |
+|------|----------|------|
+| 同局域网 + WebRTC | 设备 A ↔ 设备 B | 局域网直连，速度最快 |
+| 不同网络 + P2P 成功 | 设备 A ↔ 设备 B | 公网直连 |
+| 浏览器不支持 WebRTC | 设备 A → 服务器 → 设备 B | WebSocket 中转 |
+
+## STUN 服务器
+
+WebRTC 需要 STUN 服务器做 NAT 穿透。默认配置了国内可达的 STUN 服务器：
+
+```
+stun:stun.miwifi.com:3478
+stun:stun.chat.bilibili.com:3478
+stun:stun.hitv.com:3478
+```
+
+可在 `client/scripts/network.js` 中修改。如需跨 NAT 传输，需自建 TURN 服务器。
+
+## 技术栈
+
+- **服务端**: Node.js + ws (WebSocket)
+- **前端**: 原生 HTML/CSS/JS，无构建步骤
+- **传输**: WebRTC DataChannel（P2P）
+- **反向代理**: Nginx
+- **服务管理**: systemd
+
+## 许可证
+
+基于 Snapdrop 项目，使用 [ISC License](LICENSE)。
