@@ -1,7 +1,8 @@
 window.URL = window.URL || window.webkitURL;
 window.isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection);
 
-// 获取本机局域网 IP（支持 IPv4 和 IPv6）
+// 获取本机 IP（支持 IPv4 和 IPv6）
+// 包含 host（局域网）和 srflx（公网）候选
 function getLocalIPs() {
     return new Promise((resolve) => {
         if (!window.RTCPeerConnection) {
@@ -19,21 +20,33 @@ function getLocalIPs() {
             try { pc.close(); } catch(e) {}
             resolve(result);
         };
-        const pc = new RTCPeerConnection({ iceServers: [] });
+        // 使用 STUN 服务器，这样能获取公网 IP
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.miwifi.com:3478' },
+                { urls: 'stun:stun.chat.bilibili.com:3478' }
+            ]
+        });
         pc.onicecandidate = (e) => {
             if (!e.candidate) {
                 done();
                 return;
             }
+            const candidate = e.candidate.candidate;
             // 匹配 IPv4 地址
-            const v4 = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+            const v4 = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
             if (v4 && v4[1] !== '0.0.0.0') {
                 ips.add(v4[1]);
             }
             // 匹配 IPv6 地址
-            const v6 = e.candidate.candidate.match(/([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
+            const v6 = candidate.match(/([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
             if (v6) {
                 ips.add(v6[1]);
+            }
+            // 也匹配 mDNS 域名（现代浏览器隐藏局域网 IP 时使用）
+            const mdns = candidate.match(/(\S+\.local)/);
+            if (mdns) {
+                console.log('[闪投] 发现 mDNS:', mdns[1]);
             }
         };
         pc.createDataChannel('');
@@ -52,10 +65,20 @@ class ServerConnection {
 
     constructor() {
         this._localIPs = [];
+        this._peerId = this._getOrCreatePeerId();
         this._connect();
         Events.on('beforeunload', e => this._disconnect());
         Events.on('pagehide', e => this._disconnect());
         document.addEventListener('visibilitychange', e => this._onVisibilityChange());
+    }
+
+    _getOrCreatePeerId() {
+        let peerId = localStorage.getItem('snapdrop_peer_id');
+        if (!peerId) {
+            peerId = 'peer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('snapdrop_peer_id', peerId);
+        }
+        return peerId;
     }
 
     async _connect() {
@@ -65,10 +88,12 @@ class ServerConnection {
         // 获取局域网 IP
         this._localIPs = await getLocalIPs();
 
-        const ws = new WebSocket(this._endpoint());
+        // 在 URL 中传递 peerId
+        const wsUrl = this._endpoint() + '?peerId=' + encodeURIComponent(this._peerId);
+        const ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
         ws.onopen = e => {
-            console.log('[闪投] 服务器已连接');
+            console.log('[闪投] 服务器已连接, peerId:', this._peerId);
             // 始终发送 local-ip 消息，让服务器决定如何处理
             this.send({ type: 'local-ip', ips: this._localIPs });
         };
@@ -306,6 +331,7 @@ class RTCPeer extends Peer {
     _openConnection(peerId, isCaller) {
         this._isCaller = isCaller;
         this._peerId = peerId;
+        this._pendingIceCandidates = []; // 缓存 ICE 候选
         this._conn = new RTCPeerConnection(RTCPeer.config);
         this._conn.onicecandidate = e => this._onIceCandidate(e);
         this._conn.onconnectionstatechange = e => this._onConnectionStateChange(e);
@@ -345,6 +371,10 @@ class RTCPeer extends Peer {
                             .then(d => this._onDescription(d));
                     }
                 })
+                .then( _ => {
+                    // 设置远程描述后，添加缓存的 ICE 候选
+                    this._flushPendingIceCandidates();
+                })
                 .catch(e => {
                     // 连接状态冲突（如双方同时发起），重置连接
                     if (e.name === 'InvalidStateError') {
@@ -357,9 +387,25 @@ class RTCPeer extends Peer {
                     }
                 });
         } else if (message.ice) {
-            this._conn.addIceCandidate(new RTCIceCandidate(message.ice))
-                .catch(e => this._onError(e));
+            // 如果远程描述还没设置，先缓存 ICE 候选
+            if (!this._conn.remoteDescription) {
+                console.log('[闪投] 缓存 ICE 候选（等待 SDP）');
+                this._pendingIceCandidates.push(message.ice);
+            } else {
+                this._conn.addIceCandidate(new RTCIceCandidate(message.ice))
+                    .catch(e => this._onError(e));
+            }
         }
+    }
+
+    _flushPendingIceCandidates() {
+        if (!this._pendingIceCandidates || this._pendingIceCandidates.length === 0) return;
+        console.log('[闪投] 添加缓存的 ICE 候选:', this._pendingIceCandidates.length);
+        this._pendingIceCandidates.forEach(ice => {
+            this._conn.addIceCandidate(new RTCIceCandidate(ice))
+                .catch(e => this._onError(e));
+        });
+        this._pendingIceCandidates = [];
     }
 
     _onChannelOpened(event) {
@@ -466,7 +512,7 @@ class PeersManager {
             if (window.isRtcSupported && peer.rtcSupported) {
                 this.peers[peer.id] = new RTCPeer(this._server, peer.id);
             } else {
-                console.warn('[闪投] 对方浏览器不支持 WebRTC，无法传输文件');
+                console.warn('[闪投] 对方浏览器不支持 WebRTC');
                 Events.fire('notify-user', '对方浏览器不支持 WebRTC，无法传输文件');
             }
         })
@@ -599,7 +645,13 @@ RTCPeer.config = {
         // 国内可用的 STUN 服务器
         { urls: 'stun:stun.miwifi.com:3478' },
         { urls: 'stun:stun.chat.bilibili.com:3478' },
-        { urls: 'stun:stun.hitv.com:3478' }
+        { urls: 'stun:stun.hitv.com:3478' },
+        // Google STUN 服务器（备用）
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
     ],
     'iceTransportPolicy': 'all'
 }

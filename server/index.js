@@ -254,14 +254,23 @@ class Peer {
     }
 
     _setPeerId(request) {
-        if (request.peerId) {
-            this.id = request.peerId;
-        } else if (request.headers.cookie) {
-            const match = request.headers.cookie.match(/peerid=([^;]+)/);
-            this.id = match ? match[1] : Peer.uuid();
-        } else {
-            this.id = Peer.uuid();
+        // 优先从 URL 参数获取（客户端 localStorage 生成的唯一 ID）
+        const url = new URL(request.url, 'http://localhost');
+        const peerId = url.searchParams.get('peerId');
+        if (peerId) {
+            this.id = peerId;
+            return;
         }
+        // 其次从 cookie 获取
+        if (request.headers.cookie) {
+            const match = request.headers.cookie.match(/peerid=([^;]+)/);
+            if (match) {
+                this.id = match[1];
+                return;
+            }
+        }
+        // 最后生成新的 UUID
+        this.id = Peer.uuid();
     }
 
     toString() {
