@@ -1,4 +1,4 @@
-var CACHE_NAME = 'snapdrop-cache-v2';
+var CACHE_NAME = 'snapdrop-cache-v3';
 var urlsToCache = [
   'index.html',
   './',
@@ -11,11 +11,10 @@ var urlsToCache = [
 ];
 
 self.addEventListener('install', function(event) {
-  // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        console.log('Opened cache');
+        console.log('缓存已打开');
         return cache.addAll(urlsToCache);
       })
   );
@@ -38,7 +37,7 @@ self.addEventListener('fetch', function(event) {
 
 
 self.addEventListener('activate', function(event) {
-  console.log('Updating Service Worker...')
+  console.log('正在更新 Service Worker...')
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(

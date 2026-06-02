@@ -268,7 +268,7 @@ x-peer[transfer] x-icon {
 }
 
 x-peer[transfer] .status:before {
-    content: 'Transferring...';
+    content: '传输中...';
 }
 
 x-peer:not([transfer]) .status,
@@ -553,6 +553,26 @@ button::-moz-focus-inner {
 
 #about .row a {
     margin: 8px 8px -16px;
+}
+
+/* About Description */
+.about-desc {
+    max-width: 400px;
+    margin-top: 16px;
+    padding: 0 20px;
+}
+
+.about-desc p {
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.about-features {
+    margin-top: 16px !important;
+    font-size: 12px !important;
+    opacity: 0.7 !important;
 }
 
 

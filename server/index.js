@@ -1,13 +1,11 @@
 var process = require('process')
-// Handle SIGINT
 process.on('SIGINT', () => {
-  console.info("SIGINT Received, exiting...")
+  console.info("收到 SIGINT 信号，正在退出...")
   process.exit(0)
 })
 
-// Handle SIGTERM
 process.on('SIGTERM', () => {
-  console.info("SIGTERM Received, exiting...")
+  console.info("收到 SIGTERM 信号，正在退出...")
   process.exit(0)
 })
 
@@ -24,7 +22,7 @@ class SnapdropServer {
 
         this._rooms = {};
 
-        console.log('Snapdrop is running on port', port);
+        console.log('闪投服务已启动，端口:', port);
     }
 
     _onConnection(peer) {
@@ -33,7 +31,6 @@ class SnapdropServer {
         peer.socket.on('error', console.error);
         this._keepAlive(peer);
 
-        // send displayName
         this._send(peer, {
             type: 'display-name',
             message: {
@@ -46,15 +43,15 @@ class SnapdropServer {
     _onHeaders(headers, response) {
         if (response.headers.cookie && response.headers.cookie.indexOf('peerid=') > -1) return;
         response.peerId = Peer.uuid();
-        headers.push('Set-Cookie: peerid=' + response.peerId + "; SameSite=Strict; Secure");
+        const secure = process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true' ? '; Secure' : '';
+        headers.push('Set-Cookie: peerid=' + response.peerId + "; SameSite=Strict" + secure);
     }
 
     _onMessage(sender, message) {
-        // Try to parse message 
         try {
             message = JSON.parse(message);
         } catch (e) {
-            return; // TODO: handle malformed JSON
+            return;
         }
 
         switch (message.type) {
@@ -66,10 +63,10 @@ class SnapdropServer {
                 break;
         }
 
-        // relay message to recipient
-        if (message.to && this._rooms[sender.ip]) {
+        // 转发消息给目标设备
+        if (message.to && this._rooms[sender.roomKey]) {
             const recipientId = message.to; // TODO: sanitize
-            const recipient = this._rooms[sender.ip][recipientId];
+            const recipient = this._rooms[sender.roomKey][recipientId];
             delete message.to;
             // add sender id
             message.sender = sender.id;
@@ -79,24 +76,22 @@ class SnapdropServer {
     }
 
     _joinRoom(peer) {
-        // if room doesn't exist, create it
-        if (!this._rooms[peer.ip]) {
-            this._rooms[peer.ip] = {};
+        const roomKey = peer.roomKey;
+        if (!this._rooms[roomKey]) {
+            this._rooms[roomKey] = {};
         }
 
-        // notify all other peers
-        for (const otherPeerId in this._rooms[peer.ip]) {
-            const otherPeer = this._rooms[peer.ip][otherPeerId];
+        for (const otherPeerId in this._rooms[roomKey]) {
+            const otherPeer = this._rooms[roomKey][otherPeerId];
             this._send(otherPeer, {
                 type: 'peer-joined',
                 peer: peer.getInfo()
             });
         }
 
-        // notify peer about the other peers
         const otherPeers = [];
-        for (const otherPeerId in this._rooms[peer.ip]) {
-            otherPeers.push(this._rooms[peer.ip][otherPeerId].getInfo());
+        for (const otherPeerId in this._rooms[roomKey]) {
+            otherPeers.push(this._rooms[roomKey][otherPeerId].getInfo());
         }
 
         this._send(peer, {
@@ -104,25 +99,22 @@ class SnapdropServer {
             peers: otherPeers
         });
 
-        // add peer to room
-        this._rooms[peer.ip][peer.id] = peer;
+        this._rooms[roomKey][peer.id] = peer;
     }
 
     _leaveRoom(peer) {
-        if (!this._rooms[peer.ip] || !this._rooms[peer.ip][peer.id]) return;
-        this._cancelKeepAlive(this._rooms[peer.ip][peer.id]);
+        const roomKey = peer.roomKey;
+        if (!this._rooms[roomKey] || !this._rooms[roomKey][peer.id]) return;
+        this._cancelKeepAlive(this._rooms[roomKey][peer.id]);
 
-        // delete the peer
-        delete this._rooms[peer.ip][peer.id];
-
+        delete this._rooms[roomKey][peer.id];
         peer.socket.terminate();
-        //if room is empty, delete the room
-        if (!Object.keys(this._rooms[peer.ip]).length) {
-            delete this._rooms[peer.ip];
+
+        if (!Object.keys(this._rooms[roomKey]).length) {
+            delete this._rooms[roomKey];
         } else {
-            // notify all other peers
-            for (const otherPeerId in this._rooms[peer.ip]) {
-                const otherPeer = this._rooms[peer.ip][otherPeerId];
+            for (const otherPeerId in this._rooms[roomKey]) {
+                const otherPeer = this._rooms[roomKey][otherPeerId];
                 this._send(otherPeer, { type: 'peer-left', peerId: peer.id });
             }
         }
@@ -163,20 +155,11 @@ class SnapdropServer {
 class Peer {
 
     constructor(socket, request) {
-        // set socket
         this.socket = socket;
-
-
-        // set remote ip
         this._setIP(request);
-
-        // set peer id
         this._setPeerId(request)
-        // is WebRTC supported ?
         this.rtcSupported = request.url.indexOf('webrtc') > -1;
-        // set name 
         this._setName(request);
-        // for keepalive
         this.timerId = 0;
         this.lastBeat = Date.now();
     }
@@ -187,10 +170,30 @@ class Peer {
         } else {
             this.ip = request.connection.remoteAddress;
         }
-        // IPv4 and IPv6 use different values to refer to localhost
         if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1') {
             this.ip = '127.0.0.1';
         }
+
+        // 局域网模式：基于子网分组，同一局域网设备能互相发现
+        if (process.env.LAN_MODE !== 'false') {
+            this.roomKey = this._getSubnet(this.ip);
+        } else {
+            this.roomKey = this.ip;
+        }
+    }
+
+    _getSubnet(ip) {
+        if (ip.includes('.')) {
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                return parts.slice(0, 3).join('.') + '.0/24';
+            }
+        }
+        if (ip.includes(':')) {
+            const parts = ip.split(':');
+            return parts.slice(0, 4).join(':') + '::/64';
+        }
+        return ip;
     }
 
     _setPeerId(request) {
@@ -205,7 +208,7 @@ class Peer {
     }
 
     toString() {
-        return `<Peer id=${this.id} ip=${this.ip} rtcSupported=${this.rtcSupported}>`
+        return `<Peer id=${this.id} ip=${this.ip} roomKey=${this.roomKey} rtcSupported=${this.rtcSupported}>`
     }
 
     _setName(req) {
@@ -225,7 +228,7 @@ class Peer {
         }
 
         if(!deviceName)
-            deviceName = 'Unknown Device';
+            deviceName = '未知设备';
 
         const displayName = uniqueNamesGenerator({
             length: 2,
@@ -253,7 +256,6 @@ class Peer {
         }
     }
 
-    // return uuid of form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
     static uuid() {
         let uuid = '',
             ii;

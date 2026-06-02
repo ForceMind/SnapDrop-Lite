@@ -1,12 +1,12 @@
 {
-  "name": "snapdrop",
+  "name": "snapdrop-lite",
   "version": "1.0.0",
-  "description": "",
+  "description": "闪投 - 精简版局域网文件传输工具",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "author": "",
+  "author": "Snapdrop Lite",
   "license": "ISC",
   "dependencies": {
     "ua-parser-js": "^0.7.24",

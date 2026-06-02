@@ -2,7 +2,7 @@
 set -e
 
 # ============================================
-#  Snapdrop 局域网文件传输 - 一键部署脚本
+#  闪投 (Snapdrop Lite) - 一键部署脚本
 #  支持: Ubuntu/Debian, CentOS/RHEL, Fedora, Alpine, Arch Linux
 # ============================================
 
@@ -275,7 +275,7 @@ NGINX_EOF
 setup_systemd() {
     cat > /etc/systemd/system/${APP_NAME}.service << EOF
 [Unit]
-Description=Snapdrop WebSocket 文件传输服务
+Description=闪投 WebSocket 文件传输服务
 After=network.target
 
 [Service]
@@ -286,6 +286,7 @@ Restart=always
 RestartSec=3
 Environment=PORT=${WS_PORT}
 Environment=NODE_ENV=production
+Environment=LAN_MODE=${LAN_MODE}
 
 [Install]
 WantedBy=multi-user.target
@@ -359,7 +360,7 @@ setup_firewall() {
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║    Snapdrop 局域网文件传输 - 部署工具  ║${NC}"
+echo -e "${GREEN}║      闪投 - 局域网文件传输部署工具     ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -446,6 +447,31 @@ else
     DOMAIN_NAME="_"
 fi
 
+# ---------- 网络模式配置 ----------
+echo ""
+echo -e "${CYAN}网络模式配置:${NC}"
+echo -e "  - 局域网模式: 设备通过子网分组，同一局域网的设备能互相发现"
+echo -e "  - 公网模式: 使用 STUN 服务器做 NAT 穿透，支持跨网络 P2P"
+echo ""
+read -p "是否启用局域网模式？(Y/n): " enable_lan
+if [[ "$enable_lan" =~ ^[Nn]$ ]]; then
+    LAN_MODE="false"
+    info "已禁用局域网子网分组"
+else
+    LAN_MODE="true"
+    info "已启用局域网子网分组"
+fi
+
+echo ""
+read -p "是否启用 STUN 服务器（支持公网 P2P）？(y/N): " enable_stun
+if [[ "$enable_stun" =~ ^[Yy]$ ]]; then
+    ENABLE_STUN="true"
+    info "已启用 STUN 服务器"
+else
+    ENABLE_STUN="false"
+    info "仅使用局域网 P2P，不经过公网"
+fi
+
 # ---------- 安装依赖 ----------
 step 3 "安装依赖 (nginx + nodejs)..."
 
@@ -489,6 +515,16 @@ fi
 mkdir -p "$APP_DIR"
 cp -r "$(dirname "$0")/client" "$APP_DIR/"
 cp -r "$(dirname "$0")/server" "$APP_DIR/"
+
+# 生成前端配置文件
+if [ "$ENABLE_STUN" = "true" ]; then
+    echo "window.SNAPDROP_ENABLE_STUN = true;" > "${APP_DIR}/client/config.js"
+    info "已启用 STUN 服务器配置"
+else
+    echo "window.SNAPDROP_ENABLE_STUN = false;" > "${APP_DIR}/client/config.js"
+    info "已禁用 STUN 服务器（仅局域网 P2P）"
+fi
+
 info "文件已部署"
 
 # ---------- 安装 Node 依赖 ----------

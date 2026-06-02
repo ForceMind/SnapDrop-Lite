@@ -15,9 +15,10 @@ class ServerConnection {
         if (this._isConnected() || this._isConnecting()) return;
         const ws = new WebSocket(this._endpoint());
         ws.binaryType = 'arraybuffer';
-        ws.onopen = e => console.log('WS: server connected');
+        ws.onopen = e => console.log('WS: 服务器已连接');
         ws.onmessage = e => this._onMessage(e.data);
         ws.onclose = e => this._onDisconnect();
+
         ws.onerror = e => console.error(e);
         this._socket = ws;
     }
@@ -45,7 +46,7 @@ class ServerConnection {
                 Events.fire('display-name', msg);
                 break;
             default:
-                console.error('WS: unkown message type', msg);
+                console.error('WS: 未知消息类型', msg);
         }
     }
 
@@ -67,8 +68,8 @@ class ServerConnection {
     }
 
     _onDisconnect() {
-        console.log('WS: server disconnected');
-        Events.fire('notify-user', 'Connection lost. Retry in 5 seconds...');
+        console.log('WS: 服务器已断开');
+        Events.fire('notify-user', '连接已断开，5秒后重试...');
         clearTimeout(this._reconnectTimer);
         this._reconnectTimer = setTimeout(_ => this._connect(), 5000);
     }
@@ -210,7 +211,7 @@ class Peer {
         this._reader = null;
         this._busy = false;
         this._dequeueFile();
-        Events.fire('notify-user', 'File transfer completed.');
+        Events.fire('notify-user', '文件传输完成');
     }
 
     sendText(text) {
@@ -282,14 +283,25 @@ class RTCPeer extends Peer {
                             .then(d => this._onDescription(d));
                     }
                 })
-                .catch(e => this._onError(e));
+                .catch(e => {
+                    // 连接状态冲突（如双方同时发起），重置连接
+                    if (e.name === 'InvalidStateError') {
+                        console.warn('RTC: 连接状态冲突，重置连接');
+                        this._conn.close();
+                        this._conn = null;
+                        this._connect(message.sender, true);
+                    } else {
+                        this._onError(e);
+                    }
+                });
         } else if (message.ice) {
-            this._conn.addIceCandidate(new RTCIceCandidate(message.ice));
+            this._conn.addIceCandidate(new RTCIceCandidate(message.ice))
+                .catch(e => this._onError(e));
         }
     }
 
     _onChannelOpened(event) {
-        console.log('RTC: channel opened with', this._peerId);
+        console.log('RTC: 通道已打开', this._peerId);
         const channel = event.channel || event.target;
         channel.binaryType = 'arraybuffer';
         channel.onmessage = e => this._onMessage(e.data);
@@ -298,13 +310,13 @@ class RTCPeer extends Peer {
     }
 
     _onChannelClosed() {
-        console.log('RTC: channel closed', this._peerId);
-        if (!this.isCaller) return;
+        console.log('RTC: 通道已关闭', this._peerId);
+        if (!this._isCaller) return;
         this._connect(this._peerId, true);
     }
 
     _onConnectionStateChange(e) {
-        console.log('RTC: state changed:', this._conn.connectionState);
+        console.log('RTC: 状态变更:', this._conn.connectionState);
         switch (this._conn.connectionState) {
             case 'disconnected':
                 this._onChannelClosed();
@@ -319,10 +331,10 @@ class RTCPeer extends Peer {
     _onIceConnectionStateChange() {
         switch (this._conn.iceConnectionState) {
             case 'failed':
-                console.error('ICE Gathering failed');
+                console.error('ICE 收集失败');
                 break;
             default:
-                console.log('ICE Gathering', this._conn.iceConnectionState);
+                console.log('ICE 收集', this._conn.iceConnectionState);
         }
     }
 
@@ -518,12 +530,16 @@ class Events {
 
 RTCPeer.config = {
     'sdpSemantics': 'unified-plan',
-    'iceServers': [
-        // 国内可用的 STUN 服务器 (按优先级排列，可自行增删)
+    'iceServers': [],
+    // 优先使用局域网候选，不使用 STUN/TURN
+    'iceTransportPolicy': 'all'
+}
+
+// 如果需要公网 P2P（部署时配置），添加 STUN 服务器
+if (window.SNAPDROP_ENABLE_STUN) {
+    RTCPeer.config.iceServers = [
         { urls: 'stun:stun.miwifi.com:3478' },
         { urls: 'stun:stun.chat.bilibili.com:3478' },
         { urls: 'stun:stun.hitv.com:3478' }
-        // 如需自建 TURN 服务器，取消下面注释并填入你的信息:
-        // { urls: 'turn:your-server.com:3478', username: 'user', credential: 'pass' }
-    ]
+    ];
 }
