@@ -214,13 +214,12 @@ class Peer {
     _setName(req) {
         let ua = parser(req.headers['user-agent']);
 
-
         let deviceName = '';
-        
+
         if (ua.os && ua.os.name) {
             deviceName = ua.os.name.replace('Mac OS', 'Mac') + ' ';
         }
-        
+
         if (ua.device.model) {
             deviceName += ua.device.model;
         } else {
@@ -230,21 +229,13 @@ class Peer {
         if(!deviceName)
             deviceName = '未知设备';
 
-        const displayName = uniqueNamesGenerator({
-            length: 2,
-            separator: ' ',
-            dictionaries: [colors, animals],
-            style: 'capital',
-            seed: this.id.hashCode()
-        })
-
         this.name = {
             model: ua.device.model,
             os: ua.os.name,
             browser: ua.browser.name,
             type: ua.device.type,
             deviceName,
-            displayName
+            displayName: deviceName
         };
     }
 
