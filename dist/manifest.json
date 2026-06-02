@@ -2,25 +2,25 @@
     "name": "闪投",
     "short_name": "闪投",
     "icons": [{
-        "src": "images/android-chrome-192x192.png?v=2.0.1",
+        "src": "images/android-chrome-192x192.png?v=2.0.5",
         "sizes": "192x192",
         "type": "image/png"
     },{
-        "src": "images/android-chrome-512x512.png?v=2.0.1",
+        "src": "images/android-chrome-512x512.png?v=2.0.5",
         "sizes": "512x512",
         "type": "image/png"
     },{
-        "src": "images/android-chrome-192x192-maskable.png?v=2.0.1",
+        "src": "images/android-chrome-192x192-maskable.png?v=2.0.5",
         "sizes": "192x192",
         "type": "image/png",
         "purpose": "maskable"
     },{
-        "src": "images/android-chrome-512x512-maskable.png?v=2.0.1",
+        "src": "images/android-chrome-512x512-maskable.png?v=2.0.5",
         "sizes": "512x512",
         "type": "image/png",
         "purpose": "maskable"
     },{
-        "src": "images/favicon-96x96.png?v=2.0.1",
+        "src": "images/favicon-96x96.png?v=2.0.5",
         "sizes": "96x96",
         "type": "image/png"
     }],

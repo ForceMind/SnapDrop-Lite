@@ -68,23 +68,22 @@ class SnapdropServer {
             case 'local-ip':
                 // 客户端报告局域网 IP 列表，更新房间分组
                 console.log(`[收到] ${sender.name.deviceName} 报告 IP:`, message.ips);
+                if (!this._isLanMode()) {
+                    console.log(`[局域网IP] 当前为公网模式，忽略客户端局域网 IP 报告`);
+                    return;
+                }
                 if (message.ips && message.ips.length > 0) {
                     // 优先使用 IPv4 局域网地址（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
-                    const localIP = message.ips.find(ip =>
-                        ip.startsWith('192.168.') || ip.startsWith('10.') ||
-                        (ip.startsWith('172.') && (() => {
-                            const second = parseInt(ip.split('.')[1]);
-                            return second >= 16 && second <= 31;
-                        })())
-                    ) || message.ips[0];
+                    const localIP = this._selectLocalIP(message.ips, sender.ip);
 
-                    const newRoomKey = this._getSubnet(localIP);
+                    const newRoomKey = this._getRoomKey(localIP);
                     if (sender.roomKey !== newRoomKey) {
                         console.log(`[局域网IP] ${sender.name.deviceName} 切换房间: ${sender.roomKey} -> ${newRoomKey}`);
                         this._leaveRoom(sender, false); // 不终止连接
                         sender.ip = localIP;
                         sender.roomKey = newRoomKey;
                         this._joinRoom(sender);
+                        this._keepAlive(sender);
                     } else {
                         console.log(`[局域网IP] ${sender.name.deviceName} 房间未变: ${newRoomKey}`);
                     }
@@ -101,6 +100,7 @@ class SnapdropServer {
                         this._leaveRoom(sender, false); // 不终止连接
                         sender.roomKey = newRoom;
                         this._joinRoom(sender);
+                        this._keepAlive(sender);
                     }
                 }
                 return;
@@ -195,7 +195,34 @@ class SnapdropServer {
         }
     }
 
+    _isLanMode() {
+        return process.env.LAN_MODE !== 'false';
+    }
+
+    _selectLocalIP(ips, fallbackIP) {
+        const normalized = ips
+            .map(ip => Peer.normalizeIP(ip))
+            .filter(ip => !!ip);
+        return normalized.find(ip => this._isPrivateIP(ip)) || Peer.normalizeIP(fallbackIP);
+    }
+
+    _isPrivateIP(ip) {
+        if (!ip || !ip.includes('.')) return false;
+        if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
+        if (ip.startsWith('172.')) {
+            const second = parseInt(ip.split('.')[1]);
+            return second >= 16 && second <= 31;
+        }
+        return false;
+    }
+
+    _getRoomKey(ip) {
+        ip = Peer.normalizeIP(ip);
+        return this._isLanMode() ? this._getSubnet(ip) : ip;
+    }
+
     _getSubnet(ip) {
+        ip = Peer.normalizeIP(ip);
         if (ip.includes('.')) {
             const parts = ip.split('.');
             if (parts.length === 4) {
@@ -230,13 +257,10 @@ class Peer {
         } else {
             this.ip = request.connection.remoteAddress;
         }
-        if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1') {
-            this.ip = '127.0.0.1';
-        }
+        this.ip = Peer.normalizeIP(this.ip);
 
-        // 默认直接用 IP 作为房间 key（和原版一致）
-        // 当客户端报告局域网 IP 时会切换到子网分组
-        this.roomKey = this.ip;
+        // 局域网模式默认按子网分组；公网模式保留按远端 IP 分组。
+        this.roomKey = process.env.LAN_MODE === 'false' ? this.ip : this._getSubnet(this.ip);
     }
 
     _getSubnet(ip) {
@@ -337,6 +361,13 @@ class Peer {
         }
         return uuid;
     };
+
+    static normalizeIP(ip) {
+        if (!ip) return '';
+        if (ip === '::1') return '127.0.0.1';
+        if (ip.startsWith('::ffff:')) return ip.substring(7);
+        return ip;
+    }
 }
 
 Object.defineProperty(String.prototype, 'hashCode', {

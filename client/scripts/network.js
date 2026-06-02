@@ -1,5 +1,25 @@
 window.URL = window.URL || window.webkitURL;
-window.isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection);
+window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
+window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
+window.isRtcSupported = !!window.RTCPeerConnection;
+
+const DEFAULT_ICE_SERVERS = [
+    // 国内可用的 STUN 服务器
+    { urls: 'stun:stun.miwifi.com:3478' },
+    { urls: 'stun:stun.chat.bilibili.com:3478' },
+    { urls: 'stun:stun.hitv.com:3478' },
+    // Google STUN 服务器（备用）
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' }
+];
+
+function getIceServers() {
+    return window.SNAPDROP_ENABLE_STUN ? DEFAULT_ICE_SERVERS : [];
+}
 
 // 获取本机 IP（支持 IPv4 和 IPv6）
 // 包含 host（局域网）和 srflx（公网）候选
@@ -20,12 +40,9 @@ function getLocalIPs() {
             try { pc.close(); } catch(e) {}
             resolve(result);
         };
-        // 使用 STUN 服务器，这样能获取公网 IP
+        // 局域网模式不依赖 STUN，公网模式再启用 STUN 做 NAT 穿透。
         const pc = new RTCPeerConnection({
-            iceServers: [
-                { urls: 'stun:stun.miwifi.com:3478' },
-                { urls: 'stun:stun.chat.bilibili.com:3478' }
-            ]
+            iceServers: getIceServers()
         });
         pc.onicecandidate = (e) => {
             if (!e.candidate) {
@@ -314,6 +331,8 @@ class RTCPeer extends Peer {
 
     constructor(serverConnection, peerId) {
         super(serverConnection, peerId);
+        this._pendingMessages = [];
+        this._closed = false;
         if (!peerId) return; // we will listen for a caller
         // 使用 peerId 大小决定谁作为 caller，避免双方同时发起
         const isCaller = this._server._peerId > peerId;
@@ -327,7 +346,7 @@ class RTCPeer extends Peer {
         if (isCaller) {
             this._openChannel();
         } else {
-            this._conn.ondatachannel = e => this._onChannelOpened(e);
+            this._conn.ondatachannel = e => this._onDataChannel(e);
         }
     }
 
@@ -342,11 +361,12 @@ class RTCPeer extends Peer {
     }
 
     _openChannel() {
+        if (this._channel && this._channel.readyState !== 'closed') return;
         const channel = this._conn.createDataChannel('data-channel', {
             ordered: true,
             reliable: true
         });
-        channel.onopen = e => this._onChannelOpened(e);
+        this._bindChannel(channel);
         this._conn.createOffer().then(d => this._onDescription(d)).catch(e => this._onError(e));
     }
 
@@ -411,22 +431,40 @@ class RTCPeer extends Peer {
         this._pendingIceCandidates = [];
     }
 
+    _onDataChannel(event) {
+        this._bindChannel(event.channel);
+        if (event.channel.readyState === 'open') {
+            this._flushPendingMessages();
+        }
+    }
+
+    _bindChannel(channel) {
+        channel.binaryType = 'arraybuffer';
+        channel.onopen = e => this._onChannelOpened(e);
+        channel.onmessage = e => this._onMessage(e.data);
+        channel.onclose = e => this._onChannelClosed(e);
+        channel.onerror = e => this._onError(e);
+        this._channel = channel;
+    }
+
     _onChannelOpened(event) {
         console.log('RTC: 通道已打开', this._peerId);
         const channel = event.channel || event.target;
-        channel.binaryType = 'arraybuffer';
-        channel.onmessage = e => this._onMessage(e.data);
-        channel.onclose = e => this._onChannelClosed();
-        this._channel = channel;
+        if (channel && channel !== this._channel) {
+            this._bindChannel(channel);
+        }
+        this._flushPendingMessages();
     }
 
     _onChannelClosed() {
         console.log('RTC: 通道已关闭', this._peerId);
-        if (!this._isCaller) return;
-        this._connect(this._peerId, true);
+        this._channel = null;
+        if (this._closed || !this._isCaller) return;
+        this._restartConnection();
     }
 
     _onConnectionStateChange(e) {
+        if (!this._conn) return;
         const state = this._conn.connectionState;
         console.log('[闪投] RTC 连接状态:', state, '对方:', this._peerId);
         switch (state) {
@@ -435,22 +473,23 @@ class RTCPeer extends Peer {
                 break;
             case 'disconnected':
                 console.log('[闪投] RTC 连接断开');
-                this._onChannelClosed();
+                this._restartConnection();
                 break;
             case 'failed':
                 console.error('[闪投] RTC 连接失败');
-                this._conn = null;
-                this._onChannelClosed();
+                this._restartConnection();
                 break;
         }
     }
 
     _onIceConnectionStateChange() {
+        if (!this._conn) return;
         const state = this._conn.iceConnectionState;
         console.log('[闪投] ICE 状态:', state);
         switch (state) {
             case 'failed':
                 console.error('[闪投] ICE 连接失败 - 可能需要 STUN/TURN 服务器');
+                this._restartConnection();
                 break;
             case 'disconnected':
                 console.warn('[闪投] ICE 连接断开');
@@ -462,8 +501,25 @@ class RTCPeer extends Peer {
         console.error(error);
     }
 
+    sendFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            this._filesQueue.push(files[i]);
+        }
+        if (this._busy) return;
+        if (!this._isConnected()) {
+            Events.fire('notify-user', '正在建立 P2P 连接，请稍候...');
+            this.refresh();
+            return;
+        }
+        this._dequeueFile();
+    }
+
     _send(message) {
-        if (!this._channel) return this.refresh();
+        if (!this._isConnected()) {
+            this._pendingMessages.push(message);
+            this.refresh();
+            return;
+        }
         this._channel.send(message);
     }
 
@@ -474,8 +530,56 @@ class RTCPeer extends Peer {
     }
 
     refresh() {
-        if (this._isConnected() || this._isConnecting()) return;
+        if (this._closed) return;
+        if (this._isConnected()) {
+            this._flushPendingMessages();
+            return;
+        }
+        if (this._isConnecting()) return;
         this._connect(this._peerId, this._isCaller);
+    }
+
+    _flushPendingMessages() {
+        while (this._pendingMessages.length && this._isConnected()) {
+            this._channel.send(this._pendingMessages.shift());
+        }
+        if (this._filesQueue.length && !this._busy && this._isConnected()) {
+            this._dequeueFile();
+        }
+    }
+
+    _restartConnection() {
+        if (this._closed || !this._isCaller || !this._peerId) return;
+        this._closeConnection(false);
+        setTimeout(() => this.refresh(), 500);
+    }
+
+    _closeConnection(markClosed = true) {
+        if (markClosed) this._closed = true;
+        const channel = this._channel;
+        const conn = this._conn;
+        this._channel = null;
+        this._conn = null;
+        if (channel) {
+            channel.onopen = null;
+            channel.onmessage = null;
+            channel.onclose = null;
+            channel.onerror = null;
+            try { channel.close(); } catch(e) {}
+        }
+        if (conn) {
+            conn.onicecandidate = null;
+            conn.onconnectionstatechange = null;
+            conn.oniceconnectionstatechange = null;
+            conn.ondatachannel = null;
+            try { conn.close(); } catch(e) {}
+        }
+    }
+
+    close() {
+        this._pendingMessages = [];
+        this._filesQueue = [];
+        this._closeConnection(true);
     }
 
     _isConnected() {
@@ -494,6 +598,7 @@ class PeersManager {
         this._server = serverConnection;
         Events.on('signal', e => this._onMessage(e.detail));
         Events.on('peers', e => this._onPeers(e.detail));
+        Events.on('peer-joined', e => this._onPeerJoined(e.detail));
         Events.on('files-selected', e => this._onFilesSelected(e.detail));
         Events.on('send-text', e => this._onSendText(e.detail));
         Events.on('peer-left', e => this._onPeerLeft(e.detail));
@@ -507,37 +612,54 @@ class PeersManager {
     }
 
     _onPeers(peers) {
-        peers.forEach(peer => {
-            if (this.peers[peer.id]) {
-                this.peers[peer.id].refresh();
-                return;
-            }
-            if (window.isRtcSupported && peer.rtcSupported) {
-                this.peers[peer.id] = new RTCPeer(this._server, peer.id);
-            } else {
-                console.warn('[闪投] 对方浏览器不支持 WebRTC');
-                Events.fire('notify-user', '对方浏览器不支持 WebRTC，无法传输文件');
-            }
-        })
+        peers.forEach(peer => this._ensurePeer(peer));
+    }
+
+    _onPeerJoined(peer) {
+        this._ensurePeer(peer);
+    }
+
+    _ensurePeer(peer) {
+        if (!peer || !peer.id) return null;
+        if (this.peers[peer.id]) {
+            this.peers[peer.id].refresh();
+            return this.peers[peer.id];
+        }
+        if (window.isRtcSupported && peer.rtcSupported) {
+            this.peers[peer.id] = new RTCPeer(this._server, peer.id);
+            return this.peers[peer.id];
+        }
+        console.warn('[闪投] 对方浏览器不支持 WebRTC');
+        Events.fire('notify-user', '对方浏览器不支持 WebRTC，无法传输文件');
+        return null;
     }
 
     sendTo(peerId, message) {
+        if (!this.peers[peerId]) return;
         this.peers[peerId].send(message);
     }
 
     _onFilesSelected(message) {
+        if (!this.peers[message.to]) {
+            Events.fire('notify-user', 'P2P 连接尚未建立，请稍后重试');
+            return;
+        }
         this.peers[message.to].sendFiles(message.files);
     }
 
     _onSendText(message) {
+        if (!this.peers[message.to]) {
+            Events.fire('notify-user', 'P2P 连接尚未建立，请稍后重试');
+            return;
+        }
         this.peers[message.to].sendText(message.text);
     }
 
     _onPeerLeft(peerId) {
         const peer = this.peers[peerId];
         delete this.peers[peerId];
-        if (!peer || !peer._peer) return;
-        peer._peer.close();
+        if (!peer) return;
+        peer.close();
     }
 
 }
@@ -644,17 +766,6 @@ class Events {
 
 RTCPeer.config = {
     'sdpSemantics': 'unified-plan',
-    'iceServers': [
-        // 国内可用的 STUN 服务器
-        { urls: 'stun:stun.miwifi.com:3478' },
-        { urls: 'stun:stun.chat.bilibili.com:3478' },
-        { urls: 'stun:stun.hitv.com:3478' },
-        // Google STUN 服务器（备用）
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
-    ],
+    'iceServers': getIceServers(),
     'iceTransportPolicy': 'all'
 }
