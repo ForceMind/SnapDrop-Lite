@@ -21,6 +21,39 @@ function getIceServers() {
     return window.SNAPDROP_ENABLE_STUN ? DEFAULT_ICE_SERVERS : [];
 }
 
+function normalizeIP(ip) {
+    if (!ip) return '';
+    if (ip === '::1') return '127.0.0.1';
+    if (ip.startsWith('::ffff:')) return ip.substring(7);
+    return ip;
+}
+
+function isPrivateIPv4(ip) {
+    ip = normalizeIP(ip);
+    if (!ip || !ip.includes('.')) return false;
+    if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
+    if (ip.startsWith('172.')) {
+        const second = parseInt(ip.split('.')[1]);
+        return second >= 16 && second <= 31;
+    }
+    return false;
+}
+
+function isUnusableLocalIPv4(ip) {
+    ip = normalizeIP(ip);
+    if (!ip || ip === '0.0.0.0') return true;
+    if (ip.startsWith('127.') || ip.startsWith('169.254.')) return true;
+    return /^172\.(1[6-9]|2\d|3[01])\.0\.1$/.test(ip);
+}
+
+function candidateSummary(candidate) {
+    const line = typeof candidate === 'string' ? candidate : candidate && candidate.candidate;
+    if (!line) return { type: 'unknown', address: 'unknown' };
+    const type = (line.match(/\styp\s(\S+)/) || [])[1] || 'unknown';
+    const address = (line.match(/(\d{1,3}(?:\.\d{1,3}){3})/) || line.match(/([a-f0-9]{1,4}(?::[a-f0-9]{1,4}){2,7})/) || line.match(/(\S+\.local)/) || [])[1] || 'unknown';
+    return { type, address };
+}
+
 // 获取本机 IP（支持 IPv4 和 IPv6）
 // 包含 host（局域网）和 srflx（公网）候选
 function getLocalIPs() {
@@ -50,10 +83,16 @@ function getLocalIPs() {
                 return;
             }
             const candidate = e.candidate.candidate;
+            const summary = candidateSummary(candidate);
             // 匹配 IPv4 地址
             const v4 = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
-            if (v4 && v4[1] !== '0.0.0.0') {
-                ips.add(v4[1]);
+            if (v4) {
+                const ip = normalizeIP(v4[1]);
+                if (isUnusableLocalIPv4(ip)) {
+                    console.warn('[闪投] 忽略不可用的本机候选 IP:', ip, summary.type);
+                } else if (window.SNAPDROP_ENABLE_STUN || isPrivateIPv4(ip)) {
+                    ips.add(ip);
+                }
             }
             // 匹配 IPv6 地址
             const v6 = candidate.match(/([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
@@ -356,6 +395,7 @@ class RTCPeer extends Peer {
         this._pendingIceCandidates = []; // 缓存 ICE 候选
         this._conn = new RTCPeerConnection(RTCPeer.config);
         this._conn.onicecandidate = e => this._onIceCandidate(e);
+        this._conn.onicecandidateerror = e => this._onIceCandidateError(e);
         this._conn.onconnectionstatechange = e => this._onConnectionStateChange(e);
         this._conn.oniceconnectionstatechange = e => this._onIceConnectionStateChange(e);
     }
@@ -378,7 +418,13 @@ class RTCPeer extends Peer {
 
     _onIceCandidate(event) {
         if (!event.candidate) return;
+        const summary = candidateSummary(event.candidate);
+        console.log('[闪投] 发送 ICE 候选:', summary.type, summary.address);
         this._sendSignal({ ice: event.candidate });
+    }
+
+    _onIceCandidateError(event) {
+        console.warn('[闪投] ICE 候选错误:', event.errorCode, event.errorText || '', event.url || '');
     }
 
     onServerMessage(message) {
@@ -410,6 +456,8 @@ class RTCPeer extends Peer {
                     }
                 });
         } else if (message.ice) {
+            const summary = candidateSummary(message.ice);
+            console.log('[闪投] 收到 ICE 候选:', summary.type, summary.address);
             // 如果远程描述还没设置，先缓存 ICE 候选
             if (!this._conn.remoteDescription) {
                 console.log('[闪投] 缓存 ICE 候选（等待 SDP）');
@@ -569,6 +617,7 @@ class RTCPeer extends Peer {
         }
         if (conn) {
             conn.onicecandidate = null;
+            conn.onicecandidateerror = null;
             conn.onconnectionstatechange = null;
             conn.oniceconnectionstatechange = null;
             conn.ondatachannel = null;

@@ -200,25 +200,31 @@ class SnapdropServer {
     }
 
     _selectLocalIP(ips, fallbackIP) {
+        const fallback = Peer.normalizeIP(fallbackIP);
+        if (Peer.isPrivateIP(fallback) && !Peer.isLikelyVirtualIP(fallback)) {
+            return fallback;
+        }
+
         const normalized = ips
             .map(ip => Peer.normalizeIP(ip))
-            .filter(ip => !!ip);
-        return normalized.find(ip => this._isPrivateIP(ip)) || Peer.normalizeIP(fallbackIP);
+            .filter(ip => !!ip && Peer.isPrivateIP(ip) && !Peer.isLikelyVirtualIP(ip));
+
+        // If the server only sees localhost, use the browser-reported LAN IP as a dev fallback.
+        if (fallback === '127.0.0.1') {
+            return normalized[0] || fallback;
+        }
+
+        return fallback;
     }
 
     _isPrivateIP(ip) {
-        if (!ip || !ip.includes('.')) return false;
-        if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
-        if (ip.startsWith('172.')) {
-            const second = parseInt(ip.split('.')[1]);
-            return second >= 16 && second <= 31;
-        }
-        return false;
+        return Peer.isPrivateIP(ip);
     }
 
     _getRoomKey(ip) {
         ip = Peer.normalizeIP(ip);
-        return this._isLanMode() ? this._getSubnet(ip) : ip;
+        if (!this._isLanMode()) return ip;
+        return Peer.isPrivateIP(ip) ? this._getSubnet(ip) : ip;
     }
 
     _getSubnet(ip) {
@@ -259,8 +265,10 @@ class Peer {
         }
         this.ip = Peer.normalizeIP(this.ip);
 
-        // 局域网模式默认按子网分组；公网模式保留按远端 IP 分组。
-        this.roomKey = process.env.LAN_MODE === 'false' ? this.ip : this._getSubnet(this.ip);
+        // 局域网模式只对私有地址按子网分组；公网地址按精确 IP 分组。
+        this.roomKey = process.env.LAN_MODE === 'false' || !Peer.isPrivateIP(this.ip)
+            ? this.ip
+            : this._getSubnet(this.ip);
     }
 
     _getSubnet(ip) {
@@ -367,6 +375,22 @@ class Peer {
         if (ip === '::1') return '127.0.0.1';
         if (ip.startsWith('::ffff:')) return ip.substring(7);
         return ip;
+    }
+
+    static isPrivateIP(ip) {
+        ip = Peer.normalizeIP(ip);
+        if (!ip || !ip.includes('.')) return false;
+        if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
+        if (ip.startsWith('172.')) {
+            const second = parseInt(ip.split('.')[1]);
+            return second >= 16 && second <= 31;
+        }
+        return false;
+    }
+
+    static isLikelyVirtualIP(ip) {
+        ip = Peer.normalizeIP(ip);
+        return /^172\.(1[6-9]|2\d|3[01])\.0\.1$/.test(ip);
     }
 }
 
