@@ -422,7 +422,7 @@ class Notifications {
     _notify(message, body) {
         const config = {
             body: body,
-            icon: '/images/logo_transparent_128x128.png',
+            icon: '/images/logo_transparent_128x128.png?v=2.0.0',
         }
         let notification;
         try {

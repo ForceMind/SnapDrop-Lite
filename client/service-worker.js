@@ -1,52 +1,28 @@
-var CACHE_NAME = 'snapdrop-cache-v3';
-var urlsToCache = [
-  'index.html',
-  './',
-  'styles.css',
-  'scripts/network.js',
-  'scripts/ui.js',
-  'scripts/clipboard.js',
-  'sounds/blop.mp3',
-  'images/favicon-96x96.png'
-];
+var CACHE_NAME = 'snapdrop-cache-v2.0.0';
 
 self.addEventListener('install', function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('缓存已打开');
-        return cache.addAll(urlsToCache);
-      })
-  );
+  console.log('Service Worker 安装中...');
+  // 跳过等待，立即激活
+  self.skipWaiting();
 });
 
 
 self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
+  // 不缓存，直接从网络获取
+  event.respondWith(fetch(event.request));
 });
 
 
 self.addEventListener('activate', function(event) {
-  console.log('正在更新 Service Worker...')
+  console.log('正在更新 Service Worker... 版本: 2.0.0')
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.filter(function(cacheName) {
-          // Return true if you want to remove this cache,
-          // but remember that caches are shared across
-          // the whole origin
+          // 删除所有旧缓存
           return true
         }).map(function(cacheName) {
+          console.log('删除缓存:', cacheName);
           return caches.delete(cacheName);
         })
       );
