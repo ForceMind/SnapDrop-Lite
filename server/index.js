@@ -69,9 +69,13 @@ class SnapdropServer {
                 // 客户端报告局域网 IP 列表，更新房间分组
                 console.log(`[收到] ${sender.name.deviceName} 报告 IP:`, message.ips);
                 if (message.ips && message.ips.length > 0) {
-                    // 优先使用 IPv4 局域网地址
+                    // 优先使用 IPv4 局域网地址（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
                     const localIP = message.ips.find(ip =>
-                        ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')
+                        ip.startsWith('192.168.') || ip.startsWith('10.') ||
+                        (ip.startsWith('172.') && (() => {
+                            const second = parseInt(ip.split('.')[1]);
+                            return second >= 16 && second <= 31;
+                        })())
                     ) || message.ips[0];
 
                     const newRoomKey = this._getSubnet(localIP);
@@ -85,7 +89,19 @@ class SnapdropServer {
                         console.log(`[局域网IP] ${sender.name.deviceName} 房间未变: ${newRoomKey}`);
                     }
                 } else {
-                    console.log(`[局域网IP] ${sender.name.deviceName} 未获取到局域网 IP，使用公网 IP 分组`);
+                    console.log(`[局域网IP] ${sender.name.deviceName} 未获取到局域网 IP，保持使用公网 IP 分组: ${sender.roomKey}`);
+                }
+                return;
+            case 'join-room':
+                // 用户手动加入房间
+                if (message.roomId) {
+                    const newRoom = 'room:' + message.roomId;
+                    if (sender.roomKey !== newRoom) {
+                        console.log(`[房间] ${sender.name.deviceName} 加入房间: ${message.roomId}`);
+                        this._leaveRoom(sender);
+                        sender.roomKey = newRoom;
+                        this._joinRoom(sender);
+                    }
                 }
                 return;
         }
@@ -219,9 +235,9 @@ class Peer {
             this.ip = '127.0.0.1';
         }
 
-        // 初始房间分组（基于公网 IP）
-        // 后续客户端会报告局域网 IP，服务器会更新房间分组
-        this.roomKey = this._getSubnet(this.ip);
+        // 默认直接用 IP 作为房间 key（和原版一致）
+        // 当客户端报告局域网 IP 时会切换到子网分组
+        this.roomKey = this.ip;
     }
 
     _getSubnet(ip) {

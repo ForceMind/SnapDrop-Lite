@@ -110,6 +110,12 @@ class ServerConnection {
         this._socket.send(JSON.stringify(message));
     }
 
+    joinRoom(roomId) {
+        if (!roomId) return;
+        this.send({ type: 'join-room', roomId: roomId });
+        console.log('[闪投] 加入房间:', roomId);
+    }
+
     _endpoint() {
         const protocol = location.protocol.startsWith('https') ? 'wss' : 'ws';
         const webrtc = window.isRtcSupported ? '/webrtc' : '/fallback';

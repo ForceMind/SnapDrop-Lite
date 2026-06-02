@@ -527,8 +527,8 @@ class WebShareTargetUI {
 
 class Snapdrop {
     constructor() {
-        const server = new ServerConnection();
-        const peers = new PeersManager(server);
+        this.server = new ServerConnection();
+        const peers = new PeersManager(this.server);
         const peersUI = new PeersUI();
         Events.on('load', e => {
             const receiveDialog = new ReceiveDialog();
@@ -538,6 +538,40 @@ class Snapdrop {
             const notifications = new Notifications();
             const networkStatusUI = new NetworkStatusUI();
             const webShareTargetUI = new WebShareTargetUI();
+            this._initRoomUI();
+        });
+    }
+
+    _initRoomUI() {
+        const roomInput = $('roomInput');
+        const roomBtn = $('roomBtn');
+        if (!roomInput || !roomBtn) return;
+
+        // 检查 URL 参数是否有房间号
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRoom = urlParams.get('room');
+        if (urlRoom) {
+            roomInput.value = urlRoom;
+            this.server.joinRoom(urlRoom);
+        }
+
+        // 点击加入按钮
+        roomBtn.addEventListener('click', () => {
+            const roomId = roomInput.value.trim();
+            if (roomId) {
+                this.server.joinRoom(roomId);
+                // 更新 URL
+                const url = new URL(window.location);
+                url.searchParams.set('room', roomId);
+                history.replaceState({}, '', url);
+            }
+        });
+
+        // 回车加入
+        roomInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                roomBtn.click();
+            }
         });
     }
 }
