@@ -22,17 +22,29 @@ echo ""
 
 # 检查 terser
 run_terser() {
+    # 直接命令
     if command -v terser &>/dev/null; then
         terser "$@"
-    elif [ -f "/usr/local/lib/node_modules/.bin/terser" ]; then
-        /usr/local/lib/node_modules/.bin/terser "$@"
-    elif [ -f "/usr/lib/node_modules/.bin/terser" ]; then
-        /usr/lib/node_modules/.bin/terser "$@"
-    elif command -v npx &>/dev/null; then
-        npx terser "$@"
-    else
-        return 1
+        return
     fi
+    # nvm 路径
+    local nvm_path="$HOME/.nvm/versions/node/$(node -v 2>/dev/null)/bin/terser"
+    if [ -f "$nvm_path" ]; then
+        "$nvm_path" "$@"
+        return
+    fi
+    # 其他常见路径
+    for p in \
+        /usr/local/lib/node_modules/.bin/terser \
+        /usr/lib/node_modules/.bin/terser \
+        "$HOME/node_modules/.bin/terser"
+    do
+        if [ -f "$p" ]; then
+            "$p" "$@"
+            return
+        fi
+    done
+    return 1
 }
 
 # 测试 terser 是否可用
