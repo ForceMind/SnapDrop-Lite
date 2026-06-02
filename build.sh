@@ -20,41 +20,44 @@ echo -e "${GREEN}║      闪投 - 构建工具                   ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
 echo ""
 
-# 检查 terser
-run_terser() {
-    # 直接命令
-    if command -v terser &>/dev/null; then
-        terser "$@"
-        return
-    fi
-    # nvm 路径
-    local nvm_path="$HOME/.nvm/versions/node/$(node -v 2>/dev/null)/bin/terser"
-    if [ -f "$nvm_path" ]; then
-        "$nvm_path" "$@"
-        return
-    fi
-    # 其他常见路径
-    for p in \
-        /usr/local/lib/node_modules/.bin/terser \
-        /usr/lib/node_modules/.bin/terser \
-        "$HOME/node_modules/.bin/terser"
-    do
+# 查找 terser
+find_terser() {
+    # 1. 直接命令
+    command -v terser 2>/dev/null && return 0
+    # 2. 搜索所有可能的路径
+    local paths=(
+        /root/.nvm/versions/node/*/bin/terser
+        /home/*/.nvm/versions/node/*/bin/terser
+        /usr/local/lib/node_modules/.bin/terser
+        /usr/lib/node_modules/.bin/terser
+        /usr/local/bin/terser
+    )
+    for p in "${paths[@]}"; do
         if [ -f "$p" ]; then
-            "$p" "$@"
-            return
+            TERSER_PATH="$p"
+            return 0
         fi
     done
     return 1
 }
 
-# 测试 terser 是否可用
-if ! run_terser --version &>/dev/null; then
+TERSER_PATH=""
+
+if find_terser; then
+    if [ -z "$TERSER_PATH" ]; then
+        TERSER_PATH="terser"
+    fi
+    echo -e "  找到 terser: ${TERSER_PATH}"
+else
     echo -e "${YELLOW}[提示] 未找到 terser，正在安装...${NC}"
-    # 设置 npm 安装超时
-    timeout 30 npm install -g terser 2>&1 | tail -3 || true
-    if ! run_terser --version &>/dev/null; then
+    npm install -g terser 2>&1 | tail -3
+    if find_terser; then
+        if [ -z "$TERSER_PATH" ]; then
+            TERSER_PATH="terser"
+        fi
+        echo -e "  安装成功: ${TERSER_PATH}"
+    else
         echo -e "${YELLOW}[警告] terser 安装失败，将使用原始文件${NC}"
-        # 直接复制原始文件到 dist 目录
         mkdir -p "$BUILD_DIR/scripts"
         cp -r client/images "$BUILD_DIR/"
         cp -r client/sounds "$BUILD_DIR/"
@@ -68,6 +71,12 @@ if ! run_terser --version &>/dev/null; then
         exit 0
     fi
 fi
+
+# 创建 terser 包装函数
+run_terser() {
+    "$TERSER_PATH" "$@"
+}
+
 echo -e "  terser 版本: $(run_terser --version 2>/dev/null || echo '未知')"
 
 # 清理构建目录
