@@ -5,15 +5,21 @@ window.isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnecti
 function getLocalIPs() {
     return new Promise((resolve) => {
         if (!window.RTCPeerConnection) {
+            console.warn('WebRTC 不可用');
             resolve([]);
             return;
         }
         const ips = [];
         const pc = new RTCPeerConnection({ iceServers: [] });
         pc.createDataChannel('');
-        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(err => {
+            console.error('WebRTC 创建 offer 失败:', err);
+            pc.close();
+            resolve([]);
+        });
         pc.onicecandidate = (e) => {
             if (!e.candidate) {
+                console.log('ICE 候选收集完成，IP:', ips);
                 pc.close();
                 resolve(ips);
                 return;
@@ -23,14 +29,16 @@ function getLocalIPs() {
                 const ip = match[1];
                 if (!ips.includes(ip)) {
                     ips.push(ip);
+                    console.log('发现 IP:', ip);
                 }
             }
         };
         // 超时处理
         setTimeout(() => {
+            console.warn('获取 IP 超时，已找到:', ips);
             pc.close();
             resolve(ips);
-        }, 1000);
+        }, 2000);
     });
 }
 

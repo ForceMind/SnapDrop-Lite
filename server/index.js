@@ -67,6 +67,7 @@ class SnapdropServer {
                 break;
             case 'local-ip':
                 // 客户端报告局域网 IP 列表，更新房间分组
+                console.log(`[收到] ${sender.name.deviceName} 报告 IP:`, message.ips);
                 if (message.ips && message.ips.length > 0) {
                     // 优先使用 IPv4 局域网地址
                     const localIP = message.ips.find(ip =>
@@ -75,11 +76,13 @@ class SnapdropServer {
 
                     const newRoomKey = this._getSubnet(localIP);
                     if (sender.roomKey !== newRoomKey) {
-                        console.log(`[局域网IP] ${sender.name.deviceName} 报告 IP: ${message.ips.join(', ')} -> 房间: ${newRoomKey}`);
+                        console.log(`[局域网IP] ${sender.name.deviceName} 切换房间: ${sender.roomKey} -> ${newRoomKey}`);
                         this._leaveRoom(sender);
                         sender.ip = localIP;
                         sender.roomKey = newRoomKey;
                         this._joinRoom(sender);
+                    } else {
+                        console.log(`[局域网IP] ${sender.name.deviceName} 房间未变: ${newRoomKey}`);
                     }
                 }
                 return;
