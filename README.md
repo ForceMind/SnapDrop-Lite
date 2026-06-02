@@ -38,6 +38,7 @@
 
 - Linux 系统（Ubuntu/Debian/CentOS/Fedora/Alpine/Arch）
 - root 权限
+- Node.js 16+
 
 ### 一键部署
 
@@ -51,7 +52,7 @@ sudo bash deploy.sh
 2. 检测端口冲突，自动分配可用端口
 3. 配置域名（可选）
 4. 配置网络模式（局域网/公网）
-5. 部署文件到 `/opt/snapdrop`
+5. 构建混淆版本并部署到 `/opt/snapdrop`
 6. 配置 systemd 服务、Nginx 反向代理和防火墙
 
 ### 自定义端口
@@ -62,6 +63,25 @@ sudo WEB_PORT=9090 WS_PORT=3002 bash deploy.sh
 ```
 
 默认端口：Web `8080`，WebSocket `3001`。
+
+### 本地构建（可选）
+
+如果需要手动构建混淆版本：
+
+```bash
+# 安装混淆工具
+npm install -g terser
+
+# 构建
+bash build.sh
+```
+
+构建后生成 `dist/` 目录，包含：
+- 混淆后的 JS 文件（带随机后缀，如 `network.a1b2c3d4.js`）
+- 压缩后的 CSS 文件
+- 更新后的 `index.html`
+
+## 目录结构
 
 ## 网络模式
 
@@ -139,12 +159,12 @@ curl http://localhost:8080/health  # 健康检查
 
 ```
 Snapdrop-Lite/
-├── client/               # 前端静态文件
+├── client/               # 前端源码
 │   ├── index.html        # 主页面
 │   ├── styles.css        # 样式
+│   ├── config.js         # 部署配置
 │   ├── manifest.json     # PWA 配置
 │   ├── service-worker.js # 离线缓存
-│   ├── config.js         # 部署时生成的配置
 │   ├── scripts/
 │   │   ├── network.js    # WebSocket + WebRTC 通信
 │   │   ├── ui.js         # 界面交互
@@ -154,7 +174,13 @@ Snapdrop-Lite/
 ├── server/
 │   ├── index.js          # WebSocket 信令服务器
 │   └── package.json
-├── deploy.sh             # 一键部署脚本
+├── dist/                 # 构建输出（混淆后）
+│   ├── index.html        # 更新后的主页面
+│   ├── *.js              # 混淆后的 JS（带随机后缀）
+│   ├── *.css             # 压缩后的 CSS
+│   └── ...
+├── build.sh              # 构建脚本（混淆 + 随机后缀）
+├── deploy.sh             # 部署脚本（自动调用 build.sh）
 └── README.md
 ```
 

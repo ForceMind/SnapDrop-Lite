@@ -5,40 +5,46 @@ window.isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnecti
 function getLocalIPs() {
     return new Promise((resolve) => {
         if (!window.RTCPeerConnection) {
-            console.warn('WebRTC 不可用');
+            console.warn('[闪投] WebRTC 不可用');
             resolve([]);
             return;
         }
-        const ips = [];
+        const ips = new Set();
+        let resolved = false;
+        const done = () => {
+            if (resolved) return;
+            resolved = true;
+            const result = [...ips];
+            console.log('[闪投] 本机 IP:', result);
+            try { pc.close(); } catch(e) {}
+            resolve(result);
+        };
         const pc = new RTCPeerConnection({ iceServers: [] });
-        pc.createDataChannel('');
-        pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(err => {
-            console.error('WebRTC 创建 offer 失败:', err);
-            pc.close();
-            resolve([]);
-        });
         pc.onicecandidate = (e) => {
             if (!e.candidate) {
-                console.log('ICE 候选收集完成，IP:', ips);
-                pc.close();
-                resolve(ips);
+                done();
                 return;
             }
-            const match = e.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
-            if (match && match[1] && !match[1].startsWith('0.')) {
-                const ip = match[1];
-                if (!ips.includes(ip)) {
-                    ips.push(ip);
-                    console.log('发现 IP:', ip);
-                }
+            // 匹配 IPv4 地址
+            const v4 = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+            if (v4 && v4[1] !== '0.0.0.0') {
+                ips.add(v4[1]);
+            }
+            // 匹配 IPv6 地址
+            const v6 = e.candidate.candidate.match(/([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
+            if (v6) {
+                ips.add(v6[1]);
             }
         };
-        // 超时处理
-        setTimeout(() => {
-            console.warn('获取 IP 超时，已找到:', ips);
-            pc.close();
-            resolve(ips);
-        }, 2000);
+        pc.createDataChannel('');
+        pc.createOffer()
+            .then(offer => pc.setLocalDescription(offer))
+            .catch(err => {
+                console.error('[闪投] WebRTC offer 失败:', err);
+                done();
+            });
+        // 超时 3 秒
+        setTimeout(done, 3000);
     });
 }
 
@@ -58,24 +64,20 @@ class ServerConnection {
 
         // 获取局域网 IP
         this._localIPs = await getLocalIPs();
-        if (this._localIPs.length > 0) {
-            console.log('本机 IP:', this._localIPs);
-        } else {
-            console.warn('未能获取局域网 IP，可能无法发现同局域网设备');
-        }
 
         const ws = new WebSocket(this._endpoint());
         ws.binaryType = 'arraybuffer';
         ws.onopen = e => {
-            console.log('WS: 服务器已连接');
-            // 发送局域网 IP 给服务器
+            console.log('[闪投] 服务器已连接');
             if (this._localIPs.length > 0) {
+                console.log('[闪投] 发送本机 IP:', this._localIPs);
                 this.send({ type: 'local-ip', ips: this._localIPs });
+            } else {
+                console.warn('[闪投] 未获取到局域网 IP，可能无法发现同局域网设备');
             }
         };
         ws.onmessage = e => this._onMessage(e.data);
         ws.onclose = e => this._onDisconnect();
-
         ws.onerror = e => console.error(e);
         this._socket = ws;
     }

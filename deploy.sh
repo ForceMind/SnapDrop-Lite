@@ -204,6 +204,20 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options DENY;
 
+    # 静态资源缓存（带随机后缀的文件可以长期缓存）
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+
+    # HTML 文件不缓存
+    location ~* \.html$ {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        try_files \$uri =404;
+    }
+
     # 支持域名和IP访问
     location / {
         try_files \$uri \$uri/ =404;
@@ -503,18 +517,35 @@ if [ -d "$APP_DIR" ]; then
 fi
 
 mkdir -p "$APP_DIR"
-cp -r "$(dirname "$0")/client" "$APP_DIR/"
-cp -r "$(dirname "$0")/server" "$APP_DIR/"
 
 # 生成前端配置文件
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ "$ENABLE_STUN" = "true" ]; then
-    echo "window.SNAPDROP_ENABLE_STUN = true;" > "${APP_DIR}/client/config.js"
+    echo "window.SNAPDROP_ENABLE_STUN = true;" > "${SCRIPT_DIR}/client/config.js"
     info "已启用 STUN 服务器配置"
 else
-    echo "window.SNAPDROP_ENABLE_STUN = false;" > "${APP_DIR}/client/config.js"
+    echo "window.SNAPDROP_ENABLE_STUN = false;" > "${SCRIPT_DIR}/client/config.js"
     info "已禁用 STUN 服务器（仅局域网 P2P）"
 fi
 
+# 构建混淆版本
+info "正在构建混淆版本..."
+if [ -f "${SCRIPT_DIR}/build.sh" ]; then
+    cd "$SCRIPT_DIR"
+    bash build.sh 2>&1 | grep -E "构建完成|错误" || true
+    if [ -d "${SCRIPT_DIR}/dist" ]; then
+        cp -r "${SCRIPT_DIR}/dist" "$APP_DIR/client"
+        info "已部署混淆版本"
+    else
+        warn "混淆构建失败，使用原始文件"
+        cp -r "${SCRIPT_DIR}/client" "$APP_DIR/"
+    fi
+else
+    cp -r "${SCRIPT_DIR}/client" "$APP_DIR/"
+    info "已部署原始版本"
+fi
+
+cp -r "${SCRIPT_DIR}/server" "$APP_DIR/"
 info "文件已部署"
 
 # ---------- 安装 Node 依赖 ----------
