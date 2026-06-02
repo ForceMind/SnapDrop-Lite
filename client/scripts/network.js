@@ -315,7 +315,10 @@ class RTCPeer extends Peer {
     constructor(serverConnection, peerId) {
         super(serverConnection, peerId);
         if (!peerId) return; // we will listen for a caller
-        this._connect(peerId, true);
+        // 使用 peerId 大小决定谁作为 caller，避免双方同时发起
+        const isCaller = this._server._peerId > peerId;
+        console.log('[闪投] RTC 连接:', isCaller ? 'caller' : 'answerer', '对方:', peerId);
+        this._connect(peerId, isCaller);
     }
 
     _connect(peerId, isCaller) {
