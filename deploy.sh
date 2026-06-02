@@ -450,26 +450,16 @@ fi
 # ---------- 网络模式配置 ----------
 echo ""
 echo -e "${CYAN}网络模式配置:${NC}"
-echo -e "  - 局域网模式: 设备通过子网分组，同一局域网的设备能互相发现"
-echo -e "  - 公网模式: 使用 STUN 服务器做 NAT 穿透，支持跨网络 P2P"
+echo -e "  1) 局域网模式: 同一子网的设备互相发现（如家庭/公司 WiFi）"
+echo -e "  2) 公网模式: 所有访问的设备互相发现（云服务器部署）"
 echo ""
-read -p "是否启用局域网模式？(Y/n): " enable_lan
-if [[ "$enable_lan" =~ ^[Nn]$ ]]; then
+read -p "请选择模式 (1/2，默认1): " net_mode
+if [ "$net_mode" = "2" ]; then
     LAN_MODE="false"
-    info "已禁用局域网子网分组"
+    info "已启用公网模式 - 所有设备互相可见"
 else
     LAN_MODE="true"
-    info "已启用局域网子网分组"
-fi
-
-echo ""
-read -p "是否启用 STUN 服务器（支持公网 P2P）？(y/N): " enable_stun
-if [[ "$enable_stun" =~ ^[Yy]$ ]]; then
-    ENABLE_STUN="true"
-    info "已启用 STUN 服务器"
-else
-    ENABLE_STUN="false"
-    info "仅使用局域网 P2P，不经过公网"
+    info "已启用局域网模式 - 同子网设备互相发现"
 fi
 
 # ---------- 安装依赖 ----------

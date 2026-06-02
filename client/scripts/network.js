@@ -1,21 +1,70 @@
 window.URL = window.URL || window.webkitURL;
 window.isRtcSupported = !!(window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection);
 
+// 获取本机局域网 IP（支持 IPv4 和 IPv6）
+function getLocalIPs() {
+    return new Promise((resolve) => {
+        if (!window.RTCPeerConnection) {
+            resolve([]);
+            return;
+        }
+        const ips = [];
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel('');
+        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        pc.onicecandidate = (e) => {
+            if (!e.candidate) {
+                pc.close();
+                resolve(ips);
+                return;
+            }
+            const match = e.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
+            if (match && match[1] && !match[1].startsWith('0.')) {
+                const ip = match[1];
+                if (!ips.includes(ip)) {
+                    ips.push(ip);
+                }
+            }
+        };
+        // 超时处理
+        setTimeout(() => {
+            pc.close();
+            resolve(ips);
+        }, 1000);
+    });
+}
+
 class ServerConnection {
 
     constructor() {
+        this._localIPs = [];
         this._connect();
         Events.on('beforeunload', e => this._disconnect());
         Events.on('pagehide', e => this._disconnect());
         document.addEventListener('visibilitychange', e => this._onVisibilityChange());
     }
 
-    _connect() {
+    async _connect() {
         clearTimeout(this._reconnectTimer);
         if (this._isConnected() || this._isConnecting()) return;
+
+        // 获取局域网 IP
+        this._localIPs = await getLocalIPs();
+        if (this._localIPs.length > 0) {
+            console.log('本机 IP:', this._localIPs);
+        } else {
+            console.warn('未能获取局域网 IP，可能无法发现同局域网设备');
+        }
+
         const ws = new WebSocket(this._endpoint());
         ws.binaryType = 'arraybuffer';
-        ws.onopen = e => console.log('WS: 服务器已连接');
+        ws.onopen = e => {
+            console.log('WS: 服务器已连接');
+            // 发送局域网 IP 给服务器
+            if (this._localIPs.length > 0) {
+                this.send({ type: 'local-ip', ips: this._localIPs });
+            }
+        };
         ws.onmessage = e => this._onMessage(e.data);
         ws.onclose = e => this._onDisconnect();
 

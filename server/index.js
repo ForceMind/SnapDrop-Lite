@@ -65,6 +65,24 @@ class SnapdropServer {
             case 'pong':
                 sender.lastBeat = Date.now();
                 break;
+            case 'local-ip':
+                // 客户端报告局域网 IP 列表，更新房间分组
+                if (message.ips && message.ips.length > 0) {
+                    // 优先使用 IPv4 局域网地址
+                    const localIP = message.ips.find(ip =>
+                        ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')
+                    ) || message.ips[0];
+
+                    const newRoomKey = this._getSubnet(localIP);
+                    if (sender.roomKey !== newRoomKey) {
+                        console.log(`[局域网IP] ${sender.name.deviceName} 报告 IP: ${message.ips.join(', ')} -> 房间: ${newRoomKey}`);
+                        this._leaveRoom(sender);
+                        sender.ip = localIP;
+                        sender.roomKey = newRoomKey;
+                        this._joinRoom(sender);
+                    }
+                }
+                return;
         }
 
         // 转发消息给目标设备
@@ -156,6 +174,20 @@ class SnapdropServer {
             clearTimeout(peer.timerId);
         }
     }
+
+    _getSubnet(ip) {
+        if (ip.includes('.')) {
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                return parts.slice(0, 3).join('.') + '.0/24';
+            }
+        }
+        if (ip.includes(':')) {
+            const parts = ip.split(':');
+            return parts.slice(0, 4).join(':') + '::/64';
+        }
+        return ip;
+    }
 }
 
 
@@ -182,12 +214,9 @@ class Peer {
             this.ip = '127.0.0.1';
         }
 
-        // 局域网模式：基于子网分组，同一局域网设备能互相发现
-        if (process.env.LAN_MODE !== 'false') {
-            this.roomKey = this._getSubnet(this.ip);
-        } else {
-            this.roomKey = this.ip;
-        }
+        // 初始房间分组（基于公网 IP）
+        // 后续客户端会报告局域网 IP，服务器会更新房间分组
+        this.roomKey = this._getSubnet(this.ip);
     }
 
     _getSubnet(ip) {

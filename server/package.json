@@ -1,7 +1,7 @@
 {
   "name": "snapdrop-lite",
   "version": "1.0.0",
-  "description": "闪投 - 精简版局域网文件传输工具",
+  "description": "闪投 - 局域网文件传输工具",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

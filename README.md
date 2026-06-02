@@ -1,6 +1,6 @@
 # 闪投 (Snapdrop Lite)
 
-精简版局域网文件传输工具，基于 [Snapdrop](https://github.com/RobinLinus/snapdrop) 精简而来。
+局域网文件传输工具，基于 [Snapdrop](https://github.com/RobinLinus/snapdrop) 精简而来。
 
 无需注册、无需安装，同一网络下的设备打开浏览器即可互传文件。
 
