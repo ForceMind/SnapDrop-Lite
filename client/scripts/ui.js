@@ -547,23 +547,37 @@ class Snapdrop {
         const roomBtn = $('roomBtn');
         if (!roomInput || !roomBtn) return;
 
-        // 检查 URL 参数是否有房间号
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlRoom = urlParams.get('room');
-        if (urlRoom) {
-            roomInput.value = urlRoom;
-            this.server.joinRoom(urlRoom);
-        }
+        // 初始状态：按钮隐藏
+        roomBtn.style.display = 'none';
+
+        // 输入框内容变化时控制按钮显示
+        roomInput.addEventListener('input', () => {
+            const hasValue = roomInput.value.trim().length > 0;
+            if (hasValue && roomBtn.textContent !== '已加入') {
+                roomBtn.style.display = '';
+                roomBtn.textContent = '加入';
+                roomBtn.disabled = false;
+                roomBtn.style.opacity = '1';
+            } else if (!hasValue) {
+                roomBtn.style.display = 'none';
+                this._resetRoomBtn(roomBtn, roomInput);
+            }
+        });
 
         // 点击加入按钮
         roomBtn.addEventListener('click', () => {
             const roomId = roomInput.value.trim();
-            if (roomId) {
+            if (roomId && roomBtn.textContent !== '已加入') {
                 this.server.joinRoom(roomId);
                 // 更新 URL
                 const url = new URL(window.location);
                 url.searchParams.set('room', roomId);
                 history.replaceState({}, '', url);
+                // 更新按钮状态
+                roomBtn.textContent = '已加入';
+                roomBtn.disabled = true;
+                roomBtn.style.opacity = '0.6';
+                roomInput.disabled = true;
             }
         });
 
@@ -573,6 +587,22 @@ class Snapdrop {
                 roomBtn.click();
             }
         });
+
+        // 检查 URL 参数是否有房间号
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRoom = urlParams.get('room');
+        if (urlRoom) {
+            roomInput.value = urlRoom;
+            roomBtn.style.display = '';
+            roomBtn.click();
+        }
+    }
+
+    _resetRoomBtn(roomBtn, roomInput) {
+        roomBtn.textContent = '加入';
+        roomBtn.disabled = false;
+        roomBtn.style.opacity = '1';
+        roomInput.disabled = false;
     }
 }
 

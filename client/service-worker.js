@@ -1,30 +1,9 @@
-var CACHE_NAME = 'snapdrop-cache-v2.0.5';
-var urlsToCache = [
-  './',
-  'index.html',
-  'styles.css',
-  'config.js',
-  'scripts/network.js',
-  'scripts/ui.js',
-  'scripts/clipboard.js',
-  'sounds/blop.mp3',
-  'images/favicon-96x96.png',
-  'images/logo_transparent_128x128.png'
-];
+var CACHE_NAME = 'snapdrop-cache-v2.0.6';
 
-// 安装：缓存核心资源
+// 安装：跳过等待
 self.addEventListener('install', function(event) {
   console.log('[闪投] Service Worker 安装中...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('[闪投] 缓存已打开');
-        return cache.addAll(urlsToCache);
-      })
-      .then(function() {
-        return self.skipWaiting();
-      })
-  );
+  self.skipWaiting();
 });
 
 // 激活：清除旧缓存
