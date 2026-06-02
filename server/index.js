@@ -31,6 +31,10 @@ class SnapdropServer {
         peer.socket.on('error', console.error);
         this._keepAlive(peer);
 
+        // 记录连接日志
+        const roomPeers = this._rooms[peer.roomKey] ? Object.keys(this._rooms[peer.roomKey]).length : 0;
+        console.log(`[连接] ${peer.name.deviceName} | IP: ${peer.ip} | 房间: ${peer.roomKey} | 房间人数: ${roomPeers}`);
+
         this._send(peer, {
             type: 'display-name',
             message: {
@@ -109,6 +113,10 @@ class SnapdropServer {
 
         delete this._rooms[roomKey][peer.id];
         peer.socket.terminate();
+
+        // 记录断开日志
+        const roomPeers = this._rooms[roomKey] ? Object.keys(this._rooms[roomKey]).length : 0;
+        console.log(`[断开] ${peer.name.deviceName} | IP: ${peer.ip} | 房间: ${roomKey} | 剩余人数: ${roomPeers}`);
 
         if (!Object.keys(this._rooms[roomKey]).length) {
             delete this._rooms[roomKey];
