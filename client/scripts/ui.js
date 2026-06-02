@@ -547,37 +547,48 @@ class Snapdrop {
         const roomBtn = $('roomBtn');
         if (!roomInput || !roomBtn) return;
 
+        this._roomJoined = false;
+
         // 初始状态：按钮隐藏
         roomBtn.style.display = 'none';
 
         // 输入框内容变化时控制按钮显示
         roomInput.addEventListener('input', () => {
             const hasValue = roomInput.value.trim().length > 0;
-            if (hasValue && roomBtn.textContent !== '已加入') {
+            if (hasValue && !this._roomJoined) {
                 roomBtn.style.display = '';
                 roomBtn.textContent = '加入';
-                roomBtn.disabled = false;
-                roomBtn.style.opacity = '1';
             } else if (!hasValue) {
                 roomBtn.style.display = 'none';
-                this._resetRoomBtn(roomBtn, roomInput);
+            }
+        });
+
+        // 点击输入框时，如果已加入则重置状态
+        roomInput.addEventListener('focus', () => {
+            if (this._roomJoined) {
+                this._roomJoined = false;
+                roomBtn.textContent = '加入';
+                roomBtn.style.opacity = '1';
+                // 清除 URL 中的 room 参数
+                const url = new URL(window.location);
+                url.searchParams.delete('room');
+                history.replaceState({}, '', url);
             }
         });
 
         // 点击加入按钮
         roomBtn.addEventListener('click', () => {
             const roomId = roomInput.value.trim();
-            if (roomId && roomBtn.textContent !== '已加入') {
+            if (roomId && !this._roomJoined) {
                 this.server.joinRoom(roomId);
                 // 更新 URL
                 const url = new URL(window.location);
                 url.searchParams.set('room', roomId);
                 history.replaceState({}, '', url);
                 // 更新按钮状态
+                this._roomJoined = true;
                 roomBtn.textContent = '已加入';
-                roomBtn.disabled = true;
                 roomBtn.style.opacity = '0.6';
-                roomInput.disabled = true;
             }
         });
 
@@ -594,15 +605,12 @@ class Snapdrop {
         if (urlRoom) {
             roomInput.value = urlRoom;
             roomBtn.style.display = '';
-            roomBtn.click();
+            // 直接加入房间
+            this.server.joinRoom(urlRoom);
+            this._roomJoined = true;
+            roomBtn.textContent = '已加入';
+            roomBtn.style.opacity = '0.6';
         }
-    }
-
-    _resetRoomBtn(roomBtn, roomInput) {
-        roomBtn.textContent = '加入';
-        roomBtn.disabled = false;
-        roomBtn.style.opacity = '1';
-        roomInput.disabled = false;
     }
 }
 

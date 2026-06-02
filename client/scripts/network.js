@@ -333,9 +333,11 @@ class RTCPeer extends Peer {
     }
 
     onServerMessage(message) {
+        console.log('[闪投] 收到信令消息:', message.type || 'ice', '来自:', message.sender);
         if (!this._conn) this._connect(message.sender, false);
 
         if (message.sdp) {
+            console.log('[闪投] 收到 SDP:', message.sdp.type);
             this._conn.setRemoteDescription(new RTCSessionDescription(message.sdp))
                 .then( _ => {
                     if (message.sdp.type === 'offer') {
@@ -346,7 +348,7 @@ class RTCPeer extends Peer {
                 .catch(e => {
                     // 连接状态冲突（如双方同时发起），重置连接
                     if (e.name === 'InvalidStateError') {
-                        console.warn('RTC: 连接状态冲突，重置连接');
+                        console.warn('[闪投] RTC 连接状态冲突，重置连接');
                         this._conn.close();
                         this._conn = null;
                         this._connect(message.sender, true);
@@ -376,12 +378,18 @@ class RTCPeer extends Peer {
     }
 
     _onConnectionStateChange(e) {
-        console.log('RTC: 状态变更:', this._conn.connectionState);
-        switch (this._conn.connectionState) {
+        const state = this._conn.connectionState;
+        console.log('[闪投] RTC 连接状态:', state, '对方:', this._peerId);
+        switch (state) {
+            case 'connected':
+                console.log('[闪投] RTC P2P 连接成功！');
+                break;
             case 'disconnected':
+                console.log('[闪投] RTC 连接断开');
                 this._onChannelClosed();
                 break;
             case 'failed':
+                console.error('[闪投] RTC 连接失败');
                 this._conn = null;
                 this._onChannelClosed();
                 break;
@@ -389,12 +397,15 @@ class RTCPeer extends Peer {
     }
 
     _onIceConnectionStateChange() {
-        switch (this._conn.iceConnectionState) {
+        const state = this._conn.iceConnectionState;
+        console.log('[闪投] ICE 状态:', state);
+        switch (state) {
             case 'failed':
-                console.error('ICE 收集失败');
+                console.error('[闪投] ICE 连接失败 - 可能需要 STUN/TURN 服务器');
                 break;
-            default:
-                console.log('ICE 收集', this._conn.iceConnectionState);
+            case 'disconnected':
+                console.warn('[闪投] ICE 连接断开');
+                break;
         }
     }
 
@@ -584,16 +595,11 @@ class Events {
 
 RTCPeer.config = {
     'sdpSemantics': 'unified-plan',
-    'iceServers': [],
-    // 优先使用局域网候选，不使用 STUN/TURN
-    'iceTransportPolicy': 'all'
-}
-
-// 如果需要公网 P2P（部署时配置），添加 STUN 服务器
-if (window.SNAPDROP_ENABLE_STUN) {
-    RTCPeer.config.iceServers = [
+    'iceServers': [
+        // 国内可用的 STUN 服务器
         { urls: 'stun:stun.miwifi.com:3478' },
         { urls: 'stun:stun.chat.bilibili.com:3478' },
         { urls: 'stun:stun.hitv.com:3478' }
-    ];
+    ],
+    'iceTransportPolicy': 'all'
 }
