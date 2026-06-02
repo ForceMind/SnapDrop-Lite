@@ -151,6 +151,22 @@ run_terser client/service-worker.js \
     cp client/service-worker.js "$BUILD_DIR/service-worker.${RANDOM_SUFFIX}.js"
 }
 
+# 更新 service-worker.js 中的文件路径（添加随机后缀）
+sed -i \
+    -e "s|'styles.css'|'styles.${RANDOM_SUFFIX}.css'|g" \
+    -e "s|'config.js'|'config.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/network.js'|'scripts/network.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/ui.js'|'scripts/ui.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/clipboard.js'|'scripts/clipboard.${RANDOM_SUFFIX}.js'|g" \
+    "$BUILD_DIR/service-worker.${RANDOM_SUFFIX}.js" 2>/dev/null || \
+sed -i '' \
+    -e "s|'styles.css'|'styles.${RANDOM_SUFFIX}.css'|g" \
+    -e "s|'config.js'|'config.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/network.js'|'scripts/network.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/ui.js'|'scripts/ui.${RANDOM_SUFFIX}.js'|g" \
+    -e "s|'scripts/clipboard.js'|'scripts/clipboard.${RANDOM_SUFFIX}.js'|g" \
+    "$BUILD_DIR/service-worker.${RANDOM_SUFFIX}.js"
+
 # 复制 CSS
 cp client/styles.css "$BUILD_DIR/styles.${RANDOM_SUFFIX}.css"
 

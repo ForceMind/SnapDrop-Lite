@@ -118,8 +118,7 @@ class ServerConnection {
 
     _endpoint() {
         const protocol = location.protocol.startsWith('https') ? 'wss' : 'ws';
-        const webrtc = window.isRtcSupported ? '/webrtc' : '/fallback';
-        return protocol + '://' + location.host + '/server' + webrtc;
+        return protocol + '://' + location.host + '/server/webrtc';
     }
 
     _disconnect() {
@@ -456,7 +455,8 @@ class PeersManager {
             if (window.isRtcSupported && peer.rtcSupported) {
                 this.peers[peer.id] = new RTCPeer(this._server, peer.id);
             } else {
-                this.peers[peer.id] = new WSPeer(this._server, peer.id);
+                console.warn('[闪投] 对方浏览器不支持 WebRTC，无法传输文件');
+                Events.fire('notify-user', '对方浏览器不支持 WebRTC，无法传输文件');
             }
         })
     }
@@ -480,13 +480,6 @@ class PeersManager {
         peer._peer.close();
     }
 
-}
-
-class WSPeer {
-    _send(message) {
-        message.to = this._peerId;
-        this._server.send(message);
-    }
 }
 
 class FileChunker {

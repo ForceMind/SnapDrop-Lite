@@ -81,7 +81,7 @@ class SnapdropServer {
                     const newRoomKey = this._getSubnet(localIP);
                     if (sender.roomKey !== newRoomKey) {
                         console.log(`[局域网IP] ${sender.name.deviceName} 切换房间: ${sender.roomKey} -> ${newRoomKey}`);
-                        this._leaveRoom(sender);
+                        this._leaveRoom(sender, false); // 不终止连接
                         sender.ip = localIP;
                         sender.roomKey = newRoomKey;
                         this._joinRoom(sender);
@@ -98,7 +98,7 @@ class SnapdropServer {
                     const newRoom = 'room:' + message.roomId;
                     if (sender.roomKey !== newRoom) {
                         console.log(`[房间] ${sender.name.deviceName} 加入房间: ${message.roomId}`);
-                        this._leaveRoom(sender);
+                        this._leaveRoom(sender, false); // 不终止连接
                         sender.roomKey = newRoom;
                         this._joinRoom(sender);
                     }
@@ -145,17 +145,16 @@ class SnapdropServer {
         this._rooms[roomKey][peer.id] = peer;
     }
 
-    _leaveRoom(peer) {
+    _leaveRoom(peer, terminate = true) {
         const roomKey = peer.roomKey;
         if (!this._rooms[roomKey] || !this._rooms[roomKey][peer.id]) return;
         this._cancelKeepAlive(this._rooms[roomKey][peer.id]);
 
         delete this._rooms[roomKey][peer.id];
-        peer.socket.terminate();
 
-        // 记录断开日志
-        const roomPeers = this._rooms[roomKey] ? Object.keys(this._rooms[roomKey]).length : 0;
-        console.log(`[断开] ${peer.name.deviceName} | IP: ${peer.ip} | 房间: ${roomKey} | 剩余人数: ${roomPeers}`);
+        if (terminate) {
+            peer.socket.terminate();
+        }
 
         if (!Object.keys(this._rooms[roomKey]).length) {
             delete this._rooms[roomKey];
