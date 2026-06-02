@@ -69,12 +69,8 @@ class ServerConnection {
         ws.binaryType = 'arraybuffer';
         ws.onopen = e => {
             console.log('[闪投] 服务器已连接');
-            if (this._localIPs.length > 0) {
-                console.log('[闪投] 发送本机 IP:', this._localIPs);
-                this.send({ type: 'local-ip', ips: this._localIPs });
-            } else {
-                console.warn('[闪投] 未获取到局域网 IP，可能无法发现同局域网设备');
-            }
+            // 始终发送 local-ip 消息，让服务器决定如何处理
+            this.send({ type: 'local-ip', ips: this._localIPs });
         };
         ws.onmessage = e => this._onMessage(e.data);
         ws.onclose = e => this._onDisconnect();
@@ -84,10 +80,10 @@ class ServerConnection {
 
     _onMessage(msg) {
         msg = JSON.parse(msg);
-        console.log('WS:', msg);
+        console.log('[闪投] 收到消息:', msg.type);
         switch (msg.type) {
             case 'peers':
-                Events.fire('peers', msg.peers);
+                Events.fire('peers', msg.peers || []);
                 break;
             case 'peer-joined':
                 Events.fire('peer-joined', msg.peer);
@@ -105,7 +101,7 @@ class ServerConnection {
                 Events.fire('display-name', msg);
                 break;
             default:
-                console.error('WS: 未知消息类型', msg);
+                console.error('[闪投] 未知消息类型:', msg.type);
         }
     }
 

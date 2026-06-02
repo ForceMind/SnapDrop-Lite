@@ -532,16 +532,21 @@ fi
 info "正在构建混淆版本..."
 if [ -f "${SCRIPT_DIR}/build.sh" ]; then
     cd "$SCRIPT_DIR"
-    bash build.sh 2>&1 | grep -E "构建完成|错误" || true
-    if [ -d "${SCRIPT_DIR}/dist" ]; then
-        cp -r "${SCRIPT_DIR}/dist" "$APP_DIR/client"
-        info "已部署混淆版本"
+    # 运行构建脚本，捕获错误
+    if bash build.sh 2>&1; then
+        if [ -d "${SCRIPT_DIR}/dist" ]; then
+            cp -r "${SCRIPT_DIR}/dist/." "$APP_DIR/client/"
+            info "已部署混淆版本"
+        else
+            warn "构建完成但 dist 目录不存在，使用原始文件"
+            cp -r "${SCRIPT_DIR}/client/." "$APP_DIR/client/"
+        fi
     else
         warn "混淆构建失败，使用原始文件"
-        cp -r "${SCRIPT_DIR}/client" "$APP_DIR/"
+        cp -r "${SCRIPT_DIR}/client/." "$APP_DIR/client/"
     fi
 else
-    cp -r "${SCRIPT_DIR}/client" "$APP_DIR/"
+    cp -r "${SCRIPT_DIR}/client/." "$APP_DIR/client/"
     info "已部署原始版本"
 fi
 

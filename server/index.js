@@ -84,6 +84,8 @@ class SnapdropServer {
                     } else {
                         console.log(`[局域网IP] ${sender.name.deviceName} 房间未变: ${newRoomKey}`);
                     }
+                } else {
+                    console.log(`[局域网IP] ${sender.name.deviceName} 未获取到局域网 IP，使用公网 IP 分组`);
                 }
                 return;
         }

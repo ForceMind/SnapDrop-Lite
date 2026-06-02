@@ -1,4 +1,4 @@
-var CACHE_NAME = 'snapdrop-cache-v2.0.1';
+var CACHE_NAME = 'snapdrop-cache-v2.0.2';
 
 self.addEventListener('install', function(event) {
   console.log('[闪投] Service Worker 安装中...');

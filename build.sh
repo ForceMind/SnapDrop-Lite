@@ -21,15 +21,35 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 # 检查 terser
-if ! command -v terser &>/dev/null; then
-    echo -e "${RED}[错误] 未安装 terser，请先运行: npm install -g terser${NC}"
-    exit 1
+run_terser() {
+    if command -v terser &>/dev/null; then
+        terser "$@"
+    elif [ -f "/usr/local/lib/node_modules/.bin/terser" ]; then
+        /usr/local/lib/node_modules/.bin/terser "$@"
+    elif [ -f "/usr/lib/node_modules/.bin/terser" ]; then
+        /usr/lib/node_modules/.bin/terser "$@"
+    elif command -v npx &>/dev/null; then
+        npx terser "$@"
+    else
+        return 1
+    fi
+}
+
+# 测试 terser 是否可用
+if ! run_terser --version &>/dev/null; then
+    echo -e "${YELLOW}[提示] 未找到 terser，正在安装...${NC}"
+    npm install -g terser 2>&1 | tail -3
+    if ! run_terser --version &>/dev/null; then
+        echo -e "${RED}[错误] terser 安装失败，请手动运行: npm install -g terser${NC}"
+        exit 1
+    fi
 fi
+echo -e "  terser 版本: $(run_terser --version 2>/dev/null || echo '未知')"
 
 # 清理构建目录
 echo -e "${CYAN}[1/4] 清理构建目录...${NC}"
 rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
+mkdir -p "$BUILD_DIR/scripts"
 
 # 复制静态资源
 echo -e "${CYAN}[2/4] 复制静态资源...${NC}"
@@ -45,25 +65,23 @@ RANDOM_SUFFIX=$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n' | head -c 8)
 
 # 混淆 network.js
 echo "  混淆 network.js..."
-terser client/scripts/network.js \
+run_terser client/scripts/network.js \
     -c -m \
-    --mangle-props \
     -o "$BUILD_DIR/scripts/network.${RANDOM_SUFFIX}.js" \
     2>/dev/null || {
-    # 如果 mangle-props 失败，用简单压缩
-    terser client/scripts/network.js \
-        -c -m \
+    run_terser client/scripts/network.js \
+        -c \
         -o "$BUILD_DIR/scripts/network.${RANDOM_SUFFIX}.js"
 }
 
 # 混淆 ui.js
 echo "  混淆 ui.js..."
-terser client/scripts/ui.js \
+run_terser client/scripts/ui.js \
     -c -m \
     -o "$BUILD_DIR/scripts/ui.${RANDOM_SUFFIX}.js" \
     2>/dev/null || {
-    terser client/scripts/ui.js \
-        -c -m \
+    run_terser client/scripts/ui.js \
+        -c \
         -o "$BUILD_DIR/scripts/ui.${RANDOM_SUFFIX}.js"
 }
 
@@ -73,18 +91,18 @@ sed -i '' "s|service-worker.js|service-worker.${RANDOM_SUFFIX}.js|g" "$BUILD_DIR
 
 # 混淆 clipboard.js
 echo "  混淆 clipboard.js..."
-terser client/scripts/clipboard.js \
+run_terser client/scripts/clipboard.js \
     -c -m \
     -o "$BUILD_DIR/scripts/clipboard.${RANDOM_SUFFIX}.js" \
     2>/dev/null || {
-    terser client/scripts/clipboard.js \
-        -c -m \
+    run_terser client/scripts/clipboard.js \
+        -c \
         -o "$BUILD_DIR/scripts/clipboard.${RANDOM_SUFFIX}.js"
 }
 
 # 混淆 config.js
 echo "  混淆 config.js..."
-terser client/config.js \
+run_terser client/config.js \
     -c -m \
     -o "$BUILD_DIR/config.${RANDOM_SUFFIX}.js" \
     2>/dev/null || {
@@ -93,7 +111,7 @@ terser client/config.js \
 
 # 混淆 service-worker.js
 echo "  混淆 service-worker.js..."
-terser client/service-worker.js \
+run_terser client/service-worker.js \
     -c -m \
     -o "$BUILD_DIR/service-worker.${RANDOM_SUFFIX}.js" \
     2>/dev/null || {
@@ -105,9 +123,6 @@ cp client/styles.css "$BUILD_DIR/styles.${RANDOM_SUFFIX}.css"
 
 # 生成 index.html 并替换引用
 echo -e "${CYAN}[4/4] 生成 index.html...${NC}"
-
-# 创建 scripts 目录
-mkdir -p "$BUILD_DIR/scripts"
 
 # 读取原始 HTML 并替换引用
 sed \
@@ -142,7 +157,7 @@ echo -e "  版本号:   ${GREEN}${VERSION}${NC}"
 echo -e "  随机后缀: ${GREEN}${RANDOM_SUFFIX}${NC}"
 echo ""
 echo -e "  ${YELLOW}─── 生成的文件 ───${NC}"
-ls -la "$BUILD_DIR"/scripts/ 2>/dev/null || ls -la "$BUILD_DIR"/*.js 2>/dev/null
+ls -la "$BUILD_DIR"/scripts/ 2>/dev/null
 echo ""
 echo -e "  ${YELLOW}─── 部署命令 ───${NC}"
 echo -e "  ${GREEN}sudo bash deploy.sh${NC}"
