@@ -38,10 +38,22 @@ run_terser() {
 # 测试 terser 是否可用
 if ! run_terser --version &>/dev/null; then
     echo -e "${YELLOW}[提示] 未找到 terser，正在安装...${NC}"
-    npm install -g terser 2>&1 | tail -3
+    # 设置 npm 安装超时
+    timeout 30 npm install -g terser 2>&1 | tail -3 || true
     if ! run_terser --version &>/dev/null; then
-        echo -e "${RED}[错误] terser 安装失败，请手动运行: npm install -g terser${NC}"
-        exit 1
+        echo -e "${YELLOW}[警告] terser 安装失败，将使用原始文件${NC}"
+        # 直接复制原始文件到 dist 目录
+        mkdir -p "$BUILD_DIR/scripts"
+        cp -r client/images "$BUILD_DIR/"
+        cp -r client/sounds "$BUILD_DIR/"
+        cp client/manifest.json "$BUILD_DIR/"
+        cp client/styles.css "$BUILD_DIR/styles.css"
+        cp client/config.js "$BUILD_DIR/config.js"
+        cp client/scripts/*.js "$BUILD_DIR/scripts/"
+        cp client/service-worker.js "$BUILD_DIR/"
+        cp client/index.html "$BUILD_DIR/"
+        echo -e "${GREEN}已复制原始文件到 ${BUILD_DIR}/${NC}"
+        exit 0
     fi
 fi
 echo -e "  terser 版本: $(run_terser --version 2>/dev/null || echo '未知')"

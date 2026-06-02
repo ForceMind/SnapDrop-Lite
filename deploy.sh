@@ -532,8 +532,8 @@ fi
 info "正在构建混淆版本..."
 if [ -f "${SCRIPT_DIR}/build.sh" ]; then
     cd "$SCRIPT_DIR"
-    # 运行构建脚本，捕获错误
-    if bash build.sh 2>&1; then
+    # 运行构建脚本，设置超时 60 秒
+    if timeout 60 bash build.sh 2>&1; then
         if [ -d "${SCRIPT_DIR}/dist" ]; then
             cp -r "${SCRIPT_DIR}/dist/." "$APP_DIR/client/"
             info "已部署混淆版本"
@@ -542,7 +542,7 @@ if [ -f "${SCRIPT_DIR}/build.sh" ]; then
             cp -r "${SCRIPT_DIR}/client/." "$APP_DIR/client/"
         fi
     else
-        warn "混淆构建失败，使用原始文件"
+        warn "混淆构建失败或超时，使用原始文件"
         cp -r "${SCRIPT_DIR}/client/." "$APP_DIR/client/"
     fi
 else
