@@ -25,7 +25,37 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// 请求拦截：缓存优先，网络回退
+function cacheResponse(request, response) {
+  if (response && response.status === 200) {
+    var responseClone = response.clone();
+    caches.open(CACHE_NAME).then(function(cache) {
+      cache.put(request, responseClone);
+    });
+  }
+  return response;
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then(function(response) {
+      return cacheResponse(request, response);
+    })
+    .catch(function() {
+      return caches.match(request);
+    });
+}
+
+function cacheFirst(request) {
+  return caches.match(request)
+    .then(function(response) {
+      if (response) return response;
+      return fetch(request).then(function(response) {
+        return cacheResponse(request, response);
+      });
+    });
+}
+
+// 请求拦截：入口页面网络优先，静态资源缓存优先
 self.addEventListener('fetch', function(event) {
   // 跳过非 GET 请求
   if (event.request.method !== 'GET') return;
@@ -33,22 +63,13 @@ self.addEventListener('fetch', function(event) {
   // WebSocket 请求直接走网络
   if (event.request.url.includes('/server')) return;
 
+  var accept = event.request.headers.get('accept') || '';
+  var isNavigation = event.request.mode === 'navigate' || accept.includes('text/html');
+  var isManifest = event.request.url.includes('/manifest.json');
+
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).then(function(response) {
-          // 缓存新的请求
-          if (response && response.status === 200) {
-            var responseClone = response.clone();
-            caches.open(CACHE_NAME).then(function(cache) {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return response;
-        });
-      })
+    isNavigation || isManifest
+      ? networkFirst(event.request)
+      : cacheFirst(event.request)
   );
 });

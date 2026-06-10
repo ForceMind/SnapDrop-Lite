@@ -201,13 +201,13 @@ class SnapdropServer {
 
     _selectLocalIP(ips, fallbackIP) {
         const fallback = Peer.normalizeIP(fallbackIP);
-        if (Peer.isPrivateIP(fallback) && !Peer.isLikelyVirtualIP(fallback)) {
+        if (Peer.canUseForLanRoom(fallback)) {
             return fallback;
         }
 
         const normalized = ips
             .map(ip => Peer.normalizeIP(ip))
-            .filter(ip => !!ip && Peer.isPrivateIP(ip) && !Peer.isLikelyVirtualIP(ip));
+            .filter(ip => !!ip && Peer.canUseForLanRoom(ip));
 
         // If the server only sees localhost, use the browser-reported LAN IP as a dev fallback.
         if (fallback === '127.0.0.1') {
@@ -224,22 +224,11 @@ class SnapdropServer {
     _getRoomKey(ip) {
         ip = Peer.normalizeIP(ip);
         if (!this._isLanMode()) return ip;
-        return Peer.isPrivateIP(ip) ? this._getSubnet(ip) : ip;
+        return Peer.canUseForLanRoom(ip) ? this._getSubnet(ip) : ip;
     }
 
     _getSubnet(ip) {
-        ip = Peer.normalizeIP(ip);
-        if (ip.includes('.')) {
-            const parts = ip.split('.');
-            if (parts.length === 4) {
-                return parts.slice(0, 3).join('.') + '.0/24';
-            }
-        }
-        if (ip.includes(':')) {
-            const parts = ip.split(':');
-            return parts.slice(0, 4).join(':') + '::/64';
-        }
-        return ip;
+        return Peer.getSubnet(ip);
     }
 }
 
@@ -265,24 +254,14 @@ class Peer {
         }
         this.ip = Peer.normalizeIP(this.ip);
 
-        // 局域网模式只对私有地址按子网分组；公网地址按精确 IP 分组。
-        this.roomKey = process.env.LAN_MODE === 'false' || !Peer.isPrivateIP(this.ip)
+        // 局域网模式按 IPv4 私网 /24 或 IPv6 /64 分组；公网模式按精确 IP 分组。
+        this.roomKey = process.env.LAN_MODE === 'false' || !Peer.canUseForLanRoom(this.ip)
             ? this.ip
             : this._getSubnet(this.ip);
     }
 
     _getSubnet(ip) {
-        if (ip.includes('.')) {
-            const parts = ip.split('.');
-            if (parts.length === 4) {
-                return parts.slice(0, 3).join('.') + '.0/24';
-            }
-        }
-        if (ip.includes(':')) {
-            const parts = ip.split(':');
-            return parts.slice(0, 4).join(':') + '::/64';
-        }
-        return ip;
+        return Peer.getSubnet(ip);
     }
 
     _setPeerId(request) {
@@ -372,6 +351,7 @@ class Peer {
 
     static normalizeIP(ip) {
         if (!ip) return '';
+        ip = ip.toLowerCase();
         if (ip === '::1') return '127.0.0.1';
         if (ip.startsWith('::ffff:')) return ip.substring(7);
         return ip;
@@ -391,6 +371,47 @@ class Peer {
     static isLikelyVirtualIP(ip) {
         ip = Peer.normalizeIP(ip);
         return /^172\.(1[6-9]|2\d|3[01])\.0\.1$/.test(ip);
+    }
+
+    static isUsableIPv6ForLan(ip) {
+        ip = Peer.normalizeIP(ip);
+        return ip.includes(':') && !ip.startsWith('fe80:') && ip !== '::';
+    }
+
+    static canUseForLanRoom(ip) {
+        ip = Peer.normalizeIP(ip);
+        return (Peer.isPrivateIP(ip) && !Peer.isLikelyVirtualIP(ip)) || Peer.isUsableIPv6ForLan(ip);
+    }
+
+    static getSubnet(ip) {
+        ip = Peer.normalizeIP(ip);
+        if (ip.includes('.')) {
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                return parts.slice(0, 3).join('.') + '.0/24';
+            }
+        }
+        if (ip.includes(':')) {
+            const parts = Peer.expandIPv6(ip);
+            if (parts.length >= 4) {
+                return parts.slice(0, 4).join(':') + '::/64';
+            }
+        }
+        return ip;
+    }
+
+    static expandIPv6(ip) {
+        ip = Peer.normalizeIP(ip);
+        const pieces = ip.split('::');
+        if (pieces.length === 1) return ip.split(':').filter(part => part.length);
+
+        const left = pieces[0] ? pieces[0].split(':') : [];
+        const right = pieces[1] ? pieces[1].split(':') : [];
+        const missing = 8 - left.length - right.length;
+        return left
+            .concat(Array(Math.max(missing, 0)).fill('0'))
+            .concat(right)
+            .map(part => part || '0');
     }
 }
 
