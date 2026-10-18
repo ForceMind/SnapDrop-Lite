@@ -225,6 +225,41 @@ class Dialog {
     }
 }
 
+class FileOfferDialog extends Dialog {
+    constructor() {
+        super('fileOfferDialog');
+        this._queue = [];
+        this._active = null;
+        this._name = $('offerFileName');
+        this._size = $('offerFileSize');
+        Events.on('file-offer', e => {
+            this._queue.push(e.detail);
+            this._showNext();
+        });
+        $('acceptFileOffer').addEventListener('click', () => this._decide(true));
+        $('rejectFileOffer').addEventListener('click', () => this._decide(false));
+    }
+
+    _showNext() {
+        if (this._active || !this._queue.length) return;
+        this._active = this._queue.shift();
+        this._name.textContent = this._active.name;
+        this._size.textContent = this._active.size < 1024 ?
+            this._active.size + ' B' :
+            (this._active.size / (1024 * 1024)).toFixed(2) + ' MB';
+        this.show();
+    }
+
+    _decide(accept) {
+        if (!this._active) return;
+        const offer = this._active;
+        this._active = null;
+        Events.fire(accept ? 'file-accepted' : 'file-rejected', { from: offer.sender });
+        this.hide();
+        if (this._queue.length) setTimeout(() => this._showNext(), 220);
+    }
+}
+
 class ReceiveDialog extends Dialog {
 
     constructor() {
@@ -531,6 +566,7 @@ class Snapdrop {
         const peers = new PeersManager(this.server);
         const peersUI = new PeersUI();
         Events.on('load', e => {
+            const fileOfferDialog = new FileOfferDialog();
             const receiveDialog = new ReceiveDialog();
             const sendTextDialog = new SendTextDialog();
             const receiveTextDialog = new ReceiveTextDialog();
