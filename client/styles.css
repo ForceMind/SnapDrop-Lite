@@ -1003,3 +1003,52 @@ x-dialog .button { border-radius: 10px; }
 #fileOfferDialog .offer-file strong { max-width: 280px; font-size: 13px; font-weight: 780; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #fileOfferDialog .offer-file div span { font-size: 11px; color: #718477; }
 #fileOfferDialog .offer-accept { color: #fff; background: #236b53; border-radius: 10px; }
+
+/* Dark system appearance retains the same mint signature. */
+@media (prefers-color-scheme: dark) {
+    :root { --ink: #ebf7eb; --muted: #9eb4a3; --card: #192922; --paper: #15241d; --soft-surface: #223b2c; --line: #365343; --text-color: #e8f5ea; --bg-color: #192922; --bg-color-secondary: #293e31; --primary-color: #a4e1b4; }
+    body { background: #0c1914; color: var(--ink); }
+    .app-shell { background: radial-gradient(ellipse at 8% 12%, #1a3529, transparent 43%), radial-gradient(ellipse at 91% 84%, #183328, transparent 36%), #102019; }
+    .app-shell::after { background-image: radial-gradient(#537866 0.6px, transparent 0.6px); }
+    .brand { color: #eff8ef; }
+    .brand-symbol { background: #b6e99c; color: #164b39; box-shadow: 0 5px 20px #050d0860; }
+    .brand-identity small, .section-eyebrow { color: #91b39c; }
+    .eyebrow { color: #a2c4a9; }.eyebrow-line { background: #487456; }
+    .hero-subtitle, .trust-strip small { color: #a1bca8; }
+    .hero-orbit { border-color: #466f51; }
+    .node-b { background: #b6e99c; }
+    .orbit-tag, .signal-indicator, .toolbar-icon { background: #233d2e; color: #bddbc6; border-color: #315241; box-shadow: none; }
+    .signal-indicator[data-state="connected"] .signal-led { box-shadow: 0 0 0 4px #204d36; }
+    .workspace-card { background: #1a2b22; border-color: #31503a; box-shadow: 0 28px 80px #02090555; }
+    .workspace-count { border-color: #345541; color: #b0c5b4; }
+    .invite-panel { background: #21392b; border-color: #2d5138; }
+    .invite-panel p, .room-status { color: #9cb7a2 !important; }
+    .invite-panel h3 { color: #eff8eb; }
+    .step-token { background: #a0d59f; color: #173d29; }
+    .step-token-secondary { background: #315443; color: #c7f1c7; }
+    .primary-action { background: #b4e49c; color: #193f2c; box-shadow: none; }
+    .primary-action:hover { background: #cef5b9; }
+    .invite-divider { color: #9bb2a2; }
+    .invite-divider::before, .invite-divider::after { background: #42664c; }
+    .join-row input, .invite-url input { background: #14271d; color: #e1f1e2; border-color: #46634c; }
+    .join-row input::placeholder { color: #809b86; }
+    .join-action { background: #385a40; color: #eaf6e9; }
+    .invite-created { background: #254b33; border-color: #487958; }
+    .invite-created p { color: #b0d6b5 !important; }
+    .invite-url button { background: #a8db9f; color: #183f2b; }
+    .devices-count, .devices-stage x-no-peers p { color: #9db5a2; }
+    .devices-stage { background: #182c20; border-color: #3e6349; }
+    .devices-stage x-no-peers h2 { color: #e0f1e2; }
+    .empty-glyph { background: #315640; color: #b3e4b6; }
+    .devices-stage x-peer { background: #243a2b; border-color: #365841; }
+    .devices-stage x-peer x-icon { background: #3a6045; color: #c3edc5; }
+    .devices-stage x-peer .name { color: #e8f4e7; }
+    .app-shell .site-footer { border-top-color: #2b4936; color: #a0b4a5; }
+    .local-device { color: #bad3ba; }
+    .footer-separator { color: #516d59; }
+    x-dialog x-paper { background: #203126; color: #eaf7e9; }
+    #fileOfferDialog .offer-file { background: #233b2c; border-color: #365a41; }
+    #fileOfferDialog .offer-file-icon { background: #365743; color: #d1f5cb; }
+    #fileOfferDialog .offer-explainer { color: #b4c9b6; }
+    #fileOfferDialog .offer-accept { background: #a9db9a; color: #173e27; }
+}
