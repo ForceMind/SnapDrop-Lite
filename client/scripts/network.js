@@ -121,47 +121,73 @@ class ServerConnection {
 
     constructor() {
         this._localIPs = [];
+        // A tab-scoped identity prevents two tabs from impersonating the same peer.
         this._peerId = this._getOrCreatePeerId();
+        this._desiredRoomId = null;
+        this._connecting = false;
+        this._closing = false;
         this._connect();
-        Events.on('beforeunload', e => this._disconnect());
-        Events.on('pagehide', e => this._disconnect());
-        document.addEventListener('visibilitychange', e => this._onVisibilityChange());
+        Events.on('beforeunload', () => this._disconnect());
+        Events.on('pagehide', () => this._disconnect());
+        document.addEventListener('visibilitychange', () => this._onVisibilityChange());
     }
 
     _getOrCreatePeerId() {
-        let peerId = localStorage.getItem('snapdrop_peer_id');
-        if (!peerId) {
-            peerId = 'peer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('snapdrop_peer_id', peerId);
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
         }
-        return peerId;
+        if (!window.crypto || !window.crypto.getRandomValues) {
+            throw new Error('此浏览器缺少安全随机数能力，请使用 HTTPS');
+        }
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        return Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
     }
 
     async _connect() {
         clearTimeout(this._reconnectTimer);
-        if (this._isConnected() || this._isConnecting()) return;
+        if (this._closing || this._connecting || this._isConnected() || this._isConnecting()) return;
+        this._connecting = true;
+        Events.fire('signal-state', { state: 'connecting' });
 
-        // 获取局域网 IP
-        this._localIPs = await getLocalIPs();
-
-        // 在 URL 中传递 peerId
-        const wsUrl = this._endpoint() + '?peerId=' + encodeURIComponent(this._peerId);
-        const ws = new WebSocket(wsUrl);
-        ws.binaryType = 'arraybuffer';
-        ws.onopen = e => {
-            console.log('[闪投] 服务器已连接, peerId:', this._peerId);
-            // 始终发送 local-ip 消息，让服务器决定如何处理
-            this.send({ type: 'local-ip', ips: this._localIPs });
-        };
-        ws.onmessage = e => this._onMessage(e.data);
-        ws.onclose = e => this._onDisconnect();
-        ws.onerror = e => console.error(e);
-        this._socket = ws;
+        try {
+            this._localIPs = await getLocalIPs();
+            if (this._closing) return;
+            const wsUrl = this._endpoint() + '?peerId=' + encodeURIComponent(this._peerId);
+            const ws = new WebSocket(wsUrl);
+            ws.onopen = () => {
+                if (this._closing || this._socket !== ws) return;
+                Events.fire('signal-state', { state: 'connected' });
+                this.send({ type: 'local-ip', ips: this._localIPs });
+                // Joining before WS OPEN was previously silently dropped.
+                if (this._desiredRoomId) {
+                    this.send({ type: 'join-room', roomId: this._desiredRoomId });
+                }
+            };
+            ws.onmessage = e => this._onMessage(e.data);
+            ws.onclose = () => {
+                if (this._socket !== ws || this._closing) return;
+                this._socket = null;
+                this._onDisconnect();
+            };
+            ws.onerror = e => console.error('[闪投] 信令连接错误', e);
+            this._socket = ws;
+        } catch (error) {
+            console.error('[闪投] 信令连接失败', error);
+            this._onDisconnect();
+        } finally {
+            this._connecting = false;
+        }
     }
 
-    _onMessage(msg) {
-        msg = JSON.parse(msg);
-        console.log('[闪投] 收到消息:', msg.type);
+    _onMessage(data) {
+        let msg;
+        try {
+            msg = JSON.parse(data);
+        } catch (error) {
+            console.warn('[闪投] 无效的信令消息');
+            return;
+        }
         switch (msg.type) {
             case 'peers':
                 Events.fire('peers', msg.peers || []);
@@ -175,6 +201,12 @@ class ServerConnection {
             case 'signal':
                 Events.fire('signal', msg);
                 break;
+            case 'room-joined':
+                Events.fire('room-joined', msg);
+                break;
+            case 'room-error':
+                Events.fire('room-error', msg);
+                break;
             case 'ping':
                 this.send({ type: 'pong' });
                 break;
@@ -182,19 +214,23 @@ class ServerConnection {
                 Events.fire('display-name', msg);
                 break;
             default:
-                console.error('[闪投] 未知消息类型:', msg.type);
+                console.warn('[闪投] 未识别的消息类型:', msg.type);
         }
     }
 
     send(message) {
-        if (!this._isConnected()) return;
+        if (!this._isConnected()) return false;
         this._socket.send(JSON.stringify(message));
+        return true;
     }
 
     joinRoom(roomId) {
-        if (!roomId) return;
-        this.send({ type: 'join-room', roomId: roomId });
-        console.log('[闪投] 加入房间:', roomId);
+        if (!roomId || typeof roomId !== 'string') return false;
+        this._desiredRoomId = roomId.trim();
+        if (this._isConnected()) {
+            this.send({ type: 'join-room', roomId: this._desiredRoomId });
+        } // Otherwise it is sent automatically on ws.open / reconnect.
+        return true;
     }
 
     _endpoint() {
@@ -203,29 +239,34 @@ class ServerConnection {
     }
 
     _disconnect() {
-        this.send({ type: 'disconnect' });
-        this._socket.onclose = null;
-        this._socket.close();
+        this._closing = true;
+        clearTimeout(this._reconnectTimer);
+        const ws = this._socket;
+        this._socket = null;
+        if (!ws) return;
+        ws.onclose = null;
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'disconnect' }));
+        ws.close();
     }
 
     _onDisconnect() {
-        console.log('WS: 服务器已断开');
-        Events.fire('notify-user', '连接已断开，5秒后重试...');
+        Events.fire('signal-state', { state: 'offline' });
         clearTimeout(this._reconnectTimer);
-        this._reconnectTimer = setTimeout(_ => this._connect(), 5000);
+        if (!this._closing) {
+            this._reconnectTimer = setTimeout(() => this._connect(), 5000);
+        }
     }
 
     _onVisibilityChange() {
-        if (document.hidden) return;
-        this._connect();
+        if (!document.hidden) this._connect();
     }
 
     _isConnected() {
-        return this._socket && this._socket.readyState === this._socket.OPEN;
+        return this._socket && this._socket.readyState === WebSocket.OPEN;
     }
 
     _isConnecting() {
-        return this._socket && this._socket.readyState === this._socket.CONNECTING;
+        return this._connecting || (this._socket && this._socket.readyState === WebSocket.CONNECTING);
     }
 }
 
