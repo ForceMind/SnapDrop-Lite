@@ -992,3 +992,14 @@ x-dialog .button { border-radius: 10px; }
 @media (prefers-reduced-motion: reduce) {
     .primary-action, .devices-stage x-peer, .intro-pane * { animation: none !important; transition: none !important; }
 }
+
+/* Receiver consent: file bytes must not flow before approval. */
+#fileOfferDialog .offer-mark { width: 44px; height: 44px; border-radius: 15px; background: #e7f7e4; color: #2c7854; font-size: 26px; font-weight: 600; display: grid; place-items: center; margin-bottom: 15px; }
+#fileOfferDialog h3 { font-size: 19px; letter-spacing: -.025em; margin: 5px 0 9px; }
+#fileOfferDialog .offer-explainer { color: #708579; font-size: 13px; line-height: 1.75; }
+#fileOfferDialog .offer-file { display: flex; align-items: center; gap: 12px; border: 1px solid #e0eae1; border-radius: 14px; background: #f7faf6; margin: 20px 0 8px; padding: 14px; min-width: 0; }
+#fileOfferDialog .offer-file-icon { width: 40px; height: 40px; display: grid; place-items: center; font-size: 22px; background: #e8f3e8; color: #3a7c5c; border-radius: 10px; }
+#fileOfferDialog .offer-file div { display: grid; gap: 4px; min-width: 0; }
+#fileOfferDialog .offer-file strong { max-width: 280px; font-size: 13px; font-weight: 780; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#fileOfferDialog .offer-file div span { font-size: 11px; color: #718477; }
+#fileOfferDialog .offer-accept { color: #fff; background: #236b53; border-radius: 10px; }
