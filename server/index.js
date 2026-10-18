@@ -27,7 +27,13 @@ class SnapdropServer {
 
     _onConnection(peer) {
         this._joinRoom(peer);
-        peer.socket.on('message', message => this._onMessage(peer, message));
+        peer.socket.on('message', (data, isBinary) => {
+            // ws v7 delivers text as string; newer versions may provide a Buffer + isBinary flag.
+            // Binary messages are forbidden because this socket is for signaling only.
+            if (isBinary === true || (isBinary === undefined && typeof data !== 'string')) return;
+            const message = typeof data === 'string' ? data : data.toString('utf8');
+            this._onMessage(peer, message);
+        });
         peer.socket.on('error', console.error);
         this._keepAlive(peer);
         peer.socket.on('close', () => this._leaveRoom(peer, false));
