@@ -1007,7 +1007,7 @@ x-dialog .button { border-radius: 10px; }
 /* Dark system appearance retains the same mint signature. */
 @media (prefers-color-scheme: dark) {
     :root { --ink: #ebf7eb; --muted: #9eb4a3; --card: #192922; --paper: #15241d; --soft-surface: #223b2c; --line: #365343; --text-color: #e8f5ea; --bg-color: #192922; --bg-color-secondary: #293e31; --primary-color: #a4e1b4; }
-    body { background: #0c1914; color: var(--ink); }
+    body { background: #0c1914; color: var(--ink); --text-color: #e8f5ea; --bg-color: #192922; --bg-color-secondary: #293e31; }
     .app-shell { background: radial-gradient(ellipse at 8% 12%, #1a3529, transparent 43%), radial-gradient(ellipse at 91% 84%, #183328, transparent 36%), #102019; }
     .app-shell::after { background-image: radial-gradient(#537866 0.6px, transparent 0.6px); }
     .brand { color: #eff8ef; }
