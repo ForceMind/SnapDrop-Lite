@@ -403,7 +403,7 @@ class Peer {
                 this._onFileRejected(message);
                 break;
             case 'partition':
-                this._onReceivedPartitionEnd(message);
+                this._onReceivedPartitionEnd(message.offset);
                 break;
             case 'partition-received':
                 this._sendNextPartition();
@@ -891,7 +891,7 @@ class FileChunker {
 
     repeatPartition() {
         this._offset -= this._partitionSize;
-        this._nextPartition();
+        this.nextPartition();
     }
 
     _isPartitionEnd() {
