@@ -5,16 +5,16 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <!-- Web App Config -->
-    <title>闪投 - 局域网文件传输</title>
+    <title>闪投 — 直接分享，无需中转</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#3367d6">
+    <meta name="theme-color" content="#f5f7f5">
     <meta name="color-scheme" content="dark light">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="闪投">
     <!-- Descriptions -->
-    <meta name="description" content="闪投 - 局域网文件传输工具，无需安装，打开即用">
-    <meta name="version" content="2.1.5">
+    <meta name="description" content="闪投 - 设备直连文件传输，无需云端存储">
+    <meta name="version" content="3.0.0-dev">
     <meta name="keywords" content="文件传输, 局域网, 分享">
     <meta name="author" content="Snapdrop Lite">
     <meta property="og:title" content="闪投 - 局域网文件传输">
@@ -34,50 +34,92 @@
     <meta name="twitter:image" content="">
     <meta property="og:image" content="">
     <!-- Resources -->
-    <link rel="stylesheet" type="text/css" href="styles.css?v=2.1.5">
+    <link rel="stylesheet" type="text/css" href="styles.css?v=3.0.0">
     <link rel="manifest" href="manifest.json?v=2.1.5">
 </head>
 
 <body translate="no">
-    <header class="row-reverse">
-        <a href="#about" class="icon-button" title="关于闪投">
-            <svg class="icon">
-                <use xlink:href="#info-outline" />
-            </svg>
-        </a>
-        <a href="#" id="notification" class="icon-button" title="开启通知" hidden>
-            <svg class="icon">
-                <use xlink:href="#notifications" />
-            </svg>
-        </a>
-        <a href="#" id="install" class="icon-button" title="安装到桌面" hidden>
-            <svg class="icon">
-                <use xlink:href="#homescreen" />
-            </svg>
-        </a>
-    </header>
-    <!-- Peers -->
-    <x-peers class="center"></x-peers>
-    <x-no-peers>
-        <h2>在其他设备上打开闪投即可发送文件</h2>
-    </x-no-peers>
-    <x-instructions desktop="点击发送文件，右键发送消息" mobile="点击发送文件，长按发送消息"></x-instructions>
-    <!-- Footer -->
-    <footer class="column">
-        <svg class="icon logo">
-            <use xlink:href="#wifi-tethering" />
-        </svg>
-        <div id="displayName" placeholder="同一局域网的设备自动发现"></div>
-        <div class="font-body2">同一网络下的设备可以互相发现</div>
-        <div class="room-section" style="margin-top: 12px; display: flex; align-items: center; justify-content: center;">
-            <input type="text" id="roomInput" placeholder="输入房间号（可选）" maxlength="20"
-                   style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; width: 160px; font-size: 13px; text-align: center;">
-            <button id="roomBtn" class="button" style="padding: 6px 12px; margin-left: 8px; font-size: 13px; min-width: auto; display: none;">加入</button>
-        </div>
-        <div class="font-body2" style="font-size: 11px; opacity: 0.6; margin-top: 4px;">
-            无法自动发现时，输入相同房间号即可连接
-        </div>
-    </footer>
+    <div class="app-shell">
+        <header class="topbar" aria-label="站点导航">
+            <a class="brand" href="/" aria-label="闪投首页">
+                <span class="brand-symbol" aria-hidden="true">
+                    <svg viewBox="0 0 40 40" fill="none">
+                        <rect x="4.5" y="9" width="12" height="22" rx="5" stroke="currentColor" stroke-width="2.6"/>
+                        <rect x="23.5" y="9" width="12" height="22" rx="5" stroke="currentColor" stroke-width="2.6"/>
+                        <path d="M12 16H28M28 16l-5-5M28 16l-5 5M28 24H12M12 24l5-5M12 24l5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <span class="brand-identity">
+                    <strong>闪投</strong><small>DIRECT FILE TRANSFER</small>
+                </span>
+            </a>
+            <div class="topbar-right">
+                <span id="signalStatus" class="signal-indicator" role="status"><span class="signal-led"></span><span class="signal-label">正在连接信令服务</span></span>
+                <a href="#about" class="icon-button toolbar-icon" title="关于与使用帮助" aria-label="关于与使用帮助"><svg class="icon"><use xlink:href="#info-outline" /></svg></a>
+                <a href="#" id="notification" class="icon-button toolbar-icon" title="开启通知" hidden><svg class="icon"><use xlink:href="#notifications" /></svg></a>
+                <a href="#" id="install" class="icon-button toolbar-icon" title="安装到桌面" hidden><svg class="icon"><use xlink:href="#homescreen" /></svg></a>
+            </div>
+        </header>
+
+        <main class="workspace" id="main">
+            <section class="intro-pane" aria-labelledby="heroTitle">
+                <div class="eyebrow"><span class="eyebrow-dot"></span> PRIVATE BY CONNECTION <span class="eyebrow-line"></span> 01 / 02</div>
+                <h1 id="heroTitle">分享不必<br>绕远路<span class="heading-period">.</span></h1>
+                <p class="hero-subtitle">设备直接连接，文件直接抵达。无论在同一房间，还是相隔千里，都优先尝试点对点传输。</p>
+                <div class="hero-art" aria-hidden="true">
+                    <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+                    <div class="hero-node node-a"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8m-4-3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+                    <div class="hero-link"><span></span><i></i><span></span></div>
+                    <div class="hero-node node-b"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="17.5" r=".9" fill="currentColor"/></svg></div>
+                    <div class="orbit-tag tag-top">P2P / WEBRTC</div><div class="orbit-tag tag-bottom">NO FILE RELAY</div>
+                </div>
+                <div class="trust-strip">
+                    <div><span class="mini-icon">↗</span><strong>端到端直传</strong><small>数据不经过我们的服务器</small></div>
+                    <div><span class="mini-icon">◎</span><strong>无需安装</strong><small>打开网页即可使用</small></div>
+                </div>
+            </section>
+
+            <section class="workspace-card" aria-label="文件传输工作台">
+                <div class="card-heading">
+                    <div><div class="section-eyebrow">TRANSFER WORKSPACE</div><h2>开始连接</h2></div>
+                    <span class="workspace-count">WEB / PWA</span>
+                </div>
+
+                <div class="invite-panel">
+                    <div class="invite-panel-title"><span class="step-token">01</span><div><h3>跨网络配对</h3><p>生成邀请链接，发送给另一台设备</p></div></div>
+                    <button id="createRoomBtn" class="primary-action" type="button"><span>创建邀请链接</span><span aria-hidden="true">↗</span></button>
+                    <div class="invite-divider"><span>或者加入其他设备</span></div>
+                    <div class="join-row">
+                        <input type="text" id="roomInput" placeholder="粘贴邀请链接或输入配对码" maxlength="512" aria-label="邀请链接或配对码" autocomplete="off" spellcheck="false">
+                        <button id="roomBtn" class="join-action" type="button" hidden>加入</button>
+                    </div>
+                    <div class="invite-created" id="inviteCreated" hidden>
+                        <div><strong>邀请已生成</strong><p>将下方链接发送给接收方</p></div>
+                        <div class="invite-url"><input id="inviteUrl" aria-label="邀请链接" type="text" readonly><button id="copyInviteBtn" type="button">复制</button></div>
+                    </div>
+                    <p id="roomStatus" class="room-status" role="status" aria-live="polite">房间尚未建立 · 仅连接双方直接传输文件</p>
+                </div>
+
+                <div class="devices-section">
+                    <div class="devices-heading"><div><span class="step-token step-token-secondary">02</span><strong>选择要发送的设备</strong></div><span class="devices-count" id="peerCount">0 台设备</span></div>
+                    <div class="devices-stage">
+                        <x-peers class="center" aria-label="已发现设备"></x-peers>
+                        <x-no-peers>
+                            <span class="empty-glyph" aria-hidden="true">⌁</span>
+                            <h2>还没有发现其他设备</h2>
+                            <p>在另一台设备打开网页并加入同一邀请，即可在这里选择设备发送文件。</p>
+                        </x-no-peers>
+                    </div>
+                    <x-instructions desktop="点击设备发送文件 · 右键发送文字" mobile="点击设备发送文件 · 长按发送文字"></x-instructions>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div id="displayName" class="local-device" placeholder="正在识别当前设备"></div>
+            <div class="footer-note"><span class="privacy-dot"></span> 不上传文件 · 不使用服务器中转 <span class="footer-separator">/</span> 受限网络可能无法直连</div>
+        </footer>
+    </div>
     <!-- Receive Dialog -->
     <x-dialog id="receiveDialog">
         <x-background class="full center">
@@ -198,9 +240,9 @@
         </symbol>
     </svg>
     <!-- Scripts -->
-    <script src="config.js?v=2.1.5"></script>
-    <script src="scripts/network.js?v=2.1.5"></script>
-    <script src="scripts/ui.js?v=2.1.5"></script>
+    <script src="config.js?v=3.0.0"></script>
+    <script src="scripts/network.js?v=3.0.0"></script>
+    <script src="scripts/ui.js?v=3.0.0"></script>
     <script src="scripts/clipboard.js?v=2.1.5" async></script>
     <!-- Sounds -->
     <audio id="blop" autobuffer="true">
