@@ -277,6 +277,9 @@ class Peer {
         this._peerId = peerId;
         this._filesQueue = [];
         this._busy = false;
+        this._incomingOffer = null;
+        this._pendingOutgoingFile = null;
+        this._offerTimeout = null;
     }
 
     sendJSON(message) {
@@ -299,16 +302,60 @@ class Peer {
     }
 
     _sendFile(file) {
+        this._pendingOutgoingFile = file;
         this.sendJSON({
             type: 'header',
             name: file.name,
             mime: file.type,
             size: file.size
         });
+        clearTimeout(this._offerTimeout);
+        this._offerTimeout = setTimeout(() => {
+            if (this._pendingOutgoingFile !== file) return;
+            this._pendingOutgoingFile = null;
+            this._busy = false;
+            Events.fire('notify-user', '接收方尚未确认，已取消当前文件');
+            this._dequeueFile();
+        }, 120000);
+    }
+
+    _onFileAccepted() {
+        const file = this._pendingOutgoingFile;
+        if (!file) return;
+        this._pendingOutgoingFile = null;
+        clearTimeout(this._offerTimeout);
+        if (file.size === 0) return; // Receiver confirms an empty file immediately.
         this._chunker = new FileChunker(file,
             chunk => this._send(chunk),
             offset => this._onPartitionEnd(offset));
         this._chunker.nextPartition();
+    }
+
+    _onFileRejected() {
+        if (!this._pendingOutgoingFile) return;
+        this._pendingOutgoingFile = null;
+        clearTimeout(this._offerTimeout);
+        this._busy = false;
+        Events.fire('notify-user', '接收方已拒绝文件');
+        this._dequeueFile();
+    }
+
+    acceptIncoming() {
+        if (!this._incomingOffer) return;
+        const meta = this._incomingOffer;
+        this._incomingOffer = null;
+        this._lastProgress = 0;
+        this._digester = new FileDigester(meta, file => this._onFileReceived(file));
+        this.sendJSON({ type: 'header-accepted' });
+        if (meta.size === 0) {
+            this._onFileReceived({ name: meta.name, size: 0, mime: meta.mime, blob: new Blob([]) });
+        }
+    }
+
+    rejectIncoming() {
+        if (!this._incomingOffer) return;
+        this._incomingOffer = null;
+        this.sendJSON({ type: 'header-rejected' });
     }
 
     _onPartitionEnd(offset) {
@@ -339,6 +386,12 @@ class Peer {
             case 'header':
                 this._onFileHeader(message);
                 break;
+            case 'header-accepted':
+                this._onFileAccepted();
+                break;
+            case 'header-rejected':
+                this._onFileRejected();
+                break;
             case 'partition':
                 this._onReceivedPartitionEnd(message);
                 break;
@@ -358,17 +411,27 @@ class Peer {
     }
 
     _onFileHeader(header) {
-        this._lastProgress = 0;
-        this._digester = new FileDigester({
+        // Never accept file bytes merely because another device joined our room.
+        if (this._incomingOffer || this._digester ||
+            typeof header.name !== 'string' || header.name.length > 255 ||
+            !Number.isSafeInteger(header.size) || header.size < 0) {
+            this.sendJSON({ type: 'header-rejected' });
+            return;
+        }
+        this._incomingOffer = {
             name: header.name,
-            mime: header.mime,
+            mime: typeof header.mime === 'string' ? header.mime : 'application/octet-stream',
             size: header.size
-        }, file => this._onFileReceived(file));
+        };
+        Events.fire('file-offer', {
+            sender: this._peerId,
+            name: header.name,
+            size: header.size
+        });
     }
 
     _onChunkReceived(chunk) {
-        if(!chunk.byteLength) return;
-
+        if (!chunk || !chunk.byteLength || !this._digester) return;
         this._digester.unchunk(chunk);
         const progress = this._digester.progress;
         this._onDownloadProgress(progress);
@@ -384,12 +447,15 @@ class Peer {
     }
 
     _onFileReceived(proxyFile) {
+        this._digester = null;
         Events.fire('file-received', proxyFile);
         this.sendJSON({ type: 'transfer-complete' });
     }
 
     _onTransferCompleted() {
         this._onDownloadProgress(1);
+        clearTimeout(this._offerTimeout);
+        this._chunker = null;
         this._reader = null;
         this._busy = false;
         this._dequeueFile();
@@ -667,6 +733,10 @@ class RTCPeer extends Peer {
     }
 
     close() {
+        clearTimeout(this._offerTimeout);
+        this._incomingOffer = null;
+        this._pendingOutgoingFile = null;
+        this._digester = null;
         this._pendingMessages = [];
         this._filesQueue = [];
         this._closeConnection(true);
@@ -690,6 +760,8 @@ class PeersManager {
         Events.on('peers', e => this._onPeers(e.detail));
         Events.on('peer-joined', e => this._onPeerJoined(e.detail));
         Events.on('files-selected', e => this._onFilesSelected(e.detail));
+        Events.on('file-accepted', e => this._onFileAccepted(e.detail));
+        Events.on('file-rejected', e => this._onFileRejected(e.detail));
         Events.on('send-text', e => this._onSendText(e.detail));
         Events.on('peer-left', e => this._onPeerLeft(e.detail));
     }
@@ -735,6 +807,16 @@ class PeersManager {
             return;
         }
         this.peers[message.to].sendFiles(message.files);
+    }
+
+    _onFileAccepted(message) {
+        const peer = this.peers[message.from];
+        if (peer) peer.acceptIncoming();
+    }
+
+    _onFileRejected(message) {
+        const peer = this.peers[message.from];
+        if (peer) peer.rejectIncoming();
     }
 
     _onSendText(message) {
