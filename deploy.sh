@@ -301,6 +301,8 @@ RestartSec=3
 Environment=PORT=${WS_PORT}
 Environment=NODE_ENV=production
 Environment=LAN_MODE=${LAN_MODE}
+Environment=WS_HOST=127.0.0.1
+Environment=TRUST_PROXY=true
 
 [Install]
 WantedBy=multi-user.target
