@@ -16,7 +16,7 @@ class SnapdropServer {
 
     constructor(port) {
         const WebSocket = require('ws');
-        this._wss = new WebSocket.Server({ port: port });
+        this._wss = new WebSocket.Server({ port: port, maxPayload: 64 * 1024 });
         this._wss.on('connection', (socket, request) => this._onConnection(new Peer(socket, request)));
         this._wss.on('headers', (headers, response) => this._onHeaders(headers, response));
 
@@ -30,6 +30,7 @@ class SnapdropServer {
         peer.socket.on('message', message => this._onMessage(peer, message));
         peer.socket.on('error', console.error);
         this._keepAlive(peer);
+        peer.socket.on('close', () => this._leaveRoom(peer, false));
 
         // 记录连接日志
         const roomPeers = this._rooms[peer.roomKey] ? Object.keys(this._rooms[peer.roomKey]).length : 0;
@@ -52,11 +53,15 @@ class SnapdropServer {
     }
 
     _onMessage(sender, message) {
+        if (typeof message !== 'string' || message.length > 64 * 1024) return;
         try {
             message = JSON.parse(message);
         } catch (e) {
             return;
         }
+        if (!message || typeof message !== 'object' || Array.isArray(message)) return;
+        // Prevent the signaling server from becoming a general-purpose file relay.
+        if (!['disconnect', 'pong', 'local-ip', 'join-room', 'signal'].includes(message.type)) return;
 
         switch (message.type) {
             case 'disconnect':
@@ -76,7 +81,7 @@ class SnapdropServer {
                     // 优先使用 IPv4 局域网地址（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
                     const localIP = this._selectLocalIP(message.ips, sender.ip);
 
-                    const newRoomKey = this._getRoomKey(localIP);
+                    const newRoomKey = this._getRoomKey(localIP, sender.id);
                     if (sender.roomKey !== newRoomKey) {
                         console.log(`[局域网IP] ${sender.name.deviceName} 切换房间: ${sender.roomKey} -> ${newRoomKey}`);
                         this._leaveRoom(sender, false); // 不终止连接
@@ -93,29 +98,65 @@ class SnapdropServer {
                 return;
             case 'join-room':
                 // 用户手动加入房间
-                if (message.roomId) {
-                    const newRoom = 'room:' + message.roomId;
-                    if (sender.roomKey !== newRoom) {
-                        console.log(`[房间] ${sender.name.deviceName} 加入房间: ${message.roomId}`);
-                        this._leaveRoom(sender, false); // 不终止连接
-                        sender.roomKey = newRoom;
-                        this._joinRoom(sender);
-                        this._keepAlive(sender);
-                    }
+                if (typeof message.roomId !== 'string') return;
+                const roomId = message.roomId.trim();
+                const strongRoom = /^[a-f0-9]{32}$/i.test(roomId);
+                // Support legacy local rooms in LAN mode only; public rooms require 128-bit invite IDs.
+                const oldLanRoom = this._isLanMode() && /^[a-zA-Z0-9_-]{6,64}$/.test(roomId);
+                if (!strongRoom && !oldLanRoom) {
+                    this._send(sender, { type: 'room-error', message: '邀请码无效；公网配对请使用生成的邀请链接' });
+                    return;
                 }
+                const now = Date.now();
+                if (!sender.joinWindow || now - sender.joinWindow > 60000) {
+                    sender.joinWindow = now; sender.joinAttempts = 0;
+                }
+                sender.joinAttempts++;
+                if (sender.joinAttempts > 12) {
+                    this._send(sender, { type: 'room-error', message: '尝试过于频繁，请稍后重试' });
+                    return;
+                }
+                const newRoom = 'room:' + roomId;
+                const occupants = this._rooms[newRoom] ? Object.keys(this._rooms[newRoom]).length : 0;
+                if (sender.roomKey !== newRoom && occupants >= 2) {
+                    this._send(sender, { type: 'room-error', message: '该邀请房间已满' });
+                    return;
+                }
+                if (sender.roomKey !== newRoom) {
+                    this._leaveRoom(sender, false); // Do not close the underlying WS socket.
+                    sender.roomKey = newRoom;
+                    this._joinRoom(sender);
+                    this._keepAlive(sender);
+                }
+                this._send(sender, { type: 'room-joined', roomId });
                 return;
         }
 
-        // 转发消息给目标设备
-        if (message.to && this._rooms[sender.roomKey]) {
-            const recipientId = message.to; // TODO: sanitize
-            const recipient = this._rooms[sender.roomKey][recipientId];
-            delete message.to;
-            // add sender id
-            message.sender = sender.id;
-            this._send(recipient, message);
-            return;
+        // Only narrowly-validated ICE/SDP signaling is allowed between room members.
+        if (message.type !== 'signal' || typeof message.to !== 'string') return;
+        const members = this._rooms[sender.roomKey];
+        const recipient = members && members[message.to];
+        if (!recipient || recipient === sender) return;
+
+        let forwarded;
+        if (message.sdp && !message.ice && Object.keys(message).every(k => ['type','to','sdp'].includes(k))) {
+            const sdp = message.sdp;
+            if (!sdp || typeof sdp !== 'object' ||
+                !['offer', 'answer'].includes(sdp.type) ||
+                typeof sdp.sdp !== 'string' || sdp.sdp.length > 60000) return;
+            forwarded = { type: 'signal', sender: sender.id, sdp: {type:sdp.type, sdp:sdp.sdp} };
+        } else if (message.ice && !message.sdp && Object.keys(message).every(k => ['type','to','ice'].includes(k))) {
+            const ice = message.ice;
+            if (!ice || typeof ice !== 'object' || typeof ice.candidate !== 'string' ||
+                ice.candidate.length > 4096) return;
+            forwarded = { type: 'signal', sender: sender.id, ice: {
+                candidate: ice.candidate,
+                sdpMid: typeof ice.sdpMid === 'string' ? ice.sdpMid.slice(0, 128) : null,
+                sdpMLineIndex: Number.isInteger(ice.sdpMLineIndex) ? ice.sdpMLineIndex : null,
+                usernameFragment: typeof ice.usernameFragment === 'string' ? ice.usernameFragment.slice(0, 128) : undefined
+            } };
         }
+        if (forwarded) this._send(recipient, forwarded);
     }
 
     _joinRoom(peer) {
@@ -221,10 +262,10 @@ class SnapdropServer {
         return Peer.isPrivateIP(ip);
     }
 
-    _getRoomKey(ip) {
+    _getRoomKey(ip, peerId) {
         ip = Peer.normalizeIP(ip);
-        if (!this._isLanMode()) return ip;
-        return Peer.canUseForLanRoom(ip) ? this._getSubnet(ip) : ip;
+        if (!this._isLanMode() || !Peer.canUseForLanRoom(ip)) return 'session:' + peerId;
+        return this._getSubnet(ip);
     }
 
     _getSubnet(ip) {
@@ -238,8 +279,8 @@ class Peer {
 
     constructor(socket, request) {
         this.socket = socket;
+        this._setPeerId(request);
         this._setIP(request);
-        this._setPeerId(request)
         this.rtcSupported = request.url.indexOf('webrtc') > -1;
         this._setName(request);
         this.timerId = 0;
@@ -256,7 +297,7 @@ class Peer {
 
         // 局域网模式按 IPv4 私网 /24 或 IPv6 /64 分组；公网模式按精确 IP 分组。
         this.roomKey = process.env.LAN_MODE === 'false' || !Peer.canUseForLanRoom(this.ip)
-            ? this.ip
+            ? 'session:' + this.id
             : this._getSubnet(this.ip);
     }
 
