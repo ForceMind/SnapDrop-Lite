@@ -120,6 +120,24 @@
             <div class="footer-note"><span class="privacy-dot"></span> 不上传文件 · 不使用服务器中转 <span class="footer-separator">/</span> 受限网络可能无法直连</div>
         </footer>
     </div>
+    <!-- Incoming P2P file request: no file bytes may be sent until accepted. -->
+    <x-dialog id="fileOfferDialog">
+        <x-background class="full center">
+            <x-paper shadow="2">
+                <div class="offer-mark" aria-hidden="true">↓</div>
+                <h3>对方想给你发送文件</h3>
+                <p class="offer-explainer">请确认是否接收，确认后文件才开始通过设备直连传输。</p>
+                <div class="offer-file">
+                    <span class="offer-file-icon" aria-hidden="true">▤</span>
+                    <div><strong id="offerFileName">文件名</strong><span id="offerFileSize">文件大小</span></div>
+                </div>
+                <div class="row-reverse">
+                    <button class="button offer-accept" id="acceptFileOffer" type="button" close>接收文件</button>
+                    <button class="button" id="rejectFileOffer" type="button" close>拒绝</button>
+                </div>
+            </x-paper>
+        </x-background>
+    </x-dialog>
     <!-- Receive Dialog -->
     <x-dialog id="receiveDialog">
         <x-background class="full center">
