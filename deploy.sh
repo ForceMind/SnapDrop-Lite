@@ -465,16 +465,26 @@ fi
 echo ""
 echo -e "${CYAN}网络模式配置:${NC}"
 echo -e "  1) 局域网模式: 同一子网的设备互相发现（如家庭/公司 WiFi）"
-echo -e "  2) 公网模式: 所有访问的设备互相发现（云服务器部署）"
+echo -e "  2) 公网模式: 仅通过邀请链接配对（云服务器部署，不公开设备）"
 echo ""
 read -p "请选择模式 (1/2，默认1): " net_mode
 if [ "$net_mode" = "2" ]; then
     LAN_MODE="false"
-    info "已启用公网模式 - 所有设备互相可见"
+    info "已启用公网模式 - 设备只通过邀请码互相发现"
 else
     LAN_MODE="true"
     info "已启用局域网模式 - 同子网设备互相发现"
 fi
+
+# STUN discovers directly-reachable candidates; it does not relay file data.
+# This project intentionally has no TURN configuration.
+if [ -z "${ENABLE_STUN+x}" ]; then
+    ENABLE_STUN="true"
+fi
+if [ "$LAN_MODE" = "false" ] && [ "$ENABLE_STUN" != "true" ]; then
+    warn "公网模式关闭了 STUN：大多数 NAT 网络将无法建立跨网 P2P"
+fi
+warn "公网访问必须经 HTTPS/WSS 反向代理；当前内置的 Nginx 模板只提供 HTTP，请勿直接公网发布"
 
 # ---------- 安装依赖 ----------
 step 3 "安装依赖 (nginx + nodejs)..."
