@@ -1,3 +1,3 @@
-// 闪投前端配置文件
-// 部署时由 deploy.sh 自动生成，也可手动修改
-window.SNAPDROP_ENABLE_STUN = false;
+// Direct-only mode: STUN is used for address discovery, never for file relay.
+// Disable explicitly for LAN-only / offline deployments.
+window.SNAPDROP_ENABLE_STUN = true;
