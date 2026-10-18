@@ -16,7 +16,7 @@ class SnapdropServer {
 
     constructor(port) {
         const WebSocket = require('ws');
-        this._wss = new WebSocket.Server({ port: port, maxPayload: 64 * 1024 });
+        this._wss = new WebSocket.Server({ port: port, host: process.env.WS_HOST || '127.0.0.1', maxPayload: 64 * 1024 });
         this._wss.on('connection', (socket, request) => this._onConnection(new Peer(socket, request)));
         this._wss.on('headers', (headers, response) => this._onHeaders(headers, response));
 
@@ -77,7 +77,10 @@ class SnapdropServer {
                     console.log(`[局域网IP] 当前为公网模式，忽略客户端局域网 IP 报告`);
                     return;
                 }
-                if (message.ips && message.ips.length > 0) {
+                if (!Array.isArray(message.ips) ||
+                    message.ips.length > 16 ||
+                    message.ips.some(ip => typeof ip !== 'string' || ip.length > 128)) return;
+                if (message.ips.length > 0) {
                     // 优先使用 IPv4 局域网地址（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
                     const localIP = this._selectLocalIP(message.ips, sender.ip);
 
@@ -288,10 +291,13 @@ class Peer {
     }
 
     _setIP(request) {
-        if (request.headers['x-forwarded-for']) {
-            this.ip = request.headers['x-forwarded-for'].split(/\s*,\s*/)[0];
+        const remote = request.connection.remoteAddress;
+        const fromLoopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote);
+        const forwarded = request.headers['x-forwarded-for'];
+        if (process.env.TRUST_PROXY === 'true' && fromLoopback && typeof forwarded === 'string') {
+            this.ip = forwarded.split(/\s*,\s*/)[0];
         } else {
-            this.ip = request.connection.remoteAddress;
+            this.ip = remote;
         }
         this.ip = Peer.normalizeIP(this.ip);
 
@@ -309,7 +315,7 @@ class Peer {
         // 优先从 URL 参数获取（客户端 localStorage 生成的唯一 ID）
         const url = new URL(request.url, 'http://localhost');
         const peerId = url.searchParams.get('peerId');
-        if (peerId) {
+        if (peerId && /^[a-zA-Z0-9_-]{1,64}$/.test(peerId)) {
             this.id = peerId;
             return;
         }
