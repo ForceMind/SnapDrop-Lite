@@ -141,8 +141,16 @@ class SnapdropServer {
                 return;
         }
 
-        // Only narrowly-validated ICE/SDP signaling is allowed between room members.
+        // Limit signaling traffic: never allow a WS connection to masquerade as bulk transfer.
         if (message.type !== 'signal' || typeof message.to !== 'string') return;
+        const now = Date.now();
+        if (!sender.signalWindow || now - sender.signalWindow > 60000) {
+            sender.signalWindow = now; sender.signalMessages = 0; sender.signalBytes = 0;
+        }
+        sender.signalMessages += 1;
+        sender.signalBytes += JSON.stringify(message).length;
+        if (sender.signalMessages > 120 || sender.signalBytes > 256 * 1024) return;
+        // Only narrowly-validated ICE/SDP signaling is allowed between room members.
         const members = this._rooms[sender.roomKey];
         const recipient = members && members[message.to];
         if (!recipient || recipient === sender) return;
