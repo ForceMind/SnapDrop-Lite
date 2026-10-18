@@ -545,73 +545,124 @@ class Snapdrop {
     _initRoomUI() {
         const roomInput = $('roomInput');
         const roomBtn = $('roomBtn');
-        if (!roomInput || !roomBtn) return;
+        const createBtn = $('createRoomBtn');
+        const inviteCreated = $('inviteCreated');
+        const inviteUrl = $('inviteUrl');
+        const copyBtn = $('copyInviteBtn');
+        const roomStatus = $('roomStatus');
+        const signalStatus = $('signalStatus');
+        if (!roomInput || !roomBtn || !createBtn || !roomStatus) return;
 
-        this._roomJoined = false;
+        let currentRoom = null;
+        const showRoomStatus = (text, state = '') => {
+            roomStatus.textContent = text;
+            roomStatus.dataset.state = state;
+        };
+        const normalizeInvite = raw => {
+            let value = raw.trim();
+            if (/^https?:\/\//i.test(value)) {
+                try { value = new URL(value).searchParams.get('room') || ''; }
+                catch (e) { return ''; }
+            }
+            return value.trim();
+        };
+        const inviteLink = roomId => {
+            const url = new URL(location.href);
+            url.searchParams.set('room', roomId);
+            url.searchParams.delete('title');
+            url.searchParams.delete('text');
+            url.searchParams.delete('url');
+            return url.toString();
+        };
+        const join = (raw, showLink = false) => {
+            const roomId = normalizeInvite(raw);
+            if (!/^[a-zA-Z0-9_-]{6,64}$/.test(roomId)) {
+                showRoomStatus('邀请码格式不正确，请粘贴完整邀请链接', 'error');
+                return;
+            }
+            currentRoom = roomId;
+            roomInput.value = roomId;
+            roomBtn.hidden = false;
+            roomBtn.textContent = '连接中';
+            this.server.joinRoom(roomId);
+            const updated = new URL(window.location);
+            updated.searchParams.set('room', roomId);
+            history.replaceState({}, '', updated);
+            if (showLink) {
+                inviteCreated.hidden = false;
+                inviteUrl.value = inviteLink(roomId);
+            }
+            showRoomStatus('正在加入配对房间…', 'waiting');
+        };
 
-        // 初始状态：按钮隐藏
-        roomBtn.style.display = 'none';
-
-        // 输入框内容变化时控制按钮显示
         roomInput.addEventListener('input', () => {
-            const hasValue = roomInput.value.trim().length > 0;
-            if (hasValue && !this._roomJoined) {
-                roomBtn.style.display = '';
-                roomBtn.textContent = '加入';
-            } else if (!hasValue) {
-                roomBtn.style.display = 'none';
+            roomBtn.hidden = !roomInput.value.trim();
+            roomBtn.textContent = '加入';
+        });
+        roomBtn.addEventListener('click', () => join(roomInput.value));
+        roomInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); join(roomInput.value); }
+        });
+        createBtn.addEventListener('click', () => {
+            if (!window.crypto || !crypto.getRandomValues) {
+                showRoomStatus('请使用 HTTPS 或 localhost 以安全生成邀请', 'error');
+                return;
+            }
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            const id = Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
+            join(id, true);
+        });
+        copyBtn.addEventListener('click', async () => {
+            if (!inviteUrl.value) return;
+            try {
+                if (!navigator.clipboard?.writeText) throw Error('clipboard unavailable');
+                await navigator.clipboard.writeText(inviteUrl.value);
+                Events.fire('notify-user', '邀请链接已复制');
+            } catch (error) {
+                inviteUrl.focus();
+                inviteUrl.select();
+                Events.fire('notify-user', '请手动复制选中的邀请链接');
             }
         });
-
-        // 点击输入框时，如果已加入则重置状态
-        roomInput.addEventListener('focus', () => {
-            if (this._roomJoined) {
-                this._roomJoined = false;
-                roomBtn.textContent = '加入';
-                roomBtn.style.opacity = '1';
-                // 清除 URL 中的 room 参数
-                const url = new URL(window.location);
-                url.searchParams.delete('room');
-                history.replaceState({}, '', url);
-            }
-        });
-
-        // 点击加入按钮
-        roomBtn.addEventListener('click', () => {
-            const roomId = roomInput.value.trim();
-            if (roomId && !this._roomJoined) {
-                this.server.joinRoom(roomId);
-                // 更新 URL
-                const url = new URL(window.location);
-                url.searchParams.set('room', roomId);
-                history.replaceState({}, '', url);
-                // 更新按钮状态
-                this._roomJoined = true;
-                roomBtn.textContent = '已加入';
-                roomBtn.style.opacity = '0.6';
-            }
-        });
-
-        // 回车加入
-        roomInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                roomBtn.click();
-            }
-        });
-
-        // 检查 URL 参数是否有房间号
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlRoom = urlParams.get('room');
-        if (urlRoom) {
-            roomInput.value = urlRoom;
-            roomBtn.style.display = '';
-            // 直接加入房间
-            this.server.joinRoom(urlRoom);
-            this._roomJoined = true;
+        Events.on('room-joined', e => {
+            if (e.detail.roomId !== currentRoom) return;
             roomBtn.textContent = '已加入';
-            roomBtn.style.opacity = '0.6';
-        }
+            showRoomStatus('配对房间已就绪 · 等待另一台设备加入', 'connected');
+        });
+        Events.on('room-error', e => {
+            roomBtn.textContent = '重试';
+            showRoomStatus(e.detail.message || '加入配对房间失败', 'error');
+        });
+        Events.on('signal-state', e => {
+            if (signalStatus) {
+                signalStatus.dataset.state = e.detail.state;
+                const label = signalStatus.querySelector('.signal-label');
+                if (label) label.textContent = ({
+                    connected: '信令服务在线',
+                    connecting: '连接信令服务',
+                    offline: '信令连接已断开'
+                })[e.detail.state] || '等待连接';
+            }
+            if (e.detail.state === 'offline' && currentRoom) {
+                showRoomStatus('网络已断开，连接恢复后将重新加入', 'waiting');
+            }
+        });
+        Events.on('peer-joined', () => this._updatePeerCount());
+        Events.on('peer-left', () => this._updatePeerCount());
+        Events.on('peers', () => this._updatePeerCount());
+
+        const urlRoom = new URLSearchParams(window.location.search).get('room');
+        if (urlRoom) join(urlRoom, true);
+        this._updatePeerCount();
     }
+
+    _updatePeerCount() {
+        const $counter = $('peerCount');
+        if (!$counter) return;
+        const n = document.querySelectorAll('x-peers x-peer').length;
+        $counter.textContent = n + ' 台设备';
+    }
+
 }
 
 const snapdrop = new Snapdrop();
