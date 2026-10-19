@@ -1,21 +1,21 @@
-var CACHE_NAME = 'snapdrop-cache-v2.0.6';
+var CACHE_NAME = 'zeydrop-shell-v3.0.0';
 
 // 安装：跳过等待
 self.addEventListener('install', function(event) {
-  console.log('[闪投] Service Worker 安装中...');
+  console.log('[Zeydrop] Service Worker 安装中...');
   self.skipWaiting();
 });
 
 // 激活：清除旧缓存
 self.addEventListener('activate', function(event) {
-  console.log('[闪投] Service Worker 激活');
+  console.log('[Zeydrop] Service Worker 激活');
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.filter(function(cacheName) {
-          return cacheName !== CACHE_NAME;
+          return cacheName !== CACHE_NAME && /^(snapdrop-cache|zeydrop-shell)/.test(cacheName);
         }).map(function(cacheName) {
-          console.log('[闪投] 删除旧缓存:', cacheName);
+          console.log('[Zeydrop] 删除旧缓存:', cacheName);
           return caches.delete(cacheName);
         })
       );
@@ -66,9 +66,10 @@ self.addEventListener('fetch', function(event) {
   var accept = event.request.headers.get('accept') || '';
   var isNavigation = event.request.mode === 'navigate' || accept.includes('text/html');
   var isManifest = event.request.url.includes('/manifest.json');
+  var isConfig = /\/config(?:\.[a-f0-9]+)?\.js(?:\?|$)/.test(event.request.url);
 
   event.respondWith(
-    isNavigation || isManifest
+    isNavigation || isManifest || isConfig
       ? networkFirst(event.request)
       : cacheFirst(event.request)
   );
