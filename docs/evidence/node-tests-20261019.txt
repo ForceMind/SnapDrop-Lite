@@ -2,32 +2,33 @@
 > zeydrop@0.3.0-dev.1 test
 > node --test tests/*.test.cjs
 
-✔ diagnostic export allowlists state and never exposes tokens, SDP, addresses, codes or file data (3.387235ms)
-✔ diagnostics retain a bounded history and reject arbitrary field values (6.138751ms)
-✔ ICE/SDP arriving before discovery waits for the authorized peer and preserves order (3.947449ms)
-✔ early signals have a bounded lifetime and budget and clear when a room is left (7.102564ms)
-✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (3.188435ms)
-✔ TURN configuration is rejected; STUN can be explicitly disabled (1.940394ms)
-✔ closing a transport clears previously verified direct status (1.683557ms)
-✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (74.341994ms)
-✔ file payloads, invalid nested signaling and TURN candidates are never relayed (54.630519ms)
-✔ expired/missing invitations cannot be resurrected by joining (31.351588ms)
-✔ short reconnect restores server identity and reserves room slot; expiry drops authority (38.894304ms)
-✔ Origin/path checks and message-rate limits reject invalid clients (17.771723ms)
-✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (82.00297ms)
-✔ corruption aborts partial disk file and never exposes a completed file (6.509225ms)
-✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (7.486593ms)
-✔ unverified peers cannot send or receive file offers (1.647152ms)
-✔ fallback multi-file queue waits until user saves/discards the previous Blob (10.085119ms)
-✔ pause holds file reads, resume continues, and cancel aborts native partial writes (256.988452ms)
-✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (109.691733ms)
-✔ receiver cancellation drains only the in-flight window and preserves the channel for a new file (112.50016ms)
-✔ quota and final-save errors cancel only the file and report the cause (210.978614ms)
-ℹ tests 21
+✔ diagnostic export allowlists state and never exposes tokens, SDP, addresses, codes or file data (4.439055ms)
+✔ diagnostics retain a bounded history and reject arbitrary field values (7.478463ms)
+✔ ICE/SDP arriving before discovery waits for the authorized peer and preserves order (3.998061ms)
+✔ early signals have a bounded lifetime and budget and clear when a room is left (8.71487ms)
+✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (4.061677ms)
+✔ TURN configuration is rejected; STUN can be explicitly disabled (2.246003ms)
+✔ closing a transport clears previously verified direct status (1.36109ms)
+✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (86.519223ms)
+✔ file payloads, invalid nested signaling and TURN candidates are never relayed (56.255004ms)
+✔ expired/missing invitations cannot be resurrected by joining (30.774468ms)
+✔ short reconnect restores server identity and reserves room slot; expiry drops authority (46.310957ms)
+✔ Origin/path checks and message-rate limits reject invalid clients (18.114626ms)
+✔ malformed unauthenticated upgrade targets are rejected without crashing signaling (9.025599ms)
+✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (93.847575ms)
+✔ corruption aborts partial disk file and never exposes a completed file (5.486163ms)
+✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (7.529023ms)
+✔ unverified peers cannot send or receive file offers (1.33473ms)
+✔ fallback multi-file queue waits until user saves/discards the previous Blob (10.679138ms)
+✔ pause holds file reads, resume continues, and cancel aborts native partial writes (261.717045ms)
+✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (109.733916ms)
+✔ receiver cancellation drains only the in-flight window and preserves the channel for a new file (113.684595ms)
+✔ quota and final-save errors cancel only the file and report the cause (211.398037ms)
+ℹ tests 22
 ℹ suites 0
-ℹ pass 21
+ℹ pass 22
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 906.11901
+ℹ duration_ms 937.85622

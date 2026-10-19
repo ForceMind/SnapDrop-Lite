@@ -18,7 +18,7 @@
 
 E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服务器 WS 字节计数与正文 sentinel 检查。原生文件流使用浏览器 OPFS writer；测试只代替 picker 选择，不证明真实用户 picker 授权体验。CI 网络同主机不能替代公网 NAT 场景。
 
-协商顺序回归在 CI #7 中实际捕获 Chromium 2 / Firefox 3 条早到信令，设备发现延迟 250 ms 后仍成功直连。导出诊断的新浏览器回归尚待最新 head CI；本地脱敏与有界记录单测通过。实机记录方法见 [REAL_DEVICE_TESTING](REAL_DEVICE_TESTING.md)。
+协商顺序回归在 CI #7 中实际捕获 Chromium 2 / Firefox 3 条早到信令，设备发现延迟 250 ms 后仍成功直连。导出诊断的 Chromium/Firefox/WebKit 实际下载回归在 90962c1 的 CI #8 全部通过；本地脱敏与有界记录单测通过。实机记录方法见 [REAL_DEVICE_TESTING](REAL_DEVICE_TESTING.md)。
 
 ## 实机发布门槛（均未验证）
 

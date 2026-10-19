@@ -20,7 +20,10 @@ class ZeydropServer {
             ...(options.noServer ? { noServer: true } : { host: options.host || process.env.WS_HOST || '127.0.0.1', port: options.port ?? Number(process.env.PORT || 3001) }),
             maxPayload: MAX_MESSAGE, perMessageDeflate: false,
             verifyClient: info => this.origins.has(info.origin)
-                && new URL(info.req.url, 'http://localhost').pathname === '/server/webrtc'
+                // The untrusted request-target may be a malformed absolute URI.
+                // Exact matching also rejects query credentials and avoids parsing
+                // exceptions escaping the upgrade handler before authentication.
+                && info.req.url === '/server/webrtc'
                 && this.sessions.size < 1000 && this.connections.size < 1000
         });
         this._wss.on('connection', (socket, request) => this.connect(socket, request));

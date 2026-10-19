@@ -70,11 +70,25 @@ test('short reconnect restores server identity and reserves room slot; expiry dr
 });
 test('Origin/path checks and message-rate limits reject invalid clients', async t => {
     const { connect, url } = await setup(t);
-    for (const [target, value] of [[url, 'https://evil.example'], [url.replace('/server/webrtc', '/wrong'), origin]]) {
+    for (const [target, value] of [[url, 'https://evil.example'], [url.replace('/server/webrtc', '/wrong'), origin], [url + '?resumeToken=should-not-be-in-url', origin]]) {
         const socket = new WebSocket(target, { origin: value });
         const error = await new Promise(resolve => socket.once('error', resolve)); assert.match(error.message, /401/);
     }
     const a = await connect();
     for (let i = 0; i < 250; i++) a.send({ type: 'pong' });
     await new Promise(resolve => a.ws.on('close', resolve)); assert.equal(a.ws._closeCode, 1008);
+});
+test('malformed unauthenticated upgrade targets are rejected without crashing signaling', async t => {
+    const { connect, server } = await setup(t);
+    const net = require('node:net');
+    for (const target of ['http://[', '//[', '/server/webrtc/../webrtc', '/server/webrtc?x=1']) {
+        const response = await new Promise((resolve,reject) => {
+            const socket = net.connect(server._wss.address().port,'127.0.0.1'); let text='';
+            socket.setTimeout(2000,()=>socket.destroy(Error('upgrade timeout')));
+            socket.on('error',reject); socket.on('data',bytes=>text+=bytes.toString()); socket.on('end',()=>resolve(text));
+            socket.on('connect',()=>socket.end('GET '+target+' HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\nOrigin: '+origin+'\r\n\r\n'));
+        });
+        assert.match(response, /^HTTP\/1\.1 401/);
+    }
+    const healthy = await connect(); assert.ok(healthy.hello.peerId);
 });

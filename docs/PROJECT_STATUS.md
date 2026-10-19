@@ -1,6 +1,6 @@
 # Zeydrop 工程接管状态
 
-更新时间：2026-10-19，北京时间 22:52。版本 `0.3.0-dev.1`，分支 `feat/direct-first-workspace-20261019`。
+更新时间：2026-10-19，北京时间 22:55。版本 `0.3.0-dev.1`，分支 `feat/direct-first-workspace-20261019`。
 
 ## 当前可验证结果
 
@@ -72,4 +72,10 @@ CI #4 在临时 Chromium profile 的 OPFS 1 GiB 测试失败，原日志没有�
 
 ## 实机证据准备
 
-新增本机诊断导出，采用字段白名单、120 条环形记录、匿名 peer 序号，仅保留版本/构建 revision、信令和 ICE 状态、候选类型/数量、RTT 与能力标记。不导出 SDP、IP、安全码、设备 ID、邀请/恢复令牌、文件名/正文或任意错误原文；不自动上传。新增两项单测，本地合计 21 项通过；新增导出下载的 Chromium/Firefox/WebKit 回归，需由本次 head CI 验证后才记为通过。实机方法见 REAL_DEVICE_TESTING。
+新增本机诊断导出，采用字段白名单、120 条环形记录、匿名 peer 序号，仅保留版本/构建 revision、信令和 ICE 状态、候选类型/数量、RTT 与能力标记。不导出 SDP、IP、安全码、设备 ID、邀请/恢复令牌、文件名/正文或任意错误原文；不自动上传。新增两项单测，本地合计 21 项通过；新增导出下载的 Chromium/Firefox/WebKit 回归在 90962c1 的 CI #8（39272819405）全部通过，原始 JSON 在 evidence/ci8-*.json。实机方法见 REAL_DEVICE_TESTING。
+
+## 握手解析与发布指纹修复
+
+最终审查确认，旧 verifyClient 对未鉴权 request-target 直接调用 URL 构造器；原始 `http://[` 在隔离子进程中触发未捕获 ERR_INVALID_URL 并退出。改为精确匹配 `/server/webrtc`，拒绝 query/路径变体；真实 TCP 回归覆盖四种目标，拒绝后正常 hello 仍成功。本地总计 22 项测试通过，原始问题与回归范围记录在 `evidence/upgrade-target-regression-20261019.json`。
+
+构建指纹原先缺少 server/index.js，单改信令可能复用旧 release 路径。现包括服务端实现/包元数据、部署脚本/模板、客户端和锁文件。实际修改服务端并重建会改变 revision，finally 恢复源码后 revision 回到原值；证据在 `evidence/server-build-revision-20261019.json`。最新完整 CI 尚待验证；这些修复没有部署到生产。

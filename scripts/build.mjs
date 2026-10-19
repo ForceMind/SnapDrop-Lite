@@ -14,7 +14,7 @@ async function files(dir) {
     return result;
 }
 const hash = createHash('sha256');
-for (const file of [...await files('client'), 'package-lock.json', 'server/package-lock.json', 'scripts/build.mjs', 'LICENSE', 'NOTICE']) { hash.update(file); hash.update(await readFile(file)); }
+for (const file of [...await files('client'), 'package.json', 'package-lock.json', 'server/index.js', 'server/package.json', 'server/package-lock.json', 'scripts/build.mjs', 'deploy.sh', 'scripts/rollback.sh', ...await files('deployment'), 'LICENSE', 'NOTICE']) { hash.update(file); hash.update(await readFile(file)); }
 const revision = hash.digest('hex').slice(0, 16);
 await rm('dist', { recursive: true, force: true });
 await cp('client', 'dist', { recursive: true });

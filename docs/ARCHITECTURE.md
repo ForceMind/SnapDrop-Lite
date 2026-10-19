@@ -38,7 +38,7 @@
 
 ## 防护与尚存限制
 
-- 精确 WS Origin，生产环境未配置 ALLOWED_ORIGINS 则拒绝启动。
+- 精确 WS Origin 和无 query 的 `/server/webrtc` 请求路径，不解析未鉴权 URI；生产环境未配置 ALLOWED_ORIGINS 则拒绝启动。
 - 64 KiB frame / message，240 条 / 分钟、512 KiB / 分钟，每连接计数包含心跳；128 KiB WS 输出缓存阈值；1000 个全局房间 / 会话 / 连接上限。
 - 无压缩、拒绝二进制 WS，信令目标必须是同一未过期房间的实际成员；嵌套对象字段白名单。
 - 文件名去除路径分隔符与控制字符；DOM 使用 textContent；不自动打开收到的 HTML / URL / 图片。

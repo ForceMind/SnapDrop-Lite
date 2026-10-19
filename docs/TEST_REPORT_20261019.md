@@ -20,3 +20,5 @@ Chromium 接收待处理队列峰值 245,844 B，约 256 KiB；这不包含浏�
 流式测试将 picker 选择替换为原生 OPFS handle，真实浏览器执行实际写入。真实用户文件 picker、OS 文件保存体验、设备硬件、蜂窝网络、Safari/iOS/Android/Edge、IPv6 与严格 NAT 仍未执行。跨连接断点续传尚未实现。当前版本保持开发候选，PR 保留 Draft，未发布或部署。
 
 协商顺序回归：主动延迟 answerer 的设备发现 250 ms，Chromium 捕获 2 条、Firefox 捕获 3 条先到的 SDP/ICE；缓冲至授权设备出现后建立直连。此证据对应 a520ed9，不包含后续诊断导出 UI 改动。
+
+诊断导出提交 90962c1 的 [CI #8](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39272819405) 于北京时间 22:55 全部通过：21 项 Node 测试及原完整浏览器矩阵，另验证 Chromium/Firefox/WebKit 实际 JSON 下载；回归确认报告不含设备 ID、安全码、邀请/恢复令牌、文件名或正文。evidence/ci8-*.json 保留原始结果。后续握手路径/发布指纹修复本地 22 项通过，仍需最新提交的完整 CI。

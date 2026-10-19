@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "originalRevision": "d0fbd3bb106091a7",
+  "changedServerRevision": "a2e7f6900bec3421",
+  "restoredRevision": "d0fbd3bb106091a7",
+  "scope": "actual server source mutation + rebuild + finally restore"
+}
