@@ -248,15 +248,17 @@ class RTCPeer extends TransferPeer {
 }
 class PeersManager {
     constructor(server) {
-        this.peers = new Map(); this._server = server;
+        this.peers = new Map(); this._server = server; this._earlySignals = []; this._earlySignalBytes = 0;
         Events.on('peers', event => {
             const ids = new Set(event.detail.map(peer => peer.id));
+            this._earlySignals = this._earlySignals.filter(item => ids.has(item.message.sender));
+            this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0);
             for (const id of this.peers.keys()) if (!ids.has(id)) this._remove(id);
             event.detail.forEach(peer => this._ensure(peer));
         });
         Events.on('peer-joined', event => this._ensure(event.detail));
         Events.on('peer-left', event => this._remove(event.detail));
-        Events.on('signal', event => this.peers.get(event.detail.sender)?.onServerMessage(event.detail));
+        Events.on('signal', event => this._onSignal(event.detail));
         Events.on('files-selected', event => this.peers.get(event.detail.to)?.sendFiles(event.detail.files));
         Events.on('send-text', event => this.peers.get(event.detail.to)?.sendText(event.detail.text));
         Events.on('file-accepted', event => this.peers.get(event.detail.from)?.acceptIncoming(event.detail.id));
@@ -273,6 +275,24 @@ class PeersManager {
             if (old) { old.restart(true); Events.fire('notify-user', old._isCaller ? '正在重新协商直连' : '请让另一台设备点击重试，或创建新邀请'); }
         });
     }
-    _ensure(peer) { if (peer?.id && !this.peers.has(peer.id) && window.isRtcSupported) this.peers.set(peer.id, new RTCPeer(this._server, peer.id)); }
-    _remove(id) { this.peers.get(id)?.close(); this.peers.delete(id); }
+    _onSignal(message) {
+        if (!message || typeof message.sender !== 'string') return;
+        const peer = this.peers.get(message.sender);
+        if (peer) return peer.onServerMessage(message);
+        // The other socket may deliver its offer before our discovery frame.
+        // Buffer briefly, but only create a peer after authorized discovery.
+        const bytes = new TextEncoder().encode(JSON.stringify(message)).byteLength;
+        if (this._earlySignals.length >= 64 || this._earlySignalBytes + bytes > 256 * 1024) return;
+        this._earlySignals.push({ message, bytes, expires: Date.now() + 10000 });
+        this._earlySignalBytes += bytes;
+    }
+    _ensure(info) {
+        if (!info?.id || !window.isRtcSupported) return;
+        if (!this.peers.has(info.id)) this.peers.set(info.id, new RTCPeer(this._server, info.id));
+        const waiting = this._earlySignals.filter(item => item.message.sender === info.id);
+        this._earlySignals = this._earlySignals.filter(item => item.message.sender !== info.id);
+        this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0);
+        for (const item of waiting) if (item.expires > Date.now()) this.peers.get(info.id).onServerMessage(item.message);
+    }
+    _remove(id) { this.peers.get(id)?.close(); this.peers.delete(id); this._earlySignals = this._earlySignals.filter(item => item.message.sender !== id); this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0); }
 }

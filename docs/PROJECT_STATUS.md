@@ -65,3 +65,7 @@ CI #4 在临时 Chromium profile 的 OPFS 1 GiB 测试失败，原日志没有�
 6. 用户最后原地更名后，核验唯一 remote、三个分支、PR/Issues/历史和部署引用。不要另建仓库。
 
 后续接手先读 AGENTS、README、本文件、ARCHITECTURE、TEST_MATRIX 和当前 PR head；不要将 M0–M6 全部标记完成，不创建定时任务。
+
+## 最终审查中的协商顺序修复
+
+两个 WebSocket 不保证跨 socket 的交付顺序。先收到 SDP/ICE、后收到授权设备列表时，旧 PeersManager 会丢弃协商。已加入最多 64 条、合计 256 KiB、有效期 10 秒的早到信令队列；必须等授权设备列表后才创建 peer，离房清空。新增两项单测和真实浏览器延迟 answerer discovery 回归。新总测试数为 19；对应最新代码的完整 CI 需再次核验，不直接复用 b7d0b2f 的绿灯。

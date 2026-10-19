@@ -111,6 +111,25 @@ async function main() {
         const oldId = await a.evaluate(() => zeydrop.server._peerId); await a.evaluate(() => zeydrop.server._socket.close());
         await a.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected' && [...zeydrop.peers.peers.values()][0]?._path?.direct, null, { timeout: 30000 });
         assert.equal(await a.evaluate(() => zeydrop.server._peerId), oldId); results.cases.push('WS disconnect/reconnect preserves server identity and rebuilds P2P');
+        // Delay only the answerer's discovery, so real SDP/ICE reaches it first.
+        const ids = await Promise.all(pages.map(page => page.evaluate(() => zeydrop.server._peerId)));
+        const answerer = ids.slice().sort()[0]; let delayedFrames = 0;
+        for (const page of pages) await page.evaluate(() => { window.__earlySignalsObserved = 0; window.addEventListener('signal', event => { if (!zeydrop.peers.peers.has(event.detail.sender)) window.__earlySignalsObserved++; }); });
+        const originalSend = server.signaling.send.bind(server.signaling);
+        server.signaling.send = (peer, message) => {
+            if (peer?.id === answerer && (message.type === 'peer-joined' || (message.type === 'peers' && message.peers.length))) {
+                delayedFrames++; setTimeout(() => originalSend(peer, message), 250);
+            } else originalSend(peer, message);
+        };
+        const previousInvite = await a.locator('#inviteUrl').inputValue(); await a.locator('#createRoomBtn').click();
+        await a.waitForFunction(previous => {const value=document.querySelector('#inviteUrl').value;return value.includes('#room=') && value!==previous;}, previousInvite);
+        const delayedInvite = await a.locator('#inviteUrl').inputValue();
+        await b.locator('#roomInput').fill(delayedInvite); await b.locator('#roomBtn').click();
+        for (const page of pages) await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._path?.direct, null, {timeout:30000});
+        server.signaling.send = originalSend; assert.ok(delayedFrames>0);
+        results.delayedEarlySignals = await Promise.all(pages.map(page => page.evaluate(() => window.__earlySignalsObserved)));
+        assert.ok(results.delayedEarlySignals.some(count => count>0), 'Test must actually deliver SDP/ICE before discovery');
+        results.cases.push('real delayed discovery: earlier SDP/ICE buffered until authorized peer appears');
         assert.deepEqual(results.errors, []); results.passed = true;
     } catch (error) {
         results.failure = error.message;
