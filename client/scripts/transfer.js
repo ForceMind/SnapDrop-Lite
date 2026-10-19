@@ -57,6 +57,9 @@ class TransferPeer {
     }
     async _onMessage(data) {
         if (typeof data !== 'string') {
+            // An accepted transfer can be cancelled while its final bounded window
+            // is already in flight. Drain those bytes without saving or closing DC.
+            if (this._discard && !this._incoming && data.byteLength > 0 && data.byteLength <= CHUNK_SIZE && data.byteLength <= this._discard.remaining) { this._discard.remaining -= data.byteLength; return; }
             const state = this._incoming;
             if (!state?.sink || state.accepting || data.byteLength < 1 || data.byteLength > CHUNK_SIZE
                 || state.offset + data.byteLength > state.meta.size || state.offset + data.byteLength - state.acked > WINDOW_SIZE) throw Error('未授权或无效的文件分块');
@@ -80,11 +83,13 @@ class TransferPeer {
                 || typeof msg.name !== 'string' || msg.name.length > 255 || !Number.isSafeInteger(msg.size) || msg.size < 0
                 || typeof msg.mime !== 'string' || msg.mime.length > 128) throw Error('无效文件信息');
             if (!this._verified || !this._path?.direct || this._incoming) { this.sendJSON({ type: 'reject', id: msg.id, reason: '接收方未确认安全码或正在接收其他文件' }); return; }
+            this._discard = null;
             const state = { meta: { id: msg.id, name: safeName(msg.name), size: msg.size, mime: /^[\w.+-]+\/[\w.+-]+$/.test(msg.mime) ? msg.mime : 'application/octet-stream' }, offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
             this._incoming = state;
             state.timer = setTimeout(() => this.cancel(msg.id, '接收确认已超时'), 120000);
             Events.fire('file-offer', { sender: this._peerId, ...state.meta }); return;
         }
+        if (msg.type === 'checkpoint' && this._discard?.id === msg.id) { this._discard = null; return; }
         const outgoing = this._outgoing;
         const incoming = this._incoming;
         if (msg.type === 'accept' && outgoing?.meta.id === msg.id && outgoing.phase === 'offered') {
@@ -177,6 +182,9 @@ class TransferPeer {
     _progress(state, phase) {
         const bytes = state.acked ?? state.offset;
         if ((state.paused || state.remotePaused) && ['receiving', 'sending'].includes(phase)) phase = 'paused';
+        const now = performance.now();
+        if (state.uiPhase === phase && now - (state.lastUI || 0) < 200) return;
+        state.uiPhase = phase; state.lastUI = now;
         const speed = bytes / Math.max((performance.now() - state.start) / 1000, 0.1);
         Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
     }
@@ -194,7 +202,10 @@ class TransferPeer {
         if (!state) return;
         clearTimeout(state.timer);
         if (outgoing) { this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
-        if (incoming) { this._incoming = null; state.sink?.abort(); }
+        if (incoming) {
+            if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
+            this._incoming = null; state.sink?.abort();
+        }
         if (notify && this._isConnected()) this.sendJSON({ type: 'cancel', id });
         this._progress(state, 'cancelled');
         Events.fire('file-offer-cancelled', { id, sender: this._peerId });
@@ -203,7 +214,7 @@ class TransferPeer {
     abortAll(reason) {
         if (this._outgoing) this.cancel(this._outgoing.meta.id, reason, false);
         if (this._incoming) this.cancel(this._incoming.meta.id, reason, false);
-        this._filesQueue = []; this._queueWaitId = null;
+        this._filesQueue = []; this._queueWaitId = null; this._discard = null;
     }
     sendText(text) {
         if (!this._verified || !this._path?.direct) return Events.fire('notify-user', '请先核对安全码');

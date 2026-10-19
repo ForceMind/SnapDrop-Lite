@@ -85,6 +85,7 @@ class ServerConnection {
     }
     joinRoom(roomId, create = false) {
         if (!/^[a-f0-9]{32}$/.test(roomId)) return false;
+        if (this._desiredRoomId && this._desiredRoomId !== roomId) { this.send({ type: 'leave-room' }); Events.fire('peers', []); }
         this._desiredRoomId = roomId; this._desiredType = create ? 'create-room' : 'join-room';
         if (this._ready) this.send({ type: this._desiredType, roomId });
         return true;

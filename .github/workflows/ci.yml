@@ -29,6 +29,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y nginx
       - run: bash scripts/check-nginx.sh
       - id: browsers
+        if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium firefox webkit
       - run: LARGE_FILE_TEST=1 npm run test:browser
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}

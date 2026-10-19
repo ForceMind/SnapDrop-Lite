@@ -85,3 +85,17 @@ test('write failure cannot produce complete, and an incorrect ACK cannot advance
     await assert.rejects(other.a._onMessage(JSON.stringify({type:'ack',id:other.a._outgoing.meta.id,offset:2})), /偏移/);
     other.a._outgoing.waiter = null; other.a.abortAll('test cleanup'); other.b.abortAll('test cleanup');
 });
+test('receiver cancellation drains only the in-flight window and preserves the channel for a new file', async () => {
+    const h = await harness({ disk: true }); let channelClosed = 0;
+    h.a.close = h.b.close = () => { channelClosed++; h.a.abortAll('closed'); h.b.abortAll('closed'); };
+    h.a.sendFiles([new File([Buffer.alloc(800000)], 'cancel-in-flight')]); await h.until(() => h.b._incoming);
+    const id = h.b._incoming.meta.id; h.a.pause(id, true); await h.b.acceptIncoming(id);
+    h.b._incoming.sink.writer.write = async () => { await delay(2); };
+    h.a.pause(id, false); await h.until(() => h.sent() > 0); h.b.cancel(id);
+    await h.until(() => !h.a._outgoing); await h.b._messageChain;
+    assert.equal(channelClosed, 0); assert.equal(h.b._incoming, null);
+    h.a.sendFiles([new File(['new file'], 'retry')]); await h.until(() => h.b._incoming);
+    await h.b.acceptIncoming(h.b._incoming.meta.id); await h.until(() => h.events.some(event => event.type === 'file-received'));
+    assert.equal(h.events.find(event => event.type === 'file-received').detail.name, 'retry');
+    await h.until(() => !h.a._outgoing);
+});

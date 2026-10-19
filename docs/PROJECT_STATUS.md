@@ -21,12 +21,12 @@
 
 ## 验证证据
 
-- 本地 Node 测试 14 项通过，包含真实 TCP WebSocket 连接和拒绝测试。
+- 本地 Node 测试 15 项通过，包含真实 TCP WebSocket 连接和拒绝测试。
 - 确定性重建、引用文件 / PWA 图标检查和 shell 语法检查通过。
 - 根包及服务端 `npm audit --omit=dev` 均 0 个已知漏洞（只代表本次检索结果）。
 - 本地 Chromium 153 页面、配对 / SDP 和安全码生成已运行；桌面 / 手机 / 明暗截图已人工查看，手机无横向溢出。
 - 本地真实 P2P E2E **失败**：隔离执行网络没有可用 host 候选；未选中路径，UI 未虚报直连。即使加回环测试开关仍只有未暴露的 0.0.0.0 / :: 占位候选。完整端到端、100 MiB / 1 GiB、大文件 picker 尚未获得本地通过证据。
-- 首个实现提交 `5c79e2ec6153de3e6b86619d9df9e1c33733efa7` 已写入 PR #2。GitHub CI run `39211886476` 在真实 Chromium 156 上通过 UDP DataChannel 和双方 DTLS 安全码；随后接收弹窗父容器零尺寸导致 E2E 停止。已在后续修复中给模态框设置固定 viewport 容器，本地 Chromium UI 回归通过。第二次 CI `39212293110` 在 Nginx 测试夹具的默认 access.log 权限处失败；已为 HTTP 重定向使用不含 query 的自定义日志，并让测试禁用隐式默认日志。100 MiB / 1 GiB、Firefox 和 WebKit 仍不能据此标通过。
+- 首个实现提交 `5c79e2ec6153de3e6b86619d9df9e1c33733efa7` 已写入 PR #2。GitHub CI run `39211886476` 在真实 Chromium 156 上通过 UDP DataChannel 和双方 DTLS 安全码；随后接收弹窗父容器零尺寸导致 E2E 停止。已在后续修复中给模态框设置固定 viewport 容器，本地 Chromium UI 回归通过。第二次 CI `39212293110` 在 Nginx 测试夹具的默认 access.log 权限处失败；已为 HTTP 重定向使用不含 query 的自定义日志，并让测试禁用隐式默认日志。第三次 CI `39212533869` 在无特权检查绑定 80 端口处失败；测试夹具现替换为回环高端口，不提升权限。浏览器检查独立于该静态检查继续执行。100 MiB / 1 GiB、Firefox 和 WebKit 仍不能据此标通过。
 
 ## 外部阻碍
 
