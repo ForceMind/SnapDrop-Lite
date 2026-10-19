@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 command -v nginx >/dev/null
 mkdir -p test-results/nginx
 result_dir=$(cd test-results/nginx && pwd)
+trap 'rm -f "$result_dir/key.pem"' EXIT
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 1 -subj /CN=transfer.example.test \
     -keyout "$result_dir/key.pem" -out "$result_dir/cert.pem" >/dev/null 2>&1
 sed -e 's|@DOMAIN@|transfer.example.test|g' \
@@ -12,6 +13,6 @@ sed -e 's|@DOMAIN@|transfer.example.test|g' \
     -e "s|/var/log/nginx/zeydrop.access.log|$result_dir/access.log|g" \
     -e "s|/var/log/nginx/zeydrop.error.log|$result_dir/error.log|g" \
     deployment/nginx.conf > "$result_dir/site.conf"
-printf 'pid %s/nginx.pid;\nerror_log %s/error.log;\nevents {}\nhttp { include %s/site.conf; }\n' "$result_dir" "$result_dir" "$result_dir" > "$result_dir/nginx.conf"
+printf 'pid %s/nginx.pid;\nerror_log %s/error.log;\nevents {}\nhttp { access_log off; include %s/site.conf; }\n' "$result_dir" "$result_dir" "$result_dir" > "$result_dir/nginx.conf"
 nginx -t -p "$result_dir/" -c "$result_dir/nginx.conf"
 rm -f "$result_dir/key.pem"

@@ -68,7 +68,9 @@ class ReceiveDialog extends Dialog {
     hide() {
         super.hide();
         if (this.url) { const url = this.url; setTimeout(() => URL.revokeObjectURL(url), 1000); }
-        this.active?.release?.(); this.active = null; this.url = null; this.next();
+        this.active?.release?.();
+        if (this.active) Events.fire('file-saved', { sender: this.active.sender, id: this.active.id });
+        this.active = null; this.url = null; this.next();
     }
 }
 class PeersUI {

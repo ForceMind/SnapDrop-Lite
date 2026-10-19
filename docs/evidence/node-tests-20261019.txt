@@ -2,22 +2,25 @@
 > zeydrop@0.3.0-dev.1 test
 > node --test tests/*.test.cjs
 
-✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (3.238666ms)
-✔ TURN configuration is rejected; STUN can be explicitly disabled (1.965179ms)
-✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (70.681805ms)
-✔ file payloads, invalid nested signaling and TURN candidates are never relayed (54.964852ms)
-✔ expired/missing invitations cannot be resurrected by joining (33.237149ms)
-✔ short reconnect restores server identity and reserves room slot; expiry drops authority (37.961179ms)
-✔ Origin/path checks and message-rate limits reject invalid clients (13.482914ms)
-✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (82.197251ms)
-✔ corruption aborts partial disk file and never exposes a completed file (6.002647ms)
-✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (7.044215ms)
-✔ unverified peers cannot send or receive file offers (1.085434ms)
-ℹ tests 11
+✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (2.981298ms)
+✔ TURN configuration is rejected; STUN can be explicitly disabled (1.655302ms)
+✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (82.27691ms)
+✔ file payloads, invalid nested signaling and TURN candidates are never relayed (55.333544ms)
+✔ expired/missing invitations cannot be resurrected by joining (33.639852ms)
+✔ short reconnect restores server identity and reserves room slot; expiry drops authority (41.615337ms)
+✔ Origin/path checks and message-rate limits reject invalid clients (14.983176ms)
+✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (82.05022ms)
+✔ corruption aborts partial disk file and never exposes a completed file (7.368121ms)
+✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (9.026228ms)
+✔ unverified peers cannot send or receive file offers (1.362501ms)
+✔ fallback multi-file queue waits until user saves/discards the previous Blob (9.488865ms)
+✔ pause holds file reads, resume continues, and cancel aborts native partial writes (250.822605ms)
+✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (109.035177ms)
+ℹ tests 14
 ℹ suites 0
-ℹ pass 11
+ℹ pass 14
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 313.795576
+ℹ duration_ms 565.247862

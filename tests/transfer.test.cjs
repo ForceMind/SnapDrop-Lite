@@ -52,3 +52,36 @@ test('unverified peers cannot send or receive file offers', async () => {
     h.a.sendFiles([new File(['secret'], 's')]); assert.equal(h.a._outgoing, null); assert.equal(h.sent(), 0);
     h.b._verified = false; await h.b._onMessage(JSON.stringify({ type: 'offer', id: crypto.randomUUID(), name: 'x', size: 1, mime: '' })); assert.equal(h.b._incoming, null);
 });
+test('fallback multi-file queue waits until user saves/discards the previous Blob', async () => {
+    const h = await harness(); h.a.sendFiles([new File(['one'], 'one'), new File(['two'], 'two')]);
+    await h.until(() => h.b._incoming); const id = h.b._incoming.meta.id; await h.b.acceptIncoming(id);
+    await h.until(() => !h.a._outgoing && h.a._queueWaitId === id);
+    assert.equal(h.b._incoming, null); assert.equal(h.a._filesQueue.length, 1);
+    h.events.find(event => event.type === 'file-received').detail.release();
+    h.b.sendJSON({ type: 'ready-next', id });
+    await h.until(() => h.b._incoming); assert.equal(h.b._incoming.meta.name, 'two');
+    h.b.rejectIncoming(h.b._incoming.meta.id); await h.until(() => !h.a._outgoing);
+});
+test('pause holds file reads, resume continues, and cancel aborts native partial writes', async () => {
+    const h = await harness({ disk: true }); const bytes = Buffer.alloc(2 * 1024 * 1024);
+    h.a.sendFiles([new File([bytes], 'pause.bin')]); await h.until(() => h.b._incoming);
+    const id = h.b._incoming.meta.id; h.a.pause(id, true); await h.b.acceptIncoming(id);
+    await delay(130); assert.equal(h.sent(), 0);
+    h.a.pause(id, false); await h.until(() => h.events.some(event => event.type === 'file-received'));
+    await h.until(() => !h.a._outgoing);
+    h.a.sendFiles([new File([bytes], 'cancel.bin')]); await h.until(() => h.b._incoming);
+    const cancelled = h.b._incoming.meta.id; h.a.pause(cancelled, true); await h.b.acceptIncoming(cancelled);
+    h.a.cancel(cancelled); await h.until(() => h.aborted());
+    assert.equal(h.events.filter(event => event.type === 'file-received').length, 1); assert.equal(h.a._filesQueue.length, 0);
+});
+test('write failure cannot produce complete, and an incorrect ACK cannot advance a sender', async () => {
+    const h = await harness({ disk: true }); h.a.sendFiles([new File([Buffer.alloc(60000)], 'failure')]);
+    await h.until(() => h.b._incoming); h.a.pause(h.b._incoming.meta.id, true); await h.b.acceptIncoming(h.b._incoming.meta.id);
+    h.b._incoming.sink.writer.write = async () => { throw Error('disk full'); };
+    h.a.pause(h.b._incoming.meta.id, false); await h.until(() => h.aborted()); assert.equal(h.closed(), 0);
+    assert.ok(!h.events.some(event => event.type === 'file-received'));
+    const other = await harness(); other.a.sendFiles([new File(['x'], 'ack')]); await other.until(() => other.b._incoming);
+    other.a._outgoing.waiter = {resolve: () => assert.fail('bad ACK resolved')}; other.a._outgoing.expectedAck = 1; other.a._outgoing.offset = 1;
+    await assert.rejects(other.a._onMessage(JSON.stringify({type:'ack',id:other.a._outgoing.meta.id,offset:2})), /偏移/);
+    other.a._outgoing.waiter = null; other.a.abortAll('test cleanup'); other.b.abortAll('test cleanup');
+});

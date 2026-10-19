@@ -14,19 +14,19 @@
 - M0：品牌、包名、图标、PWA 统一；移除旧 tracked dist；确定性构建与固定 Service Worker 路径；锁文件升级，移除两个不再需要的依赖；修复错误许可证声明和来源归属。
 - M1：服务器签发 ID / 恢复令牌，显式创建 / 加入邀请、固定 15 分钟过期、两人和离线席位限制、Origin / 类型 / 大小 / 速率检查、二维码、指纹安全码和接收方同意。
 - M2：实际选中 pair 诊断、UDP / TCP 与候选类型显示、RTT、候选计数、有限 ICE restart、失败文案；中继路径 fail closed。
-- M3：新 v2 引擎，16 KiB 分块、256 KiB 持久化 ACK、DC 背压、有限接收队列、流式 sink / 64 MiB 回退内存池、SHA-256、暂停 / 继续 / 取消、零字节文件与多文件发送队列。
+- M3：新 v2 引擎，16 KiB 分块、256 KiB 持久化 ACK、DC 背压、有限接收队列、流式 sink / 64 MiB 回退内存池、SHA-256、暂停 / 继续 / 取消、零字节文件与多文件发送队列；内存保存模式等待上一文件保存或丢弃再发下一邀请，避免叠加弹窗和 Blob。
 - M4：实际页面加入安全码、传输记录、进度 / 速度 / ETA、同意 / 拒绝、二维码、离开房间、失败重试、隐私与文件能力说明；桌面 / 手机、明暗模式、键盘焦点和 reduced motion。
 - M5：真实 WS 集成测试、传输协议测试、路径单测、浏览器 E2E / smoke 和 CI 骨架。
 - M6：现有证书 HTTPS/WSS 部署模板、无特权 systemd、静态版本切换与回滚脚本。未实际部署。
 
 ## 验证证据
 
-- 本地 Node 测试 11 项通过，包含真实 TCP WebSocket 连接和拒绝测试。
+- 本地 Node 测试 14 项通过，包含真实 TCP WebSocket 连接和拒绝测试。
 - 确定性重建、引用文件 / PWA 图标检查和 shell 语法检查通过。
 - 根包及服务端 `npm audit --omit=dev` 均 0 个已知漏洞（只代表本次检索结果）。
 - 本地 Chromium 153 页面、配对 / SDP 和安全码生成已运行；桌面 / 手机 / 明暗截图已人工查看，手机无横向溢出。
 - 本地真实 P2P E2E **失败**：隔离执行网络没有可用 host 候选；未选中路径，UI 未虚报直连。即使加回环测试开关仍只有未暴露的 0.0.0.0 / :: 占位候选。完整端到端、100 MiB / 1 GiB、大文件 picker 尚未获得本地通过证据。
-- 首个实现提交 `5c79e2ec6153de3e6b86619d9df9e1c33733efa7` 已写入 PR #2。GitHub CI run `39211886476` 在真实 Chromium 156 上通过 UDP DataChannel 和双方 DTLS 安全码；随后接收弹窗父容器零尺寸导致 E2E 停止。已在后续修复中给模态框设置固定 viewport 容器，本地 Chromium UI 回归通过。100 MiB / 1 GiB、Firefox 和 WebKit 仍不能据此标通过。
+- 首个实现提交 `5c79e2ec6153de3e6b86619d9df9e1c33733efa7` 已写入 PR #2。GitHub CI run `39211886476` 在真实 Chromium 156 上通过 UDP DataChannel 和双方 DTLS 安全码；随后接收弹窗父容器零尺寸导致 E2E 停止。已在后续修复中给模态框设置固定 viewport 容器，本地 Chromium UI 回归通过。第二次 CI `39212293110` 在 Nginx 测试夹具的默认 access.log 权限处失败；已为 HTTP 重定向使用不含 query 的自定义日志，并让测试禁用隐式默认日志。100 MiB / 1 GiB、Firefox 和 WebKit 仍不能据此标通过。
 
 ## 外部阻碍
 

@@ -106,15 +106,17 @@ class TransferPeer {
             if (incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
             const result = await incoming.sink.finish();
             clearTimeout(incoming.timer); this._incoming = null;
-            this.sendJSON({ type: 'complete', id: msg.id, sha256: msg.sha256 });
+            this.sendJSON({ type: 'complete', id: msg.id, sha256: msg.sha256, readyNext: !!result.saved });
             Events.fire('file-received', { ...incoming.meta, ...result, sender: this._peerId, sha256: msg.sha256 });
             this._progress(incoming, 'complete'); return;
         }
         if (msg.type === 'complete' && outgoing?.meta.id === msg.id && outgoing.phase === 'verifying') {
             if (msg.sha256 !== outgoing.sha256) throw Error('对方返回的校验值不一致');
             clearTimeout(outgoing.timer); this._outgoing = null;
+            this._queueWaitId = msg.readyNext === true ? null : msg.id;
             this._progress(outgoing, 'complete'); this._dequeueFile(); return;
         }
+        if (msg.type === 'ready-next' && msg.id === this._queueWaitId) { this._queueWaitId = null; this._dequeueFile(); return; }
         if (['pause', 'resume'].includes(msg.type) && outgoing?.meta.id === msg.id) { outgoing.remotePaused = msg.type === 'pause'; return; }
         if (msg.type === 'cancel' && typeof msg.id === 'string') { this.cancel(msg.id, '对方取消传输', false); return; }
         if (msg.type === 'text' && this._verified && typeof msg.text === 'string' && msg.text.length <= 4096) Events.fire('text-received', { text: msg.text, sender: this._peerId });
@@ -139,7 +141,7 @@ class TransferPeer {
         this._filesQueue.push(...Array.from(files)); this._dequeueFile();
     }
     _dequeueFile() {
-        if (this._outgoing || !this._filesQueue.length || !this._isConnected()) return;
+        if (this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._isConnected()) return;
         const file = this._filesQueue.shift();
         const state = { file, meta: { id: crypto.randomUUID(), name: safeName(file.name), size: file.size, mime: file.type.slice(0, 128) }, phase: 'offered', offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
         this._outgoing = state;
@@ -201,7 +203,7 @@ class TransferPeer {
     abortAll(reason) {
         if (this._outgoing) this.cancel(this._outgoing.meta.id, reason, false);
         if (this._incoming) this.cancel(this._incoming.meta.id, reason, false);
-        this._filesQueue = [];
+        this._filesQueue = []; this._queueWaitId = null;
     }
     sendText(text) {
         if (!this._verified || !this._path?.direct) return Events.fire('notify-user', '请先核对安全码');

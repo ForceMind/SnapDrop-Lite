@@ -259,6 +259,7 @@ class PeersManager {
         Events.on('send-text', event => this.peers.get(event.detail.to)?.sendText(event.detail.text));
         Events.on('file-accepted', event => this.peers.get(event.detail.from)?.acceptIncoming(event.detail.id));
         Events.on('file-rejected', event => this.peers.get(event.detail.from)?.rejectIncoming(event.detail.id));
+        Events.on('file-saved', event => { const peer = this.peers.get(event.detail.sender); if (peer?._isConnected()) peer.sendJSON({ type: 'ready-next', id: event.detail.id }); });
         Events.on('verify-peer', event => this.peers.get(event.detail)?.verify());
         Events.on('transfer-control', event => {
             const { peerId, id, action } = event.detail; const peer = this.peers.get(peerId);
