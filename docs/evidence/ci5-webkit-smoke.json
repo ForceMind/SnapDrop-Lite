@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "engine": "webkit",
+  "tests": [
+    "render",
+    "WS session",
+    "invite + QR",
+    "leave",
+    "mobile overflow",
+    "visible consent dialog and reject"
+  ],
+  "limitation": "UI smoke only; no Safari WebRTC or iOS device claim",
+  "commit": "b7d0b2fc989e0aebb3b7c65af09a81754d3cb61f",
+  "run_id": 39269775295
+}
