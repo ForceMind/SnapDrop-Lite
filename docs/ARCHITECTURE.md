@@ -5,7 +5,7 @@
 - HTTPS：只分发静态资源；Nginx 拒绝上传方法，1 KiB request body 上限。
 - WSS `/server/webrtc`：`hello`、`create-room`、`join-room`、`leave-room`、`signal`、`ping/pong`。只转发经过白名单验证的 SDP / ICE；不转发文本、文件元信息、哈希或分块。
 - WebRTC：可靠、有序 `zeydrop-v2` DataChannel，承载所有用户文件 / 文本。无 TURN 配置，过滤 relay 候选；选中 relay 路径立即停止。
-- STUN：可配置、最多四个 STUN server 条目；只接受 `stun:` 地址。默认 Cloudflare / Google 的可用性没有在此环境中验证。不能将它们写成保证可用或自有服务。
+- STUN：可配置、最多四个 STUN server 条目；只接受 `stun:` 地址。默认 Cloudflare / Google 地址已核对官方文档来源，但可用性没有在此环境中验证。不能将它们写成保证可用或自有服务。详见 STUN_CONFIGURATION。
 
 ## 邀请和会话
 

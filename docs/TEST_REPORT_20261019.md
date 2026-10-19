@@ -1,26 +1,24 @@
 # 自动化测试报告 · 2026-10-19
 
-测试代码提交：`a520ed9c501799aeb56857ec62879ccb1395cc51`。CI：[run 39271609507](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39271609507)，2026-10-19 北京时间 22:48 完成，整体 success。
+实现提交：`7e83ba4e6306d18c4a5b557e4c548c68368b7f9b`。CI：[run 39274470166](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39274470166)，北京时间 23:06 完成，整体 success。此报告绑定固定提交；后续 head 仍需对应 CI。
 
 | 检查 | 结果 | 范围 |
 |---|---|---|
-| Node 测试 | 19/19 通过 | 实际 WS、授权/隔离/过期/恢复、路径 fixture、分块完整性、背压窗口、取消、暂停、存储失败、终止状态 |
-| 安装/审计/构建 | 通过 | 固定锁文件、生产依赖审计 0 已知漏洞、两次构建一致、资源引用、shell |
-| Nginx | 通过 | 真实模板解析，临时证书，高位 loopback 端口；没有启动生产服务 |
-| Chromium | 通过 | 两个独立持久化 profile，host / prflx selected UDP；0、100 MiB、1 GiB 原生 OPFS 写入与独立全文件 SHA-256；拒绝、失败后再传、WS 恢复 |
-| Firefox | 通过 | 两个临时 context，100 MiB 原生 OPFS 写入与独立 SHA-256，拒绝、失败后再传、WS 恢复 |
-| WebKit | 通过 | 390×844 UI、信令、二维码/邀请/离开、接收弹窗；无 Safari/iOS 文件能力结论 |
+| Node | 24/24 | 实际 WS 授权/隔离/过期/锁定/恢复、原始 TCP 畸形握手、ICE fixture、早到信令、脱敏诊断、分块/损坏/暂停/取消/存储失败 |
+| 安装/审计/构建 | 通过 | 锁文件、生产依赖审计 0 已知漏洞、两次构建一致、资源引用、shell |
+| Nginx | 通过 | 临时证书、高位 loopback 端口实际模板解析；非生产服务验收 |
+| Chromium | 通过 | 两个独立持久化 profile，selected UDP；0 / 100 MiB / 1 GiB 原生 OPFS 与独立磁盘 SHA-256；拒绝/配额失败后再传/WS 恢复 |
+| Firefox | 通过 | 两个临时 context，100 MiB 原生 OPFS 与独立 SHA-256，同类完整 E2E；没有 1 GiB 结论 |
+| WebKit | 通过 | 390×844 UI、信令/二维码/邀请/离开/接收弹窗/诊断下载；没有 Safari/iOS 文件能力结论 |
 
-1 GiB 测试用稀疏零文件，SHA-256 `49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14`。耗时 126.617 秒包含测试额外磁盘读取与校验，不是 WAN 速度基准。小文件另以指定正文比较下载结果，协议单测覆盖随机内容和人为损坏。
+已配对邀请期限由测试提前设置至当前时间前，再执行实际文件矩阵；没有真实等待 15 分钟或 12 小时。会话锁定、原成员恢复不延长期限、最长会话到期及房间清理另由可控时钟/实际 WS 验证。此场景证明邀请到期不再切断已锁定会话，不能视为 12 小时稳定性测试。
 
-Chromium 接收待处理队列峰值 245,844 B，约 256 KiB；这不包含浏览器、操作系统或文件系统缓存。捕获传输阶段 WS 56 条消息共 840 B，未包含文件名/hash/正文或二进制帧；统计不包含页面资源、初始 ICE 配对或后续重连，不代表总流量为零。
+协商顺序：延迟 answerer discovery 250 ms，Chromium 实际捕获 2 条、Firefox 3 条先到 SDP/ICE，最终直连。诊断导出实际下载并检查身份/安全码/邀请/恢复令牌/文件 sentinel 不在报告中；单测另覆盖 IP、SDP、任意错误原文和字段注入，验证 120 条历史和 30 个匿名映射上限。
 
-原始数据在 `evidence/ci7-*.json`，标注对应 commit 与 run ID。所有实际传输均在同一 CI 主机，测试关闭 STUN，验证 DataChannel 协议与非中继路径；不能证明跨网络 NAT 打洞成功率。
+1 GiB 为稀疏零文件，SHA-256 `49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14`；耗时 99.919 秒包含测试额外磁盘读取/校验，不是 WAN 速度。另有已知正文下载比较、随机内容及人为损坏协议测试。
 
-流式测试将 picker 选择替换为原生 OPFS handle，真实浏览器执行实际写入。真实用户文件 picker、OS 文件保存体验、设备硬件、蜂窝网络、Safari/iOS/Android/Edge、IPv6 与严格 NAT 仍未执行。跨连接断点续传尚未实现。当前版本保持开发候选，PR 保留 Draft，未发布或部署。
+Chromium 接收待处理队列峰值 262,228 B，不是进程总内存。传输阶段 WS 45 条 / 675 B，检查无二进制帧、文件名、正文 sentinel 和各已传文件 SHA-256；不含页面/初始配对/后续重连，不代表服务器总流量为零。
 
-协商顺序回归：主动延迟 answerer 的设备发现 250 ms，Chromium 捕获 2 条、Firefox 捕获 3 条先到的 SDP/ICE；缓冲至授权设备出现后建立直连。此证据对应 a520ed9，不包含后续诊断导出 UI 改动。
+原始数据：`evidence/ci10-*.json`，均标明 commit/run/method。历史失败和 ci4–ci9 证据保留。本地 Node 日志、服务器构建指纹改变/还原实验、隔离旧握手复现也在 evidence。
 
-诊断导出提交 90962c1 的 [CI #8](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39272819405) 于北京时间 22:55 全部通过：21 项 Node 测试及原完整浏览器矩阵，另验证 Chromium/Firefox/WebKit 实际 JSON 下载；回归确认报告不含设备 ID、安全码、邀请/恢复令牌、文件名或正文。evidence/ci8-*.json 保留原始结果。后续握手路径/发布指纹修复本地 22 项通过，仍需最新提交的完整 CI。
-
-握手/服务端发布指纹提交 7c12857 的 [CI #9](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39273386666) 全部通过：22 项 Node 测试与完整浏览器矩阵。原始 JSON 为 evidence/ci9-*.json。此结果不包括后续会话期限分离；后者本地 24 项通过，新增实际文件传输前让邀请到期的浏览器用例，需另查最新 head CI。
+边界：同一 CI 主机、STUN 关闭，不能证明公网 NAT 成功率；OPFS writer 原生但 picker 选择由测试提供。真实保存授权、OS/磁盘、Edge/Safari/iOS/Android、IPv6/严格 NAT 和生产部署/回滚均未执行。跨连接断点续传和显式 LAN 发现尚未实现。PR 保留 Draft，未正式发布或部署。
