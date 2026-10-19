@@ -25,7 +25,7 @@ for (const [label, file] of [['ws', 'server/node_modules/ws/LICENSE'], ['@noble/
 }
 await writeFile('dist/THIRD_PARTY_LICENSES.txt', notices);
 await cp('LICENSE', 'dist/LICENSE'); await cp('NOTICE', 'dist/NOTICE');
-const html = (await readFile('client/index.html', 'utf8')).replace(/((?:src|href)="(?:scripts\/[^"?]+\.js|config\.js|styles\.css|manifest\.json))(?:\?[^"\s]*)?"/g, `$1?v=${revision}"`);
+const html = (await readFile('client/index.html', 'utf8')).replace('__BUILD_REVISION__', revision).replace(/((?:src|href)="(?:scripts\/[^"?]+\.js|config\.js|styles\.css|manifest\.json))(?:\?[^"\s]*)?"/g, `$1?v=${revision}"`);
 await writeFile('dist/index.html', html);
 const assets = (await files('dist')).map(file => '/' + file.slice(5)).filter(file => !file.endsWith('service-worker.js') && !file.endsWith('config.js'));
 const shell = assets.map(file => /\.(js|css|json)$/.test(file) ? file + '?v=' + revision : file);

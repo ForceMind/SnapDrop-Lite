@@ -4,7 +4,7 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。已通过 17 项测试、Chromium 1 GiB / Firefox 100 MiB 实际 DataChannel 与独立磁盘 SHA-256，以及 WebKit UI 检查；这些均为同一 CI 主机测试，详见 [测试报告](docs/TEST_REPORT_20261019.md)。仓库正式更名留待最后由用户手动完成，不阻塞研发；当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和原始历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
+当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。已通过 19 项测试、Chromium 1 GiB / Firefox 100 MiB 实际 DataChannel 与独立磁盘 SHA-256，以及 WebKit UI 检查；这些均为同一 CI 主机测试，详见 [测试报告](docs/TEST_REPORT_20261019.md)。仓库正式更名留待最后由用户手动完成，不阻塞研发；当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和原始历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
 
 ## 使用流程
 
@@ -14,6 +14,7 @@
 - 服务端生成设备 ID 和 256-bit 恢复令牌；短时 WebSocket 重连保留配对身份，离线房间席位保留 2 分钟。刷新标签页会生成新会话，旧席位可能需要等待释放。
 - 安全码与双方 DTLS SHA-256 指纹绑定，需通过可信渠道人工比较。设备名称仅供显示，不是身份认证。
 - `getStats()` 选中 candidate pair 为已知非 relay 路径后才能发送。仅信令在线、候选收集或 nominated 状态不算直连成功。
+- 工作台可导出本机连接诊断 JSON：仅包含最多 120 条状态/候选类型/RTT 记录及构建版本，不含 IP、设备 ID、安全码、邀请、令牌或文件信息；不会自动上传。
 - STUN 只是地址发现，不能保证突破严格 NAT / CGNAT / 防火墙。失败时明确提示，不切换到服务器文件代理。
 - 同一 Wi-Fi 也可通过邀请连接。目前暂停未鉴权的子网自动发现；显式同意的局域网发现仍在待办中。
 

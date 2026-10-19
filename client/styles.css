@@ -1070,6 +1070,9 @@ button:disabled { opacity:.45; cursor: default; }
 .select-files input { position: absolute; width:1px; height:1px; opacity:0; }
 .peer-actions { display:flex; gap:8px; margin-top:10px; }
 .peer-actions button { flex:1; }
+.diagnostics-action { display:grid; justify-items:center; gap:6px; margin-top:16px; text-align:center; }
+.diagnostics-action button { min-height:44px; padding:8px 14px; border:1px solid var(--line, #d9e5dc); border-radius:10px; background:transparent; color:inherit; font:inherit; font-size:12px; cursor:pointer; }
+.diagnostics-action small { font-size:11px; opacity:.65; line-height:1.6; }
 #inviteQR { display: block; margin:14px auto; border-radius:12px; max-width: 100%; }
 .leave-room { margin-top:12px; }
 .transfer-section { max-width: 1120px; padding: 0 32px 40px; margin: 16px auto 0; }

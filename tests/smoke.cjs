@@ -15,7 +15,10 @@ const { webkit, firefox, chromium } = require('playwright'); const { startDev } 
         await page.locator('#rejectFileOffer').click();
         assert.equal(await page.locator('#fileOfferDialog').isVisible(), false);
         await page.locator('#leaveRoomBtn').click(); assert.equal(await page.locator('#inviteCreated').isHidden(), true); assert.deepEqual(errors, []);
-        await fs.mkdir('test-results', { recursive:true }); await fs.writeFile('test-results/smoke-'+engine+'.json',JSON.stringify({passed:true, engine, tests:['render','WS session','invite + QR','leave','mobile overflow','visible consent dialog and reject'], limitation:'UI smoke only; no Safari WebRTC or iOS device claim'},null,2));
+        const diagnosticDownload = page.waitForEvent('download'); await page.locator('#exportDiagnostics').click();
+        const report = JSON.parse(await fs.readFile(await (await diagnosticDownload).path(), 'utf8'));
+        assert.equal(report.product, 'Zeydrop'); assert.ok(report.events.some(event=>event.kind==='signaling' && event.state==='connected'));
+        await fs.mkdir('test-results', { recursive:true }); await fs.writeFile('test-results/smoke-'+engine+'.json',JSON.stringify({passed:true, engine, tests:['render','WS session','invite + QR','leave','mobile overflow','visible consent dialog and reject','local diagnostic export'], limitation:'UI smoke only; no Safari WebRTC or iOS device claim'},null,2));
         console.log('PASS', engine, 'UI smoke');
     } finally { await browser.close(); await server.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

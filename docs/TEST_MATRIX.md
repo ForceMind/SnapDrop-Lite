@@ -11,12 +11,14 @@
 | 接收前零字节、0 / 3 / 2 MiB 文件 | 协议双端模拟 + sink | 通过 |
 | SHA-256 损坏、超限、内存上限、未核对身份 | 协议模拟 | 通过 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
-| Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 双 profile 浏览器 | CI #5 完整通过 |
-| Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #5 全部通过（原生 OPFS） |
-| Firefox 完整 E2E | CI #5 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 配额失败后继续传输 / 会话恢复 |
-| WebKit 手机 UI | CI #5 smoke | 通过；不等于 iOS Safari 实测 |
+| Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 双 profile 浏览器 | CI #7 完整通过 |
+| Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #7 全部通过（原生 OPFS） |
+| Firefox 完整 E2E | CI #7 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 配额失败后继续传输 / 会话恢复 |
+| WebKit 手机 UI | CI #7 smoke | 通过；不等于 iOS Safari 实测 |
 
 E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服务器 WS 字节计数与正文 sentinel 检查。原生文件流使用浏览器 OPFS writer；测试只代替 picker 选择，不证明真实用户 picker 授权体验。CI 网络同主机不能替代公网 NAT 场景。
+
+协商顺序回归在 CI #7 中实际捕获 Chromium 2 / Firefox 3 条早到信令，设备发现延迟 250 ms 后仍成功直连。导出诊断的新浏览器回归尚待最新 head CI；本地脱敏与有界记录单测通过。实机记录方法见 [REAL_DEVICE_TESTING](REAL_DEVICE_TESTING.md)。
 
 ## 实机发布门槛（均未验证）
 

@@ -16,6 +16,7 @@
     <!-- Descriptions -->
     <meta name="description" content="Zeydrop 闪投：跨网络设备直连传输文件，无需上传云端、不使用文件中继">
     <meta name="version" content="0.3.0-dev.1">
+    <meta name="build-revision" content="__BUILD_REVISION__">
     <meta name="keywords" content="Zeydrop,闪投,文件传输,P2P,局域网,公网,WebRTC">
     <meta name="author" content="Zeydrop Contributors">
     <meta property="og:title" content="Zeydrop 闪投 · Direct by design.">
@@ -111,6 +112,7 @@
                         </x-no-peers>
                     </div>
                     <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
+                    <div class="diagnostics-action"><button id="exportDiagnostics" type="button">导出连接诊断</button><small>仅在本机下载连接状态，不含 IP、邀请或文件信息</small></div>
                 </div>
             </section>
         </main>
@@ -258,6 +260,7 @@
     <script src="scripts/vendor.js"></script>
     <script src="scripts/transfer.js"></script>
     <script src="scripts/network.js"></script>
+    <script src="scripts/diagnostics.js"></script>
     <script src="scripts/ui.js"></script>
     
     <!-- no script -->

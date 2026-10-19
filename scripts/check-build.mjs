@@ -19,4 +19,5 @@ const manifest = JSON.parse(await readFile('dist/manifest.json'));
 for (const icon of manifest.icons) await readFile('dist/' + icon.src);
 assert.match(await readFile('dist/service-worker.js','utf8'), /zeydrop-shell-[a-f0-9]{16}/);
 assert.ok(!html.includes('clipboard.js'));
+assert.match(html, /name="build-revision" content="[a-f0-9]{16}"/);
 console.log('PASS reproducible shell, icons and local references');

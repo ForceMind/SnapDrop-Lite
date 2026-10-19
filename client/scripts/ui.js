@@ -140,6 +140,16 @@ class TransfersUI {
 }
 class Zeydrop {
     constructor() {
+        this.diagnostics = new ConnectionDiagnostics({ version: document.querySelector('meta[name="version"]')?.content, revision: document.querySelector('meta[name="build-revision"]')?.content });
+        Events.on('connection-state', event => this.diagnostics.recordConnection(event.detail));
+        Events.on('signal-state', event => this.diagnostics.recordSignal(event.detail.state));
+        $('exportDiagnostics').onclick = () => {
+            const report = this.diagnostics.snapshot({ secureContext: window.isSecureContext, webRTC: window.isRtcSupported, streamingSave: typeof window.showSaveFilePicker === 'function' });
+            const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2) + '\n'], { type: 'application/json' }));
+            const link = document.createElement('a'); link.href = url; link.download = 'zeydrop-diagnostics-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+            document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+            Events.fire('notify-user', '诊断已在本机导出，可自行查看后分享给开发者');
+        };
         new PeersUI(); this.server = new ServerConnection(); this.peers = new PeersManager(this.server);
         new FileOfferDialog(); new ReceiveDialog(); new TransfersUI(); this.rooms(); this.text();
         Events.on('display-name', event => $('displayName').textContent = '你的设备：' + event.detail.message.deviceName);

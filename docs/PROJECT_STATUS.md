@@ -1,21 +1,21 @@
 # Zeydrop 工程接管状态
 
-更新时间：2026-10-19，北京时间 22:36。版本 `0.3.0-dev.1`，分支 `feat/direct-first-workspace-20261019`。
+更新时间：2026-10-19，北京时间 22:52。版本 `0.3.0-dev.1`，分支 `feat/direct-first-workspace-20261019`。
 
 ## 当前可验证结果
 
-实现提交 `b7d0b2fc989e0aebb3b7c65af09a81754d3cb61f` 的 [CI #5](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39269775295) **全部通过**：
+实现提交 `a520ed9c501799aeb56857ec62879ccb1395cc51` 的 [CI #7](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39271609507) **全部通过**：
 
-- 17 项 Node 测试，含实际 WebSocket 集成与文件协议/失败回归。
+- 19 项 Node 测试，含实际 WebSocket 集成与文件协议/失败回归。
 - 锁文件安装、生产依赖审计、shell 语法、确定性构建及资源引用。
 - 实际 Nginx 模板解析，使用临时证书和无特权回环测试端口。
-- Chromium：实际 UDP DataChannel、DTLS 安全码、拒绝接收、普通下载内容一致、存储配额失败后保持直连、0 / 100 MiB / **1 GiB** 原生 OPFS 流式保存及独立磁盘 SHA-256、WS 恢复、服务器信令检查。
+- Chromium：实际 UDP DataChannel、DTLS 安全码、拒绝接收、普通下载内容一致、存储配额失败后保持直连、0 / 100 MiB / **1 GiB** 原生 OPFS 流式保存及独立磁盘 SHA-256、WS 恢复、服务器信令检查、故意延迟设备发现的协商顺序回归。
 - Firefox：同类完整 E2E，最大文件 **100 MiB**；1 GiB 未在 Firefox 执行。
 - WebKit：手机布局、信令、邀请、二维码、离开和同意/拒绝弹窗 smoke；**不等于 Safari / iOS 文件传输验证**。
 
-Chromium 1 GiB 场景耗时 92.842 秒（包括测试中的独立磁盘校验；只代表 CI 主机，不是公网速度）。接收待处理消息队列峰值 262,228 字节，不是浏览器总内存。传输阶段捕获 42 条 WS 消息、630 字节，未发现文件名、hash 或正文；不包含初始配对、页面加载和后续重连流量，不能宣传服务器总流量为零。
+Chromium 1 GiB 场景耗时 126.617 秒（包括测试中的独立磁盘校验；只代表 CI 主机，不是公网速度）。接收待处理消息队列峰值 245,844 字节，不是浏览器总内存。传输阶段捕获 56 条 WS 消息、840 字节，未发现文件名、hash 或正文；不包含初始配对、页面加载和后续重连流量，不能宣传服务器总流量为零。
 
-原始证据：`docs/evidence/ci5-chromium-1gib.json`、`ci5-firefox-100mib.json`、`ci5-webkit-smoke.json`。详细范围见 TEST_MATRIX 与 TEST_REPORT_20261019。
+原始证据：`docs/evidence/ci7-chromium-1gib.json`、`ci7-firefox-100mib.json`、`ci7-webkit-smoke.json`（ci5 历史证据仍保留）。详细范围见 TEST_MATRIX 与 TEST_REPORT_20261019。
 
 ## 仓库和版本
 
@@ -68,4 +68,8 @@ CI #4 在临时 Chromium profile 的 OPFS 1 GiB 测试失败，原日志没有�
 
 ## 最终审查中的协商顺序修复
 
-两个 WebSocket 不保证跨 socket 的交付顺序。先收到 SDP/ICE、后收到授权设备列表时，旧 PeersManager 会丢弃协商。已加入最多 64 条、合计 256 KiB、有效期 10 秒的早到信令队列；必须等授权设备列表后才创建 peer，离房清空。新增两项单测和真实浏览器延迟 answerer discovery 回归。新总测试数为 19；对应最新代码的完整 CI 需再次核验，不直接复用 b7d0b2f 的绿灯。
+两个 WebSocket 不保证跨 socket 的交付顺序。先收到 SDP/ICE、后收到授权设备列表时，旧 PeersManager 会丢弃协商。已加入最多 64 条、合计 256 KiB、有效期 10 秒的早到信令队列；必须等授权设备列表后才创建 peer，离房清空。新增两项单测和真实浏览器延迟 answerer discovery 回归。新总测试数为 19；CI #7 全部通过；Chromium 实际观察到 2 条早到信令，Firefox 3 条，最终均建立真实 selected UDP 直连。
+
+## 实机证据准备
+
+新增本机诊断导出，采用字段白名单、120 条环形记录、匿名 peer 序号，仅保留版本/构建 revision、信令和 ICE 状态、候选类型/数量、RTT 与能力标记。不导出 SDP、IP、安全码、设备 ID、邀请/恢复令牌、文件名/正文或任意错误原文；不自动上传。新增两项单测，本地合计 21 项通过；新增导出下载的 Chromium/Firefox/WebKit 回归，需由本次 head CI 验证后才记为通过。实机方法见 REAL_DEVICE_TESTING。

@@ -130,6 +130,14 @@ async function main() {
         results.delayedEarlySignals = await Promise.all(pages.map(page => page.evaluate(() => window.__earlySignalsObserved)));
         assert.ok(results.delayedEarlySignals.some(count => count>0), 'Test must actually deliver SDP/ICE before discovery');
         results.cases.push('real delayed discovery: earlier SDP/ICE buffered until authorized peer appears');
+        const diagnosticDownload = a.waitForEvent('download'); await a.locator('#exportDiagnostics').click();
+        const report = JSON.parse(await fs.readFile(await (await diagnosticDownload).path(), 'utf8'));
+        assert.equal(report.schema, 1); assert.match(report.revision, /^[a-f0-9]{16}$/);
+        assert.ok(report.events.some(event => event.kind === 'connection' && event.path.direct && event.path.status === 'selected'));
+        const reportText = JSON.stringify(report);
+        const secrets = await a.evaluate(() => [zeydrop.server._peerId,zeydrop.server._resumeToken,zeydrop.server._desiredRoomId,...[...zeydrop.peers.peers.values()].flatMap(peer=>[peer._peerId,peer._code])]);
+        for (const secret of [...secrets,'PRIVATE_FILE_SENTINEL','PRIVATE_FILE_BODY_SENTINEL']) if (secret) assert.ok(!reportText.includes(secret));
+        results.cases.push('local diagnostic download records selected path without identities, invitation, tokens or file metadata');
         assert.deepEqual(results.errors, []); results.passed = true;
     } catch (error) {
         results.failure = error.message;
