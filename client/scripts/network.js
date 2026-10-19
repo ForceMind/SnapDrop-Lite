@@ -1,960 +1,273 @@
-window.URL = window.URL || window.webkitURL;
-window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription;
-window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.webkitRTCIceCandidate;
-window.isRtcSupported = !!window.RTCPeerConnection;
-
-const DEFAULT_ICE_SERVERS = [
-    // 国内可用的 STUN 服务器
-    { urls: 'stun:stun.miwifi.com:3478' },
-    { urls: 'stun:stun.chat.bilibili.com:3478' },
-    { urls: 'stun:stun.hitv.com:3478' },
-    // Google STUN 服务器（备用）
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' }
-];
-
+'use strict';
+window.isRtcSupported = !!window.RTCPeerConnection && !!window.crypto?.subtle;
+class Events {
+    static fire(type, detail) { window.dispatchEvent(new CustomEvent(type, { detail })); }
+    static on(type, callback) { window.addEventListener(type, callback); }
+    static off(type, callback) { window.removeEventListener(type, callback); }
+}
 function getIceServers() {
-    return window.SNAPDROP_ENABLE_STUN ? DEFAULT_ICE_SERVERS : [];
-}
-
-function normalizeIP(ip) {
-    if (!ip) return '';
-    if (ip === '::1') return '127.0.0.1';
-    if (ip.startsWith('::ffff:')) return ip.substring(7);
-    return ip;
-}
-
-function isPrivateIPv4(ip) {
-    ip = normalizeIP(ip);
-    if (!ip || !ip.includes('.')) return false;
-    if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
-    if (ip.startsWith('172.')) {
-        const second = parseInt(ip.split('.')[1]);
-        return second >= 16 && second <= 31;
-    }
-    return false;
-}
-
-function isUnusableLocalIPv4(ip) {
-    ip = normalizeIP(ip);
-    if (!ip || ip === '0.0.0.0') return true;
-    if (ip.startsWith('127.') || ip.startsWith('169.254.')) return true;
-    return /^172\.(1[6-9]|2\d|3[01])\.0\.1$/.test(ip);
-}
-
-function candidateSummary(candidate) {
-    const line = typeof candidate === 'string' ? candidate : candidate && candidate.candidate;
-    if (!line) return { type: 'unknown', address: 'unknown' };
-    const type = (line.match(/\styp\s(\S+)/) || [])[1] || 'unknown';
-    const address = (line.match(/(\d{1,3}(?:\.\d{1,3}){3})/) || line.match(/([a-f0-9]{1,4}(?::[a-f0-9]{1,4}){2,7})/) || line.match(/(\S+\.local)/) || [])[1] || 'unknown';
-    return { type, address };
-}
-
-// 获取本机 IP（支持 IPv4 和 IPv6）
-// 包含 host（局域网）和 srflx（公网）候选
-function getLocalIPs() {
-    return new Promise((resolve) => {
-        if (!window.RTCPeerConnection) {
-            console.warn('[闪投] WebRTC 不可用');
-            resolve([]);
-            return;
-        }
-        const ips = new Set();
-        let resolved = false;
-        const done = () => {
-            if (resolved) return;
-            resolved = true;
-            const result = [...ips];
-            console.log('[闪投] 本机 IP:', result);
-            try { pc.close(); } catch(e) {}
-            resolve(result);
-        };
-        // 局域网模式不依赖 STUN，公网模式再启用 STUN 做 NAT 穿透。
-        const pc = new RTCPeerConnection({
-            iceServers: getIceServers()
-        });
-        pc.onicecandidate = (e) => {
-            if (!e.candidate) {
-                done();
-                return;
-            }
-            const candidate = e.candidate.candidate;
-            const summary = candidateSummary(candidate);
-            // 匹配 IPv4 地址
-            const v4 = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
-            if (v4) {
-                const ip = normalizeIP(v4[1]);
-                if (isUnusableLocalIPv4(ip)) {
-                    console.warn('[闪投] 忽略不可用的本机候选 IP:', ip, summary.type);
-                } else if (window.SNAPDROP_ENABLE_STUN || isPrivateIPv4(ip)) {
-                    ips.add(ip);
-                }
-            }
-            // 匹配 IPv6 地址
-            const v6 = candidate.match(/([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/);
-            if (v6) {
-                ips.add(v6[1]);
-            }
-            // 也匹配 mDNS 域名（现代浏览器隐藏局域网 IP 时使用）
-            const mdns = candidate.match(/(\S+\.local)/);
-            if (mdns) {
-                console.log('[闪投] 发现 mDNS:', mdns[1]);
-            }
-        };
-        pc.createDataChannel('');
-        pc.createOffer()
-            .then(offer => pc.setLocalDescription(offer))
-            .catch(err => {
-                console.error('[闪投] WebRTC offer 失败:', err);
-                done();
-            });
-        // 超时 3 秒
-        setTimeout(done, 3000);
+    if (!window.ZEYDROP_CONFIG?.enableStun) return [];
+    return (window.ZEYDROP_CONFIG.iceServers || []).slice(0, 4).map(server => {
+        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+        if (!urls.length || urls.some(url => typeof url !== 'string' || !/^stun:[a-z0-9.:[\]-]+(?::\d+)?$/i.test(url))) throw Error('Zeydrop 只允许 STUN 地址，不支持 TURN 中继');
+        return { urls };
     });
 }
-
+function selectedPath(stats) {
+    let pair;
+    for (const stat of stats.values()) if (stat.type === 'transport' && stat.selectedCandidatePairId) pair = stats.get(stat.selectedCandidatePairId);
+    if (!pair) pair = [...stats.values()].find(stat => stat.type === 'candidate-pair' && stat.selected && stat.state === 'succeeded');
+    if (!pair) return { direct: false, status: 'unknown' };
+    const local = stats.get(pair.localCandidateId), remote = stats.get(pair.remoteCandidateId);
+    if (!local || !remote) return { direct: false, status: 'unknown' };
+    if ([local.candidateType, remote.candidateType].includes('relay')) return { direct: false, status: 'relay' };
+    const known = ['host', 'srflx', 'prflx'];
+    const protocol = local.protocol || remote.protocol || 'unknown';
+    // Never guess a selected route from a merely nominated candidate pair.
+    return {
+        direct: known.includes(local.candidateType) && known.includes(remote.candidateType) && ['udp', 'tcp'].includes(protocol),
+        status: 'selected', protocol, localType: local.candidateType, remoteType: remote.candidateType,
+        family: [local.address, remote.address].some(address => address?.includes(':')) ? 'IPv6 / 双栈' : 'IPv4 / mDNS',
+        rtt: Number.isFinite(pair.currentRoundTripTime) ? Math.round(pair.currentRoundTripTime * 1000) : null
+    };
+}
 class ServerConnection {
-
     constructor() {
-        this._localIPs = [];
-        // A tab-scoped identity prevents two tabs from impersonating the same peer.
-        this._peerId = this._getOrCreatePeerId();
-        this._desiredRoomId = null;
-        this._connecting = false;
-        this._closing = false;
+        this._desiredRoomId = null; this._peerId = null; this._resumeToken = null;
+        this._closing = false; this._attempt = 0; this._ready = false;
         this._connect();
-        Events.on('beforeunload', () => this._disconnect());
-        Events.on('pagehide', () => this._disconnect());
-        document.addEventListener('visibilitychange', () => this._onVisibilityChange());
+        Events.on('online', () => this._connect());
+        Events.on('pagehide', event => { if (!event.persisted) this._disconnect(); });
+        Events.on('pageshow', event => { if (event.persisted) { this._closing = false; this._connect(); } });
     }
-
-    _getOrCreatePeerId() {
-        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-            return window.crypto.randomUUID();
-        }
-        if (!window.crypto || !window.crypto.getRandomValues) {
-            throw new Error('此浏览器缺少安全随机数能力，请使用 HTTPS');
-        }
-        const bytes = new Uint8Array(16);
-        window.crypto.getRandomValues(bytes);
-        return Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
-    }
-
-    async _connect() {
-        clearTimeout(this._reconnectTimer);
-        if (this._closing || this._connecting || this._isConnected() || this._isConnecting()) return;
-        this._connecting = true;
+    _connect() {
+        if (this._closing || (this._socket && this._socket.readyState < 2)) return;
+        clearTimeout(this._retry); this._ready = false;
         Events.fire('signal-state', { state: 'connecting' });
-
-        try {
-            this._localIPs = await getLocalIPs();
-            if (this._closing) return;
-            const wsUrl = this._endpoint() + '?peerId=' + encodeURIComponent(this._peerId);
-            const ws = new WebSocket(wsUrl);
-            ws.onopen = () => {
-                if (this._closing || this._socket !== ws) return;
-                Events.fire('signal-state', { state: 'connected' });
-                this.send({ type: 'local-ip', ips: this._localIPs });
-                // Joining before WS OPEN was previously silently dropped.
-                if (this._desiredRoomId) {
-                    this.send({ type: 'join-room', roomId: this._desiredRoomId });
-                }
-            };
-            ws.onmessage = e => this._onMessage(e.data);
-            ws.onclose = () => {
-                if (this._socket !== ws || this._closing) return;
-                this._socket = null;
-                this._onDisconnect();
-            };
-            ws.onerror = e => console.error('[闪投] 信令连接错误', e);
-            this._socket = ws;
-        } catch (error) {
-            console.error('[闪投] 信令连接失败', error);
-            this._onDisconnect();
-        } finally {
-            this._connecting = false;
-        }
-    }
-
-    _onMessage(data) {
-        let msg;
-        try {
-            msg = JSON.parse(data);
-        } catch (error) {
-            console.warn('[闪投] 无效的信令消息');
-            return;
-        }
-        switch (msg.type) {
-            case 'peers':
-                Events.fire('peers', msg.peers || []);
-                break;
-            case 'peer-joined':
-                Events.fire('peer-joined', msg.peer);
-                break;
-            case 'peer-left':
-                Events.fire('peer-left', msg.peerId);
-                break;
-            case 'signal':
-                Events.fire('signal', msg);
-                break;
-            case 'room-joined':
-                Events.fire('room-joined', msg);
-                break;
-            case 'room-error':
-                Events.fire('room-error', msg);
-                break;
-            case 'ping':
-                this.send({ type: 'pong' });
-                break;
-            case 'display-name':
-                Events.fire('display-name', msg);
-                break;
-            default:
-                console.warn('[闪投] 未识别的消息类型:', msg.type);
-        }
-    }
-
-    send(message) {
-        if (!this._isConnected()) return false;
-        this._socket.send(JSON.stringify(message));
-        return true;
-    }
-
-    joinRoom(roomId) {
-        if (!roomId || typeof roomId !== 'string') return false;
-        this._desiredRoomId = roomId.trim();
-        if (this._isConnected()) {
-            this.send({ type: 'join-room', roomId: this._desiredRoomId });
-        } // Otherwise it is sent automatically on ws.open / reconnect.
-        return true;
-    }
-
-    _endpoint() {
-        const protocol = location.protocol.startsWith('https') ? 'wss' : 'ws';
-        return protocol + '://' + location.host + '/server/webrtc';
-    }
-
-    _disconnect() {
-        this._closing = true;
-        clearTimeout(this._reconnectTimer);
-        const ws = this._socket;
-        this._socket = null;
-        if (!ws) return;
-        ws.onclose = null;
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'disconnect' }));
-        ws.close();
-    }
-
-    _onDisconnect() {
-        Events.fire('signal-state', { state: 'offline' });
-        clearTimeout(this._reconnectTimer);
-        if (!this._closing) {
-            this._reconnectTimer = setTimeout(() => this._connect(), 5000);
-        }
-    }
-
-    _onVisibilityChange() {
-        if (!document.hidden) this._connect();
-    }
-
-    _isConnected() {
-        return this._socket && this._socket.readyState === WebSocket.OPEN;
-    }
-
-    _isConnecting() {
-        return this._connecting || (this._socket && this._socket.readyState === WebSocket.CONNECTING);
-    }
-}
-
-class Peer {
-
-    constructor(serverConnection, peerId) {
-        this._server = serverConnection;
-        this._peerId = peerId;
-        this._filesQueue = [];
-        this._busy = false;
-        this._incomingOffer = null;
-        this._pendingOutgoingFile = null;
-        this._offerTimeout = null;
-        this._activeOutgoingId = null;
-        this._receivingId = null;
-    }
-
-    sendJSON(message) {
-        this._send(JSON.stringify(message));
-    }
-
-    sendFiles(files) {
-        for (let i = 0; i < files.length; i++) {
-            this._filesQueue.push(files[i]);
-        }
-        if (this._busy) return;
-        this._dequeueFile();
-    }
-
-    _dequeueFile() {
-        if (!this._filesQueue.length) return;
-        this._busy = true;
-        const file = this._filesQueue.shift();
-        this._sendFile(file);
-    }
-
-    _sendFile(file) {
-        this._pendingOutgoingFile = file;
-        this._activeOutgoingId = (window.crypto && window.crypto.randomUUID)
-            ? window.crypto.randomUUID()
-            : Date.now().toString(36) + Math.random().toString(36).slice(2);
-        this.sendJSON({
-            type: 'header',
-            id: this._activeOutgoingId,
-            name: file.name,
-            mime: file.type,
-            size: file.size
-        });
-        clearTimeout(this._offerTimeout);
-        this._offerTimeout = setTimeout(() => {
-            if (this._pendingOutgoingFile !== file) return;
-            this._pendingOutgoingFile = null;
-            this._activeOutgoingId = null;
-            this._busy = false;
-            Events.fire('notify-user', '接收方尚未确认，已取消当前文件');
-            this._dequeueFile();
-        }, 120000);
-    }
-
-    _onFileAccepted(message) {
-        const file = this._pendingOutgoingFile;
-        if (!file || message.id !== this._activeOutgoingId) return;
-        this._pendingOutgoingFile = null;
-        clearTimeout(this._offerTimeout);
-        if (file.size === 0) return; // Receiver confirms an empty file immediately.
-        this._chunker = new FileChunker(file,
-            chunk => this._send(chunk),
-            offset => this._onPartitionEnd(offset));
-        this._chunker.nextPartition();
-    }
-
-    _onFileRejected(message) {
-        if (!this._pendingOutgoingFile || message.id !== this._activeOutgoingId) return;
-        this._pendingOutgoingFile = null;
-        this._activeOutgoingId = null;
-        clearTimeout(this._offerTimeout);
-        this._busy = false;
-        Events.fire('notify-user', '接收方已拒绝文件');
-        this._dequeueFile();
-    }
-
-    acceptIncoming() {
-        if (!this._incomingOffer) return;
-        const meta = this._incomingOffer;
-        this._incomingOffer = null;
-        this._lastProgress = 0;
-        this._receivingId = meta.id;
-        this._digester = new FileDigester(meta, file => this._onFileReceived(file));
-        this.sendJSON({ type: 'header-accepted', id: meta.id });
-        if (meta.size === 0) {
-            this._onFileReceived({ name: meta.name, size: 0, mime: meta.mime, blob: new Blob([]) });
-        }
-    }
-
-    rejectIncoming() {
-        if (!this._incomingOffer) return;
-        const meta = this._incomingOffer;
-        this._incomingOffer = null;
-        this.sendJSON({ type: 'header-rejected', id: meta.id });
-    }
-
-    _onPartitionEnd(offset) {
-        this.sendJSON({ type: 'partition', offset: offset });
-    }
-
-    _onReceivedPartitionEnd(offset) {
-        this.sendJSON({ type: 'partition-received', offset: offset });
-    }
-
-    _sendNextPartition() {
-        if (!this._chunker || this._chunker.isFileEnd()) return;
-        this._chunker.nextPartition();
-    }
-
-    _sendProgress(progress) {
-        this.sendJSON({ type: 'progress', progress: progress });
-    }
-
-    _onMessage(message) {
-        if (typeof message !== 'string') {
-            this._onChunkReceived(message);
-            return;
-        }
-        message = JSON.parse(message);
-        console.log('RTC:', message);
-        switch (message.type) {
-            case 'header':
-                this._onFileHeader(message);
-                break;
-            case 'header-accepted':
-                this._onFileAccepted(message);
-                break;
-            case 'header-rejected':
-                this._onFileRejected(message);
-                break;
-            case 'partition':
-                this._onReceivedPartitionEnd(message.offset);
-                break;
-            case 'partition-received':
-                this._sendNextPartition();
-                break;
-            case 'progress':
-                this._onDownloadProgress(message.progress);
-                break;
-            case 'transfer-complete':
-                this._onTransferCompleted(message);
-                break;
-            case 'text':
-                this._onTextReceived(message);
-                break;
-        }
-    }
-
-    _onFileHeader(header) {
-        // Never accept file bytes merely because another device joined our room.
-        if (this._incomingOffer || this._digester ||
-            typeof header.id !== 'string' || header.id.length > 80 ||
-            typeof header.name !== 'string' || header.name.length > 255 ||
-            !Number.isSafeInteger(header.size) || header.size < 0) {
-            this.sendJSON({ type: 'header-rejected' });
-            return;
-        }
-        this._incomingOffer = {
-            id: header.id,
-            name: header.name,
-            mime: typeof header.mime === 'string' ? header.mime : 'application/octet-stream',
-            size: header.size
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(protocol + '//' + location.host + '/server/webrtc');
+        this._socket = ws;
+        ws.onopen = () => this.send({ type: 'hello', ...(this._resumeToken ? { resumeToken: this._resumeToken } : {}) });
+        ws.onmessage = event => { if (this._socket === ws) this._onMessage(event.data); };
+        ws.onerror = () => {};
+        ws.onclose = () => {
+            if (this._socket !== ws) return;
+            this._ready = false; this._socket = null;
+            Events.fire('signal-state', { state: 'offline' });
+            // Pairing must be revalidated; old peers must not survive a new WS session.
+            Events.fire('peers', []);
+            if (!this._closing) this._retry = setTimeout(() => this._connect(), Math.min(1000 * 2 ** this._attempt++, 15000) + Math.random() * 500);
         };
-        Events.fire('file-offer', {
-            sender: this._peerId,
-            name: header.name,
-            size: header.size
-        });
     }
-
-    _onChunkReceived(chunk) {
-        if (!chunk || !chunk.byteLength || !this._digester) return;
-        this._digester.unchunk(chunk);
-        const progress = this._digester.progress;
-        this._onDownloadProgress(progress);
-
-        // occasionally notify sender about our progress
-        if (progress - this._lastProgress < 0.01) return;
-        this._lastProgress = progress;
-        this._sendProgress(progress);
+    _onMessage(raw) {
+        let msg;
+        try { msg = JSON.parse(raw); } catch { return; }
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type === 'hello') {
+            this._peerId = msg.peerId; this._resumeToken = msg.resumeToken; this._ready = true; this._attempt = 0;
+            Events.fire('display-name', { message: { deviceName: msg.deviceName } });
+            Events.fire('signal-state', { state: 'connected' });
+            if (this._desiredRoomId) this.send({ type: this._desiredType || 'join-room', roomId: this._desiredRoomId });
+        } else if (msg.type === 'ping') this.send({ type: 'pong' });
+        else if (msg.type === 'room-joined') { this._desiredType = 'join-room'; Events.fire(msg.type, msg); }
+        else if (msg.type === 'room-error') {
+            if (['expired', 'missing', 'invalid', 'exists'].includes(msg.code)) this._desiredRoomId = null;
+            Events.fire(msg.type, msg);
+        } else if (msg.type === 'room-expired') { this._desiredRoomId = null; Events.fire('room-expired', msg); }
+        else if (msg.type === 'peer-left') Events.fire('peer-left', msg.peerId);
+        else if (msg.type === 'peer-joined') Events.fire('peer-joined', msg.peer);
+        else if (msg.type === 'peers') Events.fire('peers', msg.peers || []);
+        else if (msg.type === 'signal') Events.fire('signal', msg);
     }
-
-    _onDownloadProgress(progress) {
-        Events.fire('file-progress', { sender: this._peerId, progress: progress });
+    send(message) {
+        if (this._socket?.readyState !== WebSocket.OPEN) return false;
+        this._socket.send(JSON.stringify(message)); return true;
     }
-
-    _onFileReceived(proxyFile) {
-        this._digester = null;
-        Events.fire('file-received', proxyFile);
-        this.sendJSON({ type: 'transfer-complete', id: this._receivingId });
-        this._receivingId = null;
+    joinRoom(roomId, create = false) {
+        if (!/^[a-f0-9]{32}$/.test(roomId)) return false;
+        this._desiredRoomId = roomId; this._desiredType = create ? 'create-room' : 'join-room';
+        if (this._ready) this.send({ type: this._desiredType, roomId });
+        return true;
     }
-
-    _onTransferCompleted(message) {
-        if (message.id !== this._activeOutgoingId) return;
-        this._activeOutgoingId = null;
-        this._onDownloadProgress(1);
-        clearTimeout(this._offerTimeout);
-        this._chunker = null;
-        this._reader = null;
-        this._busy = false;
-        this._dequeueFile();
-        Events.fire('notify-user', '文件传输完成');
-    }
-
-    sendText(text) {
-        const unescaped = btoa(unescape(encodeURIComponent(text)));
-        this.sendJSON({ type: 'text', text: unescaped });
-    }
-
-    _onTextReceived(message) {
-        const escaped = decodeURIComponent(escape(atob(message.text)));
-        Events.fire('text-received', { text: escaped, sender: this._peerId });
-    }
+    leaveRoom() { this._desiredRoomId = null; this._desiredType = null; this.send({ type: 'leave-room' }); Events.fire('peers', []); }
+    _disconnect() { this._closing = true; clearTimeout(this._retry); this._socket?.close(); }
 }
-
-class RTCPeer extends Peer {
-
-    constructor(serverConnection, peerId) {
-        super(serverConnection, peerId);
-        this._pendingMessages = [];
-        this._closed = false;
-        if (!peerId) return; // we will listen for a caller
-        // 使用 peerId 大小决定谁作为 caller，避免双方同时发起
-        const isCaller = this._server._peerId > peerId;
-        console.log('[闪投] RTC 连接:', isCaller ? 'caller' : 'answerer', '对方:', peerId);
-        this._connect(peerId, isCaller);
-    }
-
-    _connect(peerId, isCaller) {
-        if (!this._conn) this._openConnection(peerId, isCaller);
-
-        if (isCaller) {
-            this._openChannel();
-        } else {
-            this._conn.ondatachannel = e => this._onDataChannel(e);
+class RTCPeer extends TransferPeer {
+    constructor(server, peerId) {
+        super(server, peerId);
+        this._isCaller = server._peerId > peerId; this._closed = false; this._restarts = 0;
+        this._state = 'connecting'; this._path = { direct: false }; this._candidateCounts = { host: 0, srflx: 0, prflx: 0 };
+        this._signalChain = Promise.resolve(); this._pendingIce = [];
+        this._conn = new RTCPeerConnection({ iceServers: getIceServers(), iceTransportPolicy: 'all' });
+        this._conn.onicecandidate = event => {
+            if (!event.candidate) return;
+            const type = event.candidate.type || (event.candidate.candidate.match(/ typ (\w+)/) || [])[1];
+            if (type === 'relay') return this._protocolError('检测到中继候选，已停止连接');
+            if (type in this._candidateCounts) this._candidateCounts[type]++;
+            this._server.send({ type: 'signal', to: peerId, ice: event.candidate.toJSON() });
+        };
+        this._conn.onicecandidateerror = () => { this._stunError = true; this._connectionEvent(); };
+        this._conn.onconnectionstatechange = () => this._onConnectionStateChange();
+        this._conn.oniceconnectionstatechange = () => this._onConnectionStateChange();
+        this._conn.ondatachannel = event => {
+            if ((this._channel && this._channel.readyState !== 'closed') || event.channel.label !== 'zeydrop-v2' || !event.channel.ordered || event.channel.maxRetransmits !== null || event.channel.maxPacketLifeTime !== null) return event.channel.close();
+            this._bindChannel(event.channel);
+        };
+        if (this._isCaller) {
+            this._bindChannel(this._conn.createDataChannel('zeydrop-v2', { ordered: true }));
+            this._offer(false);
         }
+        this._deadline = setTimeout(() => this._fail('直连超时。请尝试另一网络、启用 IPv6 或关闭阻止 UDP 的防火墙。严格 NAT 可能无法直连。'), 30000);
+        this._online = () => this.restart(); Events.on('online', this._online);
+        this._connectionEvent();
     }
-
-    _openConnection(peerId, isCaller) {
-        this._isCaller = isCaller;
-        this._peerId = peerId;
-        this._pendingIceCandidates = []; // 缓存 ICE 候选
-        this._conn = new RTCPeerConnection(RTCPeer.config);
-        this._conn.onicecandidate = e => this._onIceCandidate(e);
-        this._conn.onicecandidateerror = e => this._onIceCandidateError(e);
-        this._conn.onconnectionstatechange = e => this._onConnectionStateChange(e);
-        this._conn.oniceconnectionstatechange = e => this._onIceConnectionStateChange(e);
+    async _offer(restart) {
+        try {
+            if (this._closed || this._conn.signalingState !== 'stable') return;
+            const offer = await this._conn.createOffer({ iceRestart: restart });
+            await this._conn.setLocalDescription(offer);
+            this._server.send({ type: 'signal', to: this._peerId, sdp: { type: offer.type, sdp: offer.sdp } });
+        } catch (error) { if (!this._closed) this._fail(error.message); }
     }
-
-    _openChannel() {
-        if (this._channel && this._channel.readyState !== 'closed') return;
-        const channel = this._conn.createDataChannel('data-channel', {
-            ordered: true,
-            reliable: true
-        });
-        this._bindChannel(channel);
-        this._conn.createOffer().then(d => this._onDescription(d)).catch(e => this._onError(e));
-    }
-
-    _onDescription(description) {
-        this._conn.setLocalDescription(description)
-            .then(_ => this._sendSignal({ sdp: description }))
-            .catch(e => this._onError(e));
-    }
-
-    _onIceCandidate(event) {
-        if (!event.candidate) return;
-        const summary = candidateSummary(event.candidate);
-        console.log('[闪投] 发送 ICE 候选:', summary.type, summary.address);
-        this._sendSignal({ ice: event.candidate });
-    }
-
-    _onIceCandidateError(event) {
-        console.warn('[闪投] ICE 候选错误:', event.errorCode, event.errorText || '', event.url || '');
-    }
-
-    onServerMessage(message) {
-        console.log('[闪投] 收到信令消息:', message.type || 'ice', '来自:', message.sender);
-        if (!this._conn) this._connect(message.sender, false);
-
-        if (message.sdp) {
-            console.log('[闪投] 收到 SDP:', message.sdp.type);
-            this._conn.setRemoteDescription(new RTCSessionDescription(message.sdp))
-                .then( _ => {
-                    if (message.sdp.type === 'offer') {
-                        return this._conn.createAnswer()
-                            .then(d => this._onDescription(d));
-                    }
-                })
-                .then( _ => {
-                    // 设置远程描述后，添加缓存的 ICE 候选
-                    this._flushPendingIceCandidates();
-                })
-                .catch(e => {
-                    // 连接状态冲突（如双方同时发起），重置连接
-                    if (e.name === 'InvalidStateError') {
-                        console.warn('[闪投] RTC 连接状态冲突，重置连接');
-                        this._conn.close();
-                        this._conn = null;
-                        this._connect(message.sender, true);
-                    } else {
-                        this._onError(e);
-                    }
-                });
-        } else if (message.ice) {
-            const summary = candidateSummary(message.ice);
-            console.log('[闪投] 收到 ICE 候选:', summary.type, summary.address);
-            // 如果远程描述还没设置，先缓存 ICE 候选
-            if (!this._conn.remoteDescription) {
-                console.log('[闪投] 缓存 ICE 候选（等待 SDP）');
-                this._pendingIceCandidates.push(message.ice);
-            } else {
-                this._conn.addIceCandidate(new RTCIceCandidate(message.ice))
-                    .catch(e => this._onError(e));
+    onServerMessage(msg) {
+        this._signalChain = this._signalChain.then(async () => {
+            if (this._closed) return;
+            if (msg.sdp) {
+                if (msg.sdp.type === 'offer' && this._isCaller) return; // Deterministic single offerer.
+                if (msg.sdp.type === 'offer' && this._conn.remoteDescription) {
+                    this.abortAll('连接正在重新协商，请在重连后重新选择文件');
+                    this._verified = false;
+                }
+                await this._conn.setRemoteDescription(msg.sdp);
+                if (msg.sdp.type === 'offer') {
+                    const answer = await this._conn.createAnswer(); await this._conn.setLocalDescription(answer);
+                    this._server.send({ type: 'signal', to: this._peerId, sdp: { type: answer.type, sdp: answer.sdp } });
+                }
+                for (const ice of this._pendingIce.splice(0)) await this._conn.addIceCandidate(ice);
+                await this._securityCode();
+            } else if (msg.ice) {
+                if (this._conn.remoteDescription) await this._conn.addIceCandidate(msg.ice);
+                else if (this._pendingIce.length < 64) this._pendingIce.push(msg.ice);
             }
-        }
+        }).catch(error => { if (!this._closed) this._fail('连接协商失败：' + error.message); });
     }
-
-    _flushPendingIceCandidates() {
-        if (!this._pendingIceCandidates || this._pendingIceCandidates.length === 0) return;
-        console.log('[闪投] 添加缓存的 ICE 候选:', this._pendingIceCandidates.length);
-        this._pendingIceCandidates.forEach(ice => {
-            this._conn.addIceCandidate(new RTCIceCandidate(ice))
-                .catch(e => this._onError(e));
-        });
-        this._pendingIceCandidates = [];
+    async _securityCode() {
+        const sdps = [this._conn.localDescription?.sdp, this._conn.remoteDescription?.sdp];
+        const fingerprints = sdps.map(sdp => (sdp?.match(/a=fingerprint:sha-256 ([A-Fa-f0-9:]+)/) || [])[1]);
+        if (fingerprints.some(value => !value)) return;
+        const bytes = new TextEncoder().encode(fingerprints.map(v => v.toUpperCase()).sort().join('|'));
+        const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+        this._code = hex(digest).slice(0, 12).toUpperCase().match(/.{4}/g).join(' ');
+        this._connectionEvent();
     }
-
-    _onDataChannel(event) {
-        this._bindChannel(event.channel);
-        if (event.channel.readyState === 'open') {
-            this._flushPendingMessages();
-        }
+    verify() {
+        if (!this._code || !this._path.direct || !this._remoteHello) return;
+        this._verified = true; this._connectionEvent();
     }
-
     _bindChannel(channel) {
-        channel.binaryType = 'arraybuffer';
-        channel.onopen = e => this._onChannelOpened(e);
-        channel.onmessage = e => this._onMessage(e.data);
-        channel.onclose = e => this._onChannelClosed(e);
-        channel.onerror = e => this._onError(e);
-        this._channel = channel;
+        this._channel = channel; channel.binaryType = 'arraybuffer'; channel.bufferedAmountLowThreshold = 128 * 1024;
+        channel.onopen = () => {
+            this.sendJSON({ type: 'hello', version: 2 });
+            this._statsTimer = setInterval(() => this._samplePath(), 2000);
+            this._samplePath(); this._securityCode();
+        };
+        channel.onmessage = event => this._receive(event.data);
+        channel.onclose = () => { if (!this._closed) this._fail('文件通道已断开，请重试连接后重新选择文件'); };
+        channel.onerror = () => { if (!this._closed) this._fail('文件通道发生错误'); };
     }
-
-    _onChannelOpened(event) {
-        console.log('RTC: 通道已打开', this._peerId);
-        const channel = event.channel || event.target;
-        if (channel && channel !== this._channel) {
-            this._bindChannel(channel);
-        }
-        this._flushPendingMessages();
+    _send(data) {
+        if (!this._isConnected()) throw Error('文件通道尚未就绪');
+        if (this._channel.bufferedAmount + (typeof data === 'string' ? new TextEncoder().encode(data).byteLength : data.byteLength) > 1024 * 1024) throw Error('发送缓冲超限');
+        this._channel.send(data);
     }
-
-    _onChannelClosed() {
-        console.log('RTC: 通道已关闭', this._peerId);
-        this._channel = null;
-        if (this._closed || !this._isCaller) return;
-        this._restartConnection();
-    }
-
-    _onConnectionStateChange(e) {
-        if (!this._conn) return;
-        const state = this._conn.connectionState;
-        console.log('[闪投] RTC 连接状态:', state, '对方:', this._peerId);
-        switch (state) {
-            case 'connected':
-                console.log('[闪投] RTC P2P 连接成功！');
-                break;
-            case 'disconnected':
-                console.log('[闪投] RTC 连接断开');
-                this._restartConnection();
-                break;
-            case 'failed':
-                console.error('[闪投] RTC 连接失败');
-                this._restartConnection();
-                break;
-        }
-    }
-
-    _onIceConnectionStateChange() {
-        if (!this._conn) return;
-        const state = this._conn.iceConnectionState;
-        console.log('[闪投] ICE 状态:', state);
-        switch (state) {
-            case 'failed':
-                console.error('[闪投] ICE 连接失败 - 可能需要 STUN/TURN 服务器');
-                this._restartConnection();
-                break;
-            case 'disconnected':
-                console.warn('[闪投] ICE 连接断开');
-                break;
-        }
-    }
-
-    _onError(error) {
-        console.error(error);
-    }
-
-    sendFiles(files) {
-        for (let i = 0; i < files.length; i++) {
-            this._filesQueue.push(files[i]);
-        }
-        if (this._busy) return;
-        if (!this._isConnected()) {
-            Events.fire('notify-user', '正在建立 P2P 连接，请稍候...');
-            this.refresh();
-            return;
-        }
-        this._dequeueFile();
-    }
-
-    _send(message) {
-        if (!this._isConnected()) {
-            this._pendingMessages.push(message);
-            this.refresh();
-            return;
-        }
-        this._channel.send(message);
-    }
-
-    _sendSignal(signal) {
-        signal.type = 'signal';
-        signal.to = this._peerId;
-        this._server.send(signal);
-    }
-
-    refresh() {
-        if (this._closed) return;
-        if (this._isConnected()) {
-            this._flushPendingMessages();
-            return;
-        }
-        if (this._isConnecting()) return;
-        this._connect(this._peerId, this._isCaller);
-    }
-
-    _flushPendingMessages() {
-        while (this._pendingMessages.length && this._isConnected()) {
-            this._channel.send(this._pendingMessages.shift());
-        }
-        if (this._filesQueue.length && !this._busy && this._isConnected()) {
-            this._dequeueFile();
-        }
-    }
-
-    _restartConnection() {
-        if (this._closed || !this._isCaller || !this._peerId) return;
-        this._closeConnection(false);
-        setTimeout(() => this.refresh(), 500);
-    }
-
-    _closeConnection(markClosed = true) {
-        if (markClosed) this._closed = true;
+    async _waitForDrain() {
+        if (!this._isConnected()) throw Error('文件通道已断开');
+        if (this._channel.bufferedAmount <= 256 * 1024) return;
         const channel = this._channel;
-        const conn = this._conn;
-        this._channel = null;
-        this._conn = null;
-        if (channel) {
-            channel.onopen = null;
-            channel.onmessage = null;
-            channel.onclose = null;
-            channel.onerror = null;
-            try { channel.close(); } catch(e) {}
-        }
-        if (conn) {
-            conn.onicecandidate = null;
-            conn.onicecandidateerror = null;
-            conn.onconnectionstatechange = null;
-            conn.oniceconnectionstatechange = null;
-            conn.ondatachannel = null;
-            try { conn.close(); } catch(e) {}
-        }
-    }
-
-    close() {
-        clearTimeout(this._offerTimeout);
-        this._incomingOffer = null;
-        this._pendingOutgoingFile = null;
-        this._activeOutgoingId = null;
-        this._receivingId = null;
-        this._digester = null;
-        this._pendingMessages = [];
-        this._filesQueue = [];
-        this._closeConnection(true);
-    }
-
-    _isConnected() {
-        return this._channel && this._channel.readyState === 'open';
-    }
-
-    _isConnecting() {
-        return this._channel && this._channel.readyState === 'connecting';
-    }
-}
-
-class PeersManager {
-
-    constructor(serverConnection) {
-        this.peers = {};
-        this._server = serverConnection;
-        Events.on('signal', e => this._onMessage(e.detail));
-        Events.on('peers', e => this._onPeers(e.detail));
-        Events.on('peer-joined', e => this._onPeerJoined(e.detail));
-        Events.on('files-selected', e => this._onFilesSelected(e.detail));
-        Events.on('file-accepted', e => this._onFileAccepted(e.detail));
-        Events.on('file-rejected', e => this._onFileRejected(e.detail));
-        Events.on('send-text', e => this._onSendText(e.detail));
-        Events.on('peer-left', e => this._onPeerLeft(e.detail));
-    }
-
-    _onMessage(message) {
-        if (!this.peers[message.sender]) {
-            this.peers[message.sender] = new RTCPeer(this._server);
-        }
-        this.peers[message.sender].onServerMessage(message);
-    }
-
-    _onPeers(peers) {
-        peers.forEach(peer => this._ensurePeer(peer));
-    }
-
-    _onPeerJoined(peer) {
-        this._ensurePeer(peer);
-    }
-
-    _ensurePeer(peer) {
-        if (!peer || !peer.id) return null;
-        if (this.peers[peer.id]) {
-            this.peers[peer.id].refresh();
-            return this.peers[peer.id];
-        }
-        if (window.isRtcSupported && peer.rtcSupported) {
-            this.peers[peer.id] = new RTCPeer(this._server, peer.id);
-            return this.peers[peer.id];
-        }
-        console.warn('[闪投] 对方浏览器不支持 WebRTC');
-        Events.fire('notify-user', '对方浏览器不支持 WebRTC，无法传输文件');
-        return null;
-    }
-
-    sendTo(peerId, message) {
-        if (!this.peers[peerId]) return;
-        this.peers[peerId].send(message);
-    }
-
-    _onFilesSelected(message) {
-        if (!this.peers[message.to]) {
-            Events.fire('notify-user', 'P2P 连接尚未建立，请稍后重试');
-            return;
-        }
-        this.peers[message.to].sendFiles(message.files);
-    }
-
-    _onFileAccepted(message) {
-        const peer = this.peers[message.from];
-        if (peer) peer.acceptIncoming();
-    }
-
-    _onFileRejected(message) {
-        const peer = this.peers[message.from];
-        if (peer) peer.rejectIncoming();
-    }
-
-    _onSendText(message) {
-        if (!this.peers[message.to]) {
-            Events.fire('notify-user', 'P2P 连接尚未建立，请稍后重试');
-            return;
-        }
-        this.peers[message.to].sendText(message.text);
-    }
-
-    _onPeerLeft(peerId) {
-        const peer = this.peers[peerId];
-        delete this.peers[peerId];
-        if (!peer) return;
-        peer.close();
-    }
-
-}
-
-class FileChunker {
-
-    constructor(file, onChunk, onPartitionEnd) {
-        this._chunkSize = 64000; // 64 KB
-        this._maxPartitionSize = 1e6; // 1 MB
-        this._offset = 0;
-        this._partitionSize = 0;
-        this._file = file;
-        this._onChunk = onChunk;
-        this._onPartitionEnd = onPartitionEnd;
-        this._reader = new FileReader();
-        this._reader.addEventListener('load', e => this._onChunkRead(e.target.result));
-    }
-
-    nextPartition() {
-        this._partitionSize = 0;
-        this._readChunk();
-    }
-
-    _readChunk() {
-        const chunk = this._file.slice(this._offset, this._offset + this._chunkSize);
-        this._reader.readAsArrayBuffer(chunk);
-    }
-
-    _onChunkRead(chunk) {
-        this._offset += chunk.byteLength;
-        this._partitionSize += chunk.byteLength;
-        this._onChunk(chunk);
-        if (this.isFileEnd()) return;
-        if (this._isPartitionEnd()) {
-            this._onPartitionEnd(this._offset);
-            return;
-        }
-        this._readChunk();
-    }
-
-    repeatPartition() {
-        this._offset -= this._partitionSize;
-        this.nextPartition();
-    }
-
-    _isPartitionEnd() {
-        return this._partitionSize >= this._maxPartitionSize;
-    }
-
-    isFileEnd() {
-        return this._offset >= this._file.size;
-    }
-
-    get progress() {
-        return this._offset / this._file.size;
-    }
-}
-
-class FileDigester {
-
-    constructor(meta, callback) {
-        this._buffer = [];
-        this._bytesReceived = 0;
-        this._size = meta.size;
-        this._mime = meta.mime || 'application/octet-stream';
-        this._name = meta.name;
-        this._callback = callback;
-    }
-
-    unchunk(chunk) {
-        this._buffer.push(chunk);
-        this._bytesReceived += chunk.byteLength || chunk.size;
-        const totalChunks = this._buffer.length;
-        this.progress = this._bytesReceived / this._size;
-        if (isNaN(this.progress)) this.progress = 1
-
-        if (this._bytesReceived < this._size) return;
-        // we are done
-        let blob = new Blob(this._buffer, { type: this._mime });
-        this._callback({
-            name: this._name,
-            mime: this._mime,
-            size: this._size,
-            blob: blob
+        await new Promise((resolve, reject) => {
+            const done = error => { clearTimeout(timer); channel.removeEventListener('bufferedamountlow', low); channel.removeEventListener('close', closed); error ? reject(error) : resolve(); };
+            const low = () => done(); const closed = () => done(Error('文件通道已关闭'));
+            const timer = setTimeout(() => done(Error('发送背压等待超时')), 30000);
+            channel.addEventListener('bufferedamountlow', low, { once: true }); channel.addEventListener('close', closed, { once: true });
+            if (channel.bufferedAmount <= channel.bufferedAmountLowThreshold) done();
         });
     }
-
+    async _samplePath() {
+        const conn = this._conn;
+        if (this._closed || !conn || !this._isConnected()) return;
+        try {
+            const path = selectedPath(await conn.getStats());
+            if (this._closed || conn !== this._conn) return;
+            if (path.status === 'relay') return this._protocolError('检测到中继路径，已停止连接');
+            this._path = path;
+            if (path.direct) { this._reason = null; this._state = 'connected'; clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); }
+            this._connectionEvent();
+        } catch { this._connectionEvent(); }
+    }
+    _onConnectionStateChange() {
+        if (this._closed) return;
+        const state = this._conn.iceConnectionState;
+        if (['connected', 'completed'].includes(state)) { clearTimeout(this._disconnectTimer); this._samplePath(); }
+        else if (state === 'disconnected') {
+            this.abortAll('网络中断，当前传输已停止，请重连后重新选择文件');
+            this._state = 'disconnected'; this._path = { direct: false }; this._verified = false;
+            clearTimeout(this._disconnectTimer); this._disconnectTimer = setTimeout(() => this.restart(), 5000); this._connectionEvent();
+        } else if (state === 'failed') this.restart();
+    }
+    restart(manual = false) {
+        if (this._closed || !this._isCaller) return;
+        if (!manual && this._restartPending) return;
+        if (manual) this._restarts = 0;
+        if (this._restarts++ >= 2) return this._fail('无法建立直连。请尝试更换网络或启用 IPv6；此服务不会切换到文件中继。');
+        this._reason = null; this._restartPending = true;
+        if (this._channel?.readyState === 'closed') this._bindChannel(this._conn.createDataChannel('zeydrop-v2', { ordered: true }));
+        clearInterval(this._statsTimer); this._statsTimer = setInterval(() => this._samplePath(), 2000);
+        this._verified = false; this._path = { direct: false }; this._state = 'connecting';
+        this.abortAll('网络变化，当前文件已停止；连接恢复后请重新选择文件');
+        this._connectionEvent();
+        this._offer(true).finally(() => { this._restartPending = false; });
+        clearTimeout(this._deadline); this._deadline = setTimeout(() => this.restart(), 20000);
+    }
+    _fail(reason) {
+        this._state = 'failed'; this._path = { direct: false }; this._verified = false;
+        this.abortAll(reason); clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer);
+        this._reason = reason; this._connectionEvent();
+    }
+    _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); }
+    _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
+    close() {
+        if (this._closed) return;
+        this._closed = true; this.abortAll('连接已关闭，文件未完成');
+        clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); Events.off('online', this._online);
+        if (this._channel) { this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
+        this._conn.close();
+    }
 }
-
-class Events {
-    static fire(type, detail) {
-        window.dispatchEvent(new CustomEvent(type, { detail: detail }));
+class PeersManager {
+    constructor(server) {
+        this.peers = new Map(); this._server = server;
+        Events.on('peers', event => {
+            const ids = new Set(event.detail.map(peer => peer.id));
+            for (const id of this.peers.keys()) if (!ids.has(id)) this._remove(id);
+            event.detail.forEach(peer => this._ensure(peer));
+        });
+        Events.on('peer-joined', event => this._ensure(event.detail));
+        Events.on('peer-left', event => this._remove(event.detail));
+        Events.on('signal', event => this.peers.get(event.detail.sender)?.onServerMessage(event.detail));
+        Events.on('files-selected', event => this.peers.get(event.detail.to)?.sendFiles(event.detail.files));
+        Events.on('send-text', event => this.peers.get(event.detail.to)?.sendText(event.detail.text));
+        Events.on('file-accepted', event => this.peers.get(event.detail.from)?.acceptIncoming(event.detail.id));
+        Events.on('file-rejected', event => this.peers.get(event.detail.from)?.rejectIncoming(event.detail.id));
+        Events.on('verify-peer', event => this.peers.get(event.detail)?.verify());
+        Events.on('transfer-control', event => {
+            const { peerId, id, action } = event.detail; const peer = this.peers.get(peerId);
+            if (action === 'cancel') peer?.cancel(id); else peer?.pause(id, action === 'pause');
+        });
+        Events.on('retry-peer', event => {
+            const old = this.peers.get(event.detail);
+            if (old) { old.restart(true); Events.fire('notify-user', old._isCaller ? '正在重新协商直连' : '请让另一台设备点击重试，或创建新邀请'); }
+        });
     }
-
-    static on(type, callback) {
-        return window.addEventListener(type, callback, false);
-    }
-
-    static off(type, callback) {
-        return window.removeEventListener(type, callback, false);
-    }
-}
-
-
-RTCPeer.config = {
-    'sdpSemantics': 'unified-plan',
-    'iceServers': getIceServers(),
-    'iceTransportPolicy': 'all'
+    _ensure(peer) { if (peer?.id && !this.peers.has(peer.id) && window.isRtcSupported) this.peers.set(peer.id, new RTCPeer(this._server, peer.id)); }
+    _remove(id) { this.peers.get(id)?.close(); this.peers.delete(id); }
 }

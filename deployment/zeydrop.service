@@ -1,0 +1,28 @@
+[Unit]
+Description=Zeydrop pairing and WebRTC signaling (no file relay)
+After=network.target
+
+[Service]
+Type=simple
+User=zeydrop
+Group=zeydrop
+WorkingDirectory=/opt/zeydrop/current/server
+EnvironmentFile=/etc/zeydrop/signaling.env
+ExecStart=@NODE@ --max-old-space-size=96 /opt/zeydrop/current/server/index.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0077
+MemoryMax=192M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

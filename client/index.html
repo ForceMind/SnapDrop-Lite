@@ -6,8 +6,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <!-- Web App Config -->
     <title>Zeydrop · 闪投 — Direct P2P File Transfer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f5f7f5">
+    <meta name="referrer" content="no-referrer">
     <meta name="color-scheme" content="dark light">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,14 +18,14 @@
     <meta name="version" content="3.0.0-dev">
     <meta name="keywords" content="Zeydrop,闪投,文件传输,P2P,局域网,公网,WebRTC">
     <meta name="author" content="Zeydrop Contributors">
-    <meta property="og:title" content="闪投 - 局域网文件传输">
+    <meta property="og:title" content="Zeydrop 闪投 · Direct by design.">
     <meta property="og:type" content="article">
     <meta property="og:url" content="">
     <meta property="og:author" content="">
     <meta name="twitter:author" content="">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:description" content="Zeydrop：直接向另一台设备发送文件。无需注册或文件云存储。">
-    <meta name="og:description" content="闪投 - 局域网文件传输工具，无需安装，打开即用">
+    <meta name="og:description" content="Zeydrop 闪投 · Direct by design.">
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="images/zeydrop-mark.svg?v=3.0.0">
     <link rel="alternate icon" href="images/favicon-96x96.png?v=2.1.5">
@@ -56,7 +57,6 @@
             <div class="topbar-right">
                 <span id="signalStatus" class="signal-indicator" role="status"><span class="signal-led"></span><span class="signal-label">正在连接信令服务</span></span>
                 <a href="#about" class="icon-button toolbar-icon" title="关于与使用帮助" aria-label="关于与使用帮助"><svg class="icon"><use xlink:href="#info-outline" /></svg></a>
-                <a href="#" id="notification" class="icon-button toolbar-icon" title="开启通知" hidden><svg class="icon"><use xlink:href="#notifications" /></svg></a>
                 <a href="#" id="install" class="icon-button toolbar-icon" title="安装到桌面" hidden><svg class="icon"><use xlink:href="#homescreen" /></svg></a>
             </div>
         </header>
@@ -94,9 +94,9 @@
                         <button id="roomBtn" class="join-action" type="button" hidden>加入</button>
                     </div>
                     <div class="invite-created" id="inviteCreated" hidden>
-                        <div><strong>邀请已生成</strong><p>将下方链接发送给接收方</p></div>
+                        <div><strong>邀请已生成</strong><p id="inviteExpiry">15 分钟有效 · 最多两台设备</p></div><canvas id="inviteQR" width="160" height="160" aria-label="邀请二维码"></canvas>
                         <div class="invite-url"><input id="inviteUrl" aria-label="邀请链接" type="text" readonly><button id="copyInviteBtn" type="button">复制</button></div>
-                    </div>
+                    <button id="leaveRoomBtn" type="button" class="leave-room">离开房间</button></div>
                     <p id="roomStatus" class="room-status" role="status" aria-live="polite">房间尚未建立 · 仅连接双方直接传输文件</p>
                 </div>
 
@@ -110,10 +110,11 @@
                             <p>在另一台设备打开网页并加入同一邀请，即可在这里选择设备发送文件。</p>
                         </x-no-peers>
                     </div>
-                    <x-instructions desktop="点击设备发送文件 · 右键发送文字" mobile="点击设备发送文件 · 长按发送文字"></x-instructions>
+                    <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
                 </div>
             </section>
         </main>
+        <section id="transferSection" class="transfer-section" hidden aria-label="传输记录"><h2>文件传输</h2><p>当前连接内可暂停和继续；断线后请重新选择文件。只有校验通过才显示完成。</p><div id="transfers" aria-live="polite"></div></section>
 
         <footer class="site-footer">
             <div id="displayName" class="local-device" placeholder="正在识别当前设备"></div>
@@ -148,12 +149,9 @@
                 <div class='preview' style="visibility: hidden;">
                     <img id='img-preview' src="" alt="">
                 </div>
-                <div class="row">
-                    <label for="autoDownload" class="grow">下载前询问保存位置</label>
-                    <input type="checkbox" id="autoDownload" checked="">
-                </div>
+                
                 <div class="row-reverse">
-                    <a class="button" close id="download" title="下载文件" autofocus>保存</a>
+                    <a class="button" close href="#" id="download" title="下载文件" autofocus>保存</a>
                     <button class="button" close>忽略</button>
                 </div>
             </x-paper>
@@ -201,15 +199,13 @@
                     </svg>
                 </a>
             </header>
-            <svg class="icon logo">
-                <use xlink:href="#wifi-tethering" />
-            </svg>
+            <img class="about-mark" src="images/zeydrop-mark.svg" alt="Zeydrop" width="72" height="72">
             <h1>Zeydrop</h1>
             <div class="font-subheading">闪投 · 设备间点对点文件传输</div>
             <div class="about-desc">
                 <p>无需注册、无需安装。通过邀请链接配对后，在网络允许时通过 WebRTC 在两台设备之间直接传输文件。</p>
                 <p>服务器只用于页面加载和交换连接信令，不中转文件内容。部分严格 NAT 和防火墙环境无法直连。</p>
-                <p class="about-features">支持文件、文本、图片传输 | 拖拽发送 | PWA 支持</p>
+                <p>网页、信令和 STUN 探测仍会产生少量流量。邀请链接是访问凭证，请只发给信任的人。请在双方核对与 DTLS 指纹绑定的安全码。</p><p>支持流式保存的桌面 Chrome / Edge 可直接写入文件；其他浏览器最多合计保存 64 MiB。断线不支持跨连接续传，必须重新选择文件。</p><p class="about-features">支持文件、文本、图片传输 | 拖拽发送 | PWA 支持</p>
                 <p class="about-version">3.0.0-dev · Zeydrop</p>
             </div>
         </section>
@@ -259,14 +255,11 @@
     </svg>
     <!-- Scripts -->
     <script src="config.js?v=3.0.0"></script>
+    <script src="scripts/vendor.js"></script>
+    <script src="scripts/transfer.js"></script>
     <script src="scripts/network.js?v=3.0.0"></script>
     <script src="scripts/ui.js?v=3.0.0"></script>
-    <script src="scripts/clipboard.js?v=2.1.5" async></script>
-    <!-- Sounds -->
-    <audio id="blop" autobuffer="true">
-        <source src="sounds/blop.mp3?v=2.1.5" type="audio/mpeg">
-        <source src="sounds/blop.ogg?v=2.1.5" type="audio/ogg">
-    </audio>
+    
     <!-- no script -->
     <noscript>
         <x-noscript class="full center column">

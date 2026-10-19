@@ -1,214 +1,79 @@
-# 闪投 (Snapdrop Lite)
+# Zeydrop · 闪投
 
-局域网文件传输工具，基于 [Snapdrop](https://github.com/RobinLinus/snapdrop) 精简而来。
+**Direct by design.**
 
-无需注册、无需安装，同一网络下的设备打开浏览器即可互传文件。
+无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-## 特性
+当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。仓库正式更名尚未完成，当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和原始历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
 
-- 同局域网设备自动发现，无需手动输入地址
-- WebRTC 点对点传输，文件不经服务器，速度快且保护隐私
-- 支持发送文件和文本消息
-- 支持拖拽、粘贴图片发送
-- PWA 支持，手机可添加到桌面
-- 一键部署脚本，支持主流 Linux 发行版
-- 支持域名访问、IP 访问、localhost 内网转发
-- 全中文界面
+## 使用流程
 
-## 架构
+创建邀请 → 另一台设备打开链接 / 扫描二维码 → 等待实际直连路径核验 → 双方核对相同的安全码并各自允许传输 → 选择文件 → 接收方同意 → 传输、校验、保存。
 
-```
-┌──────────┐   WebSocket (信令)   ┌──────────────┐   WebSocket (信令)   ┌──────────┐
-│  设备 A  │ ◄──────────────────► │   服务器     │ ◄──────────────────► │  设备 B  │
-│          │                      │  (Node.js)   │                      │          │
-└────┬─────┘                      └──────────────┘                      └────┬─────┘
-     │                                                                       │
-     │                    WebRTC DataChannel (文件数据)                       │
-     └───────────────────────────────────────────────────────────────────────┘
-                            局域网直连，不经服务器
-```
+- 邀请包含 128-bit 随机凭证，有效期 15 分钟，最多两台设备；链接只应交给信任的人。凭证放在 URL fragment 中，避免进入常规 HTTP 请求及访问日志。
+- 服务端生成设备 ID 和 256-bit 恢复令牌；短时 WebSocket 重连保留配对身份，离线房间席位保留 2 分钟。刷新标签页会生成新会话，旧席位可能需要等待释放。
+- 安全码与双方 DTLS SHA-256 指纹绑定，需通过可信渠道人工比较。设备名称仅供显示，不是身份认证。
+- `getStats()` 选中 candidate pair 为已知非 relay 路径后才能发送。仅信令在线、候选收集或 nominated 状态不算直连成功。
+- STUN 只是地址发现，不能保证突破严格 NAT / CGNAT / 防火墙。失败时明确提示，不切换到服务器文件代理。
+- 同一 Wi-Fi 也可通过邀请连接。目前暂停未鉴权的子网自动发现；显式同意的局域网发现仍在待办中。
 
-**服务器只负责设备发现和信令交换，文件传输走局域网 P2P 直连。**
+## 文件能力与限制
 
-当浏览器不支持 WebRTC 或 P2P 失败时，自动降级为 WebSocket 中转。
+- 16 KiB 分块，256 KiB 接收写入确认窗口；DataChannel 背压和接收消息队列均有上限。
+- 增量 SHA-256，完整长度和哈希均匹配后才报告完成。
+- 支持多文件发送队列、当前连接内暂停 / 继续、取消；断线中止当前文件，需重新选择重发。**尚未实现跨连接断点续传。**
+- 支持 `showSaveFilePicker` 的浏览器直接写入接收方选择的文件；必须由接收按钮触发授权。兼容性和用户操作仍需实机验证。
+- 无流式文件保存能力时，接收中与待保存文件合计最多 **64 MiB**；超限在传输前拒绝。Safari / iOS 不宣称支持 1 GiB 文件。
+- 拒绝、超时或校验失败不交付完成文件；接收方取消时尽力 abort 未完成写入。中断恢复不保留未经验证的进度。
 
-## 快速部署
+“服务器文件正文流量为零”不等于“服务器总流量为零”：页面资源、WebSocket 心跳 / 信令和 STUN 探测都会产生少量流量；第三方 STUN 可看到探测来源地址。
 
-### 服务器要求
+## 本地开发
 
-- Linux 系统（Ubuntu/Debian/CentOS/Fedora/Alpine/Arch）
-- root 权限
-- Node.js 16+
-
-### 一键部署
+需要 Node.js 22+：
 
 ```bash
-# 上传项目到服务器后执行
-sudo bash deploy.sh
+npm ci --ignore-scripts
+npm --prefix server ci --ignore-scripts
+npm test
+npm run build
+npm run dev
 ```
 
-脚本会自动：
-1. 检测 Linux 发行版并安装对应依赖（nginx + nodejs）
-2. 检测端口冲突，自动分配可用端口
-3. 配置域名（可选）
-4. 配置网络模式（局域网/公网）
-5. 构建混淆版本并部署到 `/opt/snapdrop`
-6. 配置 systemd 服务、Nginx 反向代理和防火墙
-
-### 自定义端口
+打开 `http://localhost:8080`。其他设备 / 公网环境必须使用 HTTPS / WSS。浏览器只运行本地打包代码，无运行时 CDN、二维码上传服务或分析埋点。
 
 ```bash
-# 通过环境变量指定端口
-sudo WEB_PORT=9090 WS_PORT=3002 bash deploy.sh
+node scripts/check-build.mjs
+npx playwright install --with-deps chromium firefox webkit
+LARGE_FILE_TEST=1 npm run test:browser
+BROWSER_TYPE=firefox npm run test:browser
+BROWSER_TYPE=webkit npm run test:smoke
 ```
 
-默认端口：Web `8080`，WebSocket `3001`。
+`dist/` 由确定性构建生成，不再提交旧构建。固定路径的 Service Worker 预缓存完整同版本 shell；新版本等待旧标签关闭后激活，避免传输中强制刷新。配置、信令和邀请 URL 不进入动态缓存。
 
-### 本地构建（可选）
+## 部署与安全
 
-如果需要手动构建混淆版本：
+正式部署使用自有域名和已有 TLS 证书，见 [部署与回滚](docs/DEPLOYMENT.md)。信令仅监听回环地址；Origin 使用精确白名单；二进制和非信令转发被拒绝；限制消息大小、速率、连接和房间总数。
 
 ```bash
-# 安装混淆工具
-npm install -g terser
-
-# 构建
-bash build.sh
+sudo DOMAIN=transfer.example.com \
+  TLS_CERT=/etc/letsencrypt/live/transfer.example.com/fullchain.pem \
+  TLS_KEY=/etc/letsencrypt/live/transfer.example.com/privkey.pem \
+  bash deploy.sh
 ```
 
-构建后生成 `dist/` 目录，包含：
-- 混淆后的 JS 文件（带随机后缀，如 `network.a1b2c3d4.js`）
-- 压缩后的 CSS 文件
-- 更新后的 `index.html`
+示例域名不是已配置站点。部署脚本不会购买域名、申请证书、改变防火墙或自动停止旧 Snapdrop 服务。现有安装迁移需先按部署文档准备并验证。
 
-## 目录结构
+## 工程导航
 
-## 网络模式
-
-### 局域网模式（默认）
-
-- 设备按子网分组（如 192.168.1.x 的设备在同一房间）
-- 不使用 STUN 服务器，完全走局域网
-- 文件传输不经公网，速度快且隐私安全
-
-### 公网模式
-
-- 使用 STUN 服务器做 NAT 穿透
-- 支持跨网络 P2P 连接
-- 文件传输走公网直连（不经服务器）
-
-部署时会询问是否启用 STUN 服务器。
-
-## 访问方式
-
-### 1. IP 直接访问（默认）
-```
-http://服务器IP:8080
-http://localhost:8080
-```
-
-### 2. 域名访问
-部署时输入域名，或手动修改 Nginx 配置：
-```bash
-nano /etc/nginx/conf.d/snapdrop.conf
-# 修改 server_name 为你的域名
-```
-
-### 3. 内网转发（frp/ngrok 等）
-配置转发时注意：
-- 转发端口 `8080` 的 HTTP 流量
-- 确保 WebSocket 路径 `/server` 能正确升级
-- 域名解析到转发后的公网地址
-
-## 手动部署
-
-如果不使用一键脚本，可以手动操作：
-
-```bash
-# 1. 安装依赖
-apt install nginx nodejs npm   # Debian/Ubuntu
-yum install nginx nodejs npm   # CentOS/RHEL
-
-# 2. 复制文件
-cp -r client/ /opt/snapdrop/client/
-cp -r server/ /opt/snapdrop/server/
-
-# 3. 安装 Node 依赖
-cd /opt/snapdrop/server && npm install --production
-
-# 4. 生成前端配置
-echo "window.SNAPDROP_ENABLE_STUN = false;" > /opt/snapdrop/client/config.js
-
-# 5. 启动服务
-PORT=3001 LAN_MODE=true node /opt/snapdrop/server/index.js &
-
-# 6. 配置 Nginx 反向代理（参考 deploy.sh 中的配置）
-```
-
-## 常用命令
-
-```bash
-systemctl status snapdrop     # 查看服务状态
-journalctl -u snapdrop -f     # 查看实时日志
-systemctl restart snapdrop    # 重启服务
-systemctl restart nginx       # 重启 Nginx
-curl http://localhost:8080/health  # 健康检查
-```
-
-## 目录结构
-
-```
-Snapdrop-Lite/
-├── client/               # 前端源码
-│   ├── index.html        # 主页面
-│   ├── styles.css        # 样式
-│   ├── config.js         # 部署配置
-│   ├── manifest.json     # PWA 配置
-│   ├── service-worker.js # 离线缓存
-│   ├── scripts/
-│   │   ├── network.js    # WebSocket + WebRTC 通信
-│   │   ├── ui.js         # 界面交互
-│   │   └── clipboard.js  # 剪贴板兼容
-│   ├── images/           # 图标资源
-│   └── sounds/           # 提示音
-├── server/
-│   ├── index.js          # WebSocket 信令服务器
-│   └── package.json
-├── dist/                 # 构建输出（混淆后）
-│   ├── index.html        # 更新后的主页面
-│   ├── *.js              # 混淆后的 JS（带随机后缀）
-│   ├── *.css             # 压缩后的 CSS
-│   └── ...
-├── build.sh              # 构建脚本（混淆 + 随机后缀）
-├── deploy.sh             # 部署脚本（自动调用 build.sh）
-└── README.md
-```
-
-## 数据传输说明
-
-| 场景 | 数据路径 | 说明 |
-|------|----------|------|
-| 同局域网 | 设备 A ↔ 设备 B | 局域网 P2P 直连，不消耗服务器流量 |
-| 不同网络 + STUN | 设备 A ↔ 设备 B | 公网 P2P 直连（需启用 STUN） |
-
-**注意：** 文件传输仅通过 WebRTC P2P 直连，不经过服务器中转。服务器只负责设备发现和信令交换。
-
-## 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| PORT | 3001 | WebSocket 服务端口 |
-| LAN_MODE | true | 是否启用局域网子网分组 |
-| NODE_ENV | production | Node.js 运行环境 |
-
-## 技术栈
-
-- **服务端**: Node.js + ws (WebSocket)
-- **前端**: 原生 HTML/CSS/JS，无构建步骤
-- **传输**: WebRTC DataChannel（P2P）
-- **反向代理**: Nginx
-- **服务管理**: systemd
+- [当前状态与下一步](docs/PROJECT_STATUS.md)
+- [历史公网 P2P 方案](docs/PUBLIC_P2P_DEVELOPMENT_PLAN.md)（原方案保留，执行状态以当前状态为准）
+- [UI 设计](docs/UI_DESIGN_V1.md)
+- [协议、安全和架构](docs/ARCHITECTURE.md)
+- [测试矩阵](docs/TEST_MATRIX.md)
+- [许可证来源](docs/LICENSE_PROVENANCE.md)
 
 ## 许可证
 
-基于 Snapdrop 项目，使用 [ISC License](LICENSE)。
+本项目基于 Snapdrop 保留代码演进，组合应用使用 [GPL-3.0](LICENSE)。来源、修改与依赖声明见 [NOTICE](NOTICE)。原仓库的 Apache 文本被保留作历史来源记录；旧 README 的 ISC 声明已修正。

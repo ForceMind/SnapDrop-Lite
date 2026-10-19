@@ -1,76 +1,19 @@
-var CACHE_NAME = 'zeydrop-shell-v3.0.0';
-
-// 安装：跳过等待
-self.addEventListener('install', function(event) {
-  console.log('[Zeydrop] Service Worker 安装中...');
-  self.skipWaiting();
+'use strict';
+const CACHE = 'zeydrop-shell-__REVISION__';
+const ASSETS = /*__ASSETS__*/ [];
+self.addEventListener('install', event => {
+    // A failed shell install never replaces the last complete version.
+    event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
 });
-
-// 激活：清除旧缓存
-self.addEventListener('activate', function(event) {
-  console.log('[Zeydrop] Service Worker 激活');
-  event.waitUntil(
-    caches.keys().then(function(cacheNames) {
-      return Promise.all(
-        cacheNames.filter(function(cacheName) {
-          return cacheName !== CACHE_NAME && /^(snapdrop-cache|zeydrop-shell)/.test(cacheName);
-        }).map(function(cacheName) {
-          console.log('[Zeydrop] 删除旧缓存:', cacheName);
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(function() {
-      return self.clients.claim();
-    })
-  );
-});
-
-function cacheResponse(request, response) {
-  if (response && response.status === 200) {
-    var responseClone = response.clone();
-    caches.open(CACHE_NAME).then(function(cache) {
-      cache.put(request, responseClone);
-    });
-  }
-  return response;
-}
-
-function networkFirst(request) {
-  return fetch(request)
-    .then(function(response) {
-      return cacheResponse(request, response);
-    })
-    .catch(function() {
-      return caches.match(request);
-    });
-}
-
-function cacheFirst(request) {
-  return caches.match(request)
-    .then(function(response) {
-      if (response) return response;
-      return fetch(request).then(function(response) {
-        return cacheResponse(request, response);
-      });
-    });
-}
-
-// 请求拦截：入口页面网络优先，静态资源缓存优先
-self.addEventListener('fetch', function(event) {
-  // 跳过非 GET 请求
-  if (event.request.method !== 'GET') return;
-
-  // WebSocket 请求直接走网络
-  if (event.request.url.includes('/server')) return;
-
-  var accept = event.request.headers.get('accept') || '';
-  var isNavigation = event.request.mode === 'navigate' || accept.includes('text/html');
-  var isManifest = event.request.url.includes('/manifest.json');
-  var isConfig = /\/config(?:\.[a-f0-9]+)?\.js(?:\?|$)/.test(event.request.url);
-
-  event.respondWith(
-    isNavigation || isManifest || isConfig
-      ? networkFirst(event.request)
-      : cacheFirst(event.request)
-  );
+self.addEventListener('activate', event => event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE && /^(snapdrop-cache|zeydrop-shell)/.test(key)).map(key => caches.delete(key)))).then(() => self.clients.claim())
+));
+self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin || event.request.method !== 'GET' || url.pathname.startsWith('/server') || url.pathname.endsWith('/config.js') || url.pathname.endsWith('/build.json')) return;
+    if (event.request.mode === 'navigate') {
+        // Always cache a canonical shell; invitation tokens must never enter cache keys.
+        event.respondWith(fetch(event.request).catch(() => caches.match('/'))); return;
+    }
+    event.respondWith(caches.match(event.request).then(response => response || fetch(event.request)));
 });

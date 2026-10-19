@@ -1,0 +1,25 @@
+{
+  "name": "zeydrop",
+  "version": "0.3.0-dev.1",
+  "private": true,
+  "description": "Zeydrop · 闪投 — Direct by design.",
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "node tests/browser.cjs",
+    "dev": "node scripts/dev.cjs",
+    "test:smoke": "node tests/smoke.cjs"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "playwright": "^1.58.0"
+  }
+}
