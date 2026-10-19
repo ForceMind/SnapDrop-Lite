@@ -11,7 +11,7 @@
 
 在干净检出中安装、测试、构建，然后按 README 的环境变量运行 `deploy.sh`。安装目录 `/opt/zeydrop/releases/<build-revision>`，活动版本 `/opt/zeydrop/current`。Node 只监听 127.0.0.1:3001；外部只需 HTTPS，不应放行 3001。STUN 探测和设备 P2P 的 UDP 流量发生在客户端网络，不能靠开放服务器 3001 UDP 修复客户端 NAT。
 
-脚本校验域名 / 证书路径、证书期限和域名、证书与密钥匹配，安装固定锁文件依赖、运行测试、确定性构建。通过 systemd `zeydrop` 运行无特权账号，Nginx 反代 WSS，配置 Origin 只接受 `https://<DOMAIN>`。
+脚本校验域名 / 证书路径、证书期限和域名、证书与密钥匹配，安装固定锁文件依赖、运行测试、确定性构建。修改配置前备份受管文件、旧活动目录及服务状态；失败 trap 尝试恢复，备份目录在失败时保留供检查。此路径尚未在真实 systemd 主机演练。通过 systemd `zeydrop` 运行无特权账号，Nginx 反代 WSS，配置 Origin 只接受 `https://<DOMAIN>`。
 
 静态 `/health` 仅证明 Nginx 服务就绪；必须另外实际执行 WS hello、邀请两端配对、candidate pair、文件校验才能证明信令 / P2P 可用。不得将静态健康检查写成完整产品验收。
 

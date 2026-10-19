@@ -174,7 +174,7 @@ class TransferPeer {
     }
     _progress(state, phase) {
         const bytes = state.acked ?? state.offset;
-        if (state.paused && ['receiving', 'sending'].includes(phase)) phase = 'paused';
+        if ((state.paused || state.remotePaused) && ['receiving', 'sending'].includes(phase)) phase = 'paused';
         const speed = bytes / Math.max((performance.now() - state.start) / 1000, 0.1);
         Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
     }

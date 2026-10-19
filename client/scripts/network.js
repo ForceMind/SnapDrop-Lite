@@ -17,7 +17,7 @@ function selectedPath(stats) {
     let pair;
     for (const stat of stats.values()) if (stat.type === 'transport' && stat.selectedCandidatePairId) pair = stats.get(stat.selectedCandidatePairId);
     if (!pair) pair = [...stats.values()].find(stat => stat.type === 'candidate-pair' && stat.selected && stat.state === 'succeeded');
-    if (!pair) return { direct: false, status: 'unknown' };
+    if (!pair || pair.state !== 'succeeded') return { direct: false, status: 'unknown' };
     const local = stats.get(pair.localCandidateId), remote = stats.get(pair.remoteCandidateId);
     if (!local || !remote) return { direct: false, status: 'unknown' };
     if ([local.candidateType, remote.candidateType].includes('relay')) return { direct: false, status: 'relay' };
@@ -27,7 +27,7 @@ function selectedPath(stats) {
     return {
         direct: known.includes(local.candidateType) && known.includes(remote.candidateType) && ['udp', 'tcp'].includes(protocol),
         status: 'selected', protocol, localType: local.candidateType, remoteType: remote.candidateType,
-        family: [local.address, remote.address].some(address => address?.includes(':')) ? 'IPv6 / 双栈' : 'IPv4 / mDNS',
+        family: [local.address || local.ip, remote.address || remote.ip].some(address => address?.includes(':')) ? 'IPv6 / 双栈' : [local.address || local.ip, remote.address || remote.ip].some(address => /^\d+\.\d+\.\d+\.\d+$/.test(address || '')) ? 'IPv4' : '地址族未公开',
         rtt: Number.isFinite(pair.currentRoundTripTime) ? Math.round(pair.currentRoundTripTime * 1000) : null
     };
 }
@@ -195,6 +195,7 @@ class RTCPeer extends TransferPeer {
     async _samplePath() {
         const conn = this._conn;
         if (this._closed || !conn || !this._isConnected()) return;
+        if (!['connected', 'completed'].includes(conn.iceConnectionState)) { this._path = { direct: false }; this._connectionEvent(); return; }
         try {
             const path = selectedPath(await conn.getStats());
             if (this._closed || conn !== this._conn) return;
@@ -239,7 +240,7 @@ class RTCPeer extends TransferPeer {
         if (this._closed) return;
         this._closed = true; this.abortAll('连接已关闭，文件未完成');
         clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); Events.off('online', this._online);
-        if (this._channel) { this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
+        if (this._channel) { this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
         this._conn.close();
     }
 }

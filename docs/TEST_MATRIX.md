@@ -11,7 +11,7 @@
 | 接收前零字节、0 / 3 / 2 MiB 文件 | 协议双端模拟 + sink | 通过 |
 | SHA-256 损坏、超限、内存上限、未核对身份 | 协议模拟 | 通过 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
-| Chromium 页面 / 邀请 / SDP | 两 context 浏览器 | 通过部分 UI；实际直连未建立 |
+| Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 两 context 浏览器 | GitHub CI #1 已通过直连与安全码；后续弹窗缺陷已修复 |
 | Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 两 context E2E | 本地网络阻碍；未通过 |
 | Firefox 完整 E2E | CI 脚本 | 待执行 |
 | WebKit 手机 UI | CI smoke | 待执行；不等于 iOS Safari 实测 |

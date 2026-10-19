@@ -1092,3 +1092,8 @@ button:disabled { opacity:.45; cursor: default; }
 .devices-stage x-peer .name { max-width:none; width:auto; text-align:left; font-size:14px; }
 .devices-stage x-peer .select-files { position:relative; padding:12px; }
 [hidden] { display:none !important; }
+/* Give the modal a viewport box as well as its backdrop; inline custom tags
+   otherwise have a zero-sized accessible/click target even while children show. */
+x-dialog[show] { display:block; position:fixed; inset:0; z-index:100; }
+x-dialog:not([show]) { display:none; }
+.node-a svg { color:#e3fff0; }
