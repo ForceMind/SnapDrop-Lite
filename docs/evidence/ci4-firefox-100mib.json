@@ -1,0 +1,50 @@
+{
+  "engine": "firefox",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "family": "地址族未公开",
+      "rtt": 0
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 0
+    }
+  ],
+  "stream0": {
+    "ms": 159,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 11778,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "signaling": {
+    "messages": 6,
+    "bytes": 90,
+    "fileBodyObserved": false
+  },
+  "passed": true,
+  "commit": "09cff110380a79532f0a5e63ffa969c7ac94e821",
+  "run_id": 39212811865
+}

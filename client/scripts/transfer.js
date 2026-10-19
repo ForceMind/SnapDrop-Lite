@@ -6,6 +6,11 @@ const WINDOW_SIZE = 256 * 1024;
 const hex = bytes => Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
 const safeName = value => String(value).replace(/[\\/\x00-\x1f\x7f]/g, '_').slice(0, 255) || 'file';
 let reservedMemory = 0;
+function saveError(error) {
+    if (error?.name === 'QuotaExceededError') return '保存空间不足，文件未完成。请释放磁盘或浏览器存储空间后重试。';
+    if (error?.name === 'NotAllowedError') return '没有文件保存权限，请重新选择保存位置。';
+    return '文件保存失败：' + String(error?.message || error).slice(0, 160);
+}
 class ReceiveSink {
     static async open(meta) {
         const sink = new ReceiveSink(meta);
@@ -50,6 +55,7 @@ class TransferPeer {
     sendJSON(message) { this._send(JSON.stringify(message)); }
     _receive(data) {
         this._queuedBytes += typeof data === 'string' ? data.length : data.byteLength;
+        this._peakQueuedBytes = Math.max(this._peakQueuedBytes || 0, this._queuedBytes);
         if (this._queuedBytes > 1024 * 1024) { this._protocolError('接收缓冲超限'); return; }
         this._messageChain = this._messageChain.then(() => this._onMessage(data))
             .catch(error => this._protocolError(error.message))
@@ -63,7 +69,8 @@ class TransferPeer {
             const state = this._incoming;
             if (!state?.sink || state.accepting || data.byteLength < 1 || data.byteLength > CHUNK_SIZE
                 || state.offset + data.byteLength > state.meta.size || state.offset + data.byteLength - state.acked > WINDOW_SIZE) throw Error('未授权或无效的文件分块');
-            await state.sink.write(data);
+            try { await state.sink.write(data); }
+            catch (error) { this.cancel(state.meta.id, saveError(error)); return; }
             if (this._incoming !== state) return;
             state.hash.update(new Uint8Array(data)); state.offset += data.byteLength;
             this._progress(state, 'receiving');
@@ -109,7 +116,10 @@ class TransferPeer {
         }
         if (msg.type === 'finish' && incoming?.sink && msg.id === incoming.meta.id) {
             if (incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
-            const result = await incoming.sink.finish();
+            let result;
+            try { result = await incoming.sink.finish(); }
+            catch (error) { this.cancel(msg.id, saveError(error)); return; }
+            if (this._incoming !== incoming) { result.release?.(); return; }
             clearTimeout(incoming.timer); this._incoming = null;
             this.sendJSON({ type: 'complete', id: msg.id, sha256: msg.sha256, readyNext: !!result.saved });
             Events.fire('file-received', { ...incoming.meta, ...result, sender: this._peerId, sha256: msg.sha256 });
@@ -186,7 +196,7 @@ class TransferPeer {
         if (state.uiPhase === phase && now - (state.lastUI || 0) < 200) return;
         state.uiPhase = phase; state.lastUI = now;
         const speed = bytes / Math.max((performance.now() - state.start) / 1000, 0.1);
-        Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
+        Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, error: state.error || null, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
     }
     pause(id, paused) {
         const state = [this._outgoing, this._incoming].find(s => s?.meta.id === id);
@@ -200,7 +210,7 @@ class TransferPeer {
         const incoming = this._incoming?.meta.id === id && this._incoming;
         const state = outgoing || incoming;
         if (!state) return;
-        clearTimeout(state.timer);
+        clearTimeout(state.timer); state.error = reason;
         if (outgoing) { this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
         if (incoming) {
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
@@ -221,5 +231,5 @@ class TransferPeer {
         if (text.length > 4096) return Events.fire('notify-user', '文本最多 4096 字符');
         this.sendJSON({ type: 'text', text });
     }
-    _protocolError(reason) { this.abortAll(reason); this.close(); Events.fire('notify-user', reason); }
+    _protocolError(reason) { this.abortAll(reason); this.close(reason); Events.fire('notify-user', reason); }
 }

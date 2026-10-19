@@ -12,9 +12,9 @@
 | SHA-256 损坏、超限、内存上限、未核对身份 | 协议模拟 | 通过 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
 | Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 两 context 浏览器 | GitHub CI #1 已通过直连与安全码；后续弹窗缺陷已修复 |
-| Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 两 context E2E | 本地网络阻碍；未通过 |
-| Firefox 完整 E2E | CI 脚本 | 待执行 |
-| WebKit 手机 UI | CI smoke | 待执行；不等于 iOS Safari 实测 |
+| Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #4：直连及 100 MiB 通过；1 GiB 失败，继续定位 |
+| Firefox 完整 E2E | CI #4 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 会话恢复 |
+| WebKit 手机 UI | CI #4 smoke | 通过；不等于 iOS Safari 实测 |
 
 E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服务器 WS 字节计数与正文 sentinel 检查。原生文件流使用浏览器 OPFS writer；测试只代替 picker 选择，不证明真实用户 picker 授权体验。CI 网络同主机不能替代公网 NAT 场景。
 

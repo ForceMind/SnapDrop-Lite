@@ -99,3 +99,16 @@ test('receiver cancellation drains only the in-flight window and preserves the c
     assert.equal(h.events.find(event => event.type === 'file-received').detail.name, 'retry');
     await h.until(() => !h.a._outgoing);
 });
+test('quota and final-save errors cancel only the file and report the cause', async () => {
+    for (const failOn of ['write', 'close']) {
+        const h = await harness({ disk: true }); let closedTransport = 0;
+        h.a.close = h.b.close = () => closedTransport++;
+        h.a.sendFiles([new File([Buffer.alloc(60000)], 'quota')]); await h.until(() => h.b._incoming);
+        const id = h.b._incoming.meta.id; h.a.pause(id, true); await h.b.acceptIncoming(id);
+        const failure = new Error('storage full'); failure.name = 'QuotaExceededError';
+        h.b._incoming.sink.writer[failOn] = async () => { throw failure; };
+        h.a.pause(id, false); await h.until(() => h.aborted()); await h.until(() => !h.a._outgoing);
+        assert.equal(closedTransport, 0); assert.ok(!h.events.some(event => event.type === 'file-received'));
+        assert.ok(h.events.some(event => event.type === 'transfer-state' && event.detail.phase === 'cancelled' && /保存空间不足/.test(event.detail.error || '')));
+    }
+});

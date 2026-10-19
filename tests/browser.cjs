@@ -1,20 +1,29 @@
 'use strict';
 // Real two-browser-context DataChannel tests. No external NAT claims are made.
-const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto');
+const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto'), os = require('node:os');
 const { chromium, firefox, webkit } = require('playwright'); const { startDev } = require('../scripts/dev.cjs');
 async function main() {
     const server = await startDev(0); const results = { engine: process.env.BROWSER_TYPE || 'chromium', cases: [], network: 'two contexts on the same test host; STUN disabled', errors: [] };
     const engine = { chromium, firefox, webkit }[results.engine];
-    const browser = await engine.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : {}) });
+    const persistent = results.engine === 'chromium' && process.env.LARGE_FILE_TEST === '1';
+    const profileRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'zeydrop-e2e-'));
+    results.profiles = persistent ? 'two persistent profiles (disk-backed OPFS)' : 'two ephemeral contexts';
+    const launchOptions = { headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : {}) };
+    const browser = persistent ? null : await engine.launch(launchOptions);
     const contexts = []; const pages = [];
     await fs.mkdir('test-results', { recursive: true });
     try {
         for (let i = 0; i < 2; i++) {
-            const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce' }); contexts.push(context);
+            const contextOptions = { acceptDownloads: true, viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce' };
+            const context = persistent ? await engine.launchPersistentContext(path.join(profileRoot, String(i)), { ...launchOptions, ...contextOptions }) : await browser.newContext(contextOptions); contexts.push(context);
             const page = await context.newPage(); pages.push(page);
             page.on('pageerror', error => results.errors.push(error.message));
             await page.route('**/config.js?*', route => route.fulfill({ contentType: 'text/javascript', body: 'window.ZEYDROP_CONFIG={enableStun:false,memoryLimit:67108864};' }));
-            await page.addInitScript(() => { window.showSaveFilePicker = undefined; });
+            await page.addInitScript(() => {
+                window.showSaveFilePicker = undefined; window.__testTransfers = {}; window.__testNotices = [];
+                window.addEventListener('transfer-state', event => window.__testTransfers[event.detail.name] = event.detail);
+                window.addEventListener('notify-user', event => { window.__testNotices.push(event.detail); if (window.__testNotices.length > 50) window.__testNotices.shift(); });
+            });
         }
         const [a, b] = pages;
         await a.goto(server.origin); await a.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
@@ -52,6 +61,14 @@ async function main() {
         const expected = crypto.createHash('sha256').update(file.buffer).digest('hex'); assert.ok((await b.locator('#fileSize').innerText()).includes(expected));
         const downloadPromise = b.waitForEvent('download'); await b.locator('#download').click(); const download = await downloadPromise;
         assert.deepEqual(await fs.readFile(await download.path()), file.buffer); results.cases.push('fallback save and independent downloaded SHA-256/content equality');
+        // Synthetic storage failure must stop this file without breaking the direct channel.
+        await b.evaluate(() => { window.showSaveFilePicker = async () => ({ createWritable: async () => ({ write: async () => { throw new DOMException('Test storage quota', 'QuotaExceededError'); }, close: async () => {}, abort: async () => {} }) }); });
+        await a.locator('x-peer input[type=file]').setInputFiles({name:'quota-test.bin',mimeType:'application/octet-stream',buffer:Buffer.alloc(60000)});
+        await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
+        await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing);
+        const quota = await b.evaluate(() => ({state:window.__testTransfers['quota-test.bin'],connected:[...zeydrop.peers.peers.values()][0]._isConnected()}));
+        assert.equal(quota.state.phase,'cancelled'); assert.match(quota.state.error,/保存空间不足/); assert.equal(quota.connected,true);
+        results.cases.push('storage quota failure reports cancellation without closing the direct channel');
         // Native browser FileSystemWritableFileStream, with only picker selection supplied by the test.
         await b.evaluate(() => {
             window.showSaveFilePicker = async ({ suggestedName }) => {
@@ -59,12 +76,15 @@ async function main() {
                 return directory.getFileHandle(suggestedName, { create: true });
             };
         });
+        results.storageBefore = await b.evaluate(() => navigator.storage.estimate());
         for (const size of [0, 100 * 1024 * 1024, ...(process.env.LARGE_FILE_TEST === '1' ? [1024 ** 3] : [])]) {
             const name = 'stream-' + size + '.bin', local = path.resolve('test-results', name);
             const handle = await fs.open(local, 'w'); await handle.truncate(size); await handle.close();
             const start = Date.now(); await a.locator('x-peer input[type=file]').setInputFiles(local);
             await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
             await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing, null, { timeout: 300000 });
+            const terminal = await a.evaluate(name => ({ state: window.__testTransfers[name], notices: window.__testNotices }), name);
+            assert.equal(terminal.state?.phase, 'complete', 'File did not complete: ' + JSON.stringify(terminal));
             const actualSize = await b.evaluate(async name => (await (await (await navigator.storage.getDirectory()).getFileHandle(name)).getFile()).size, name);
             assert.equal(actualSize, size);
             const sha = crypto.createHash('sha256'); for (let offset = 0; offset < size; offset += 1024 * 1024) sha.update(Buffer.alloc(Math.min(1024 * 1024, size - offset)));
@@ -78,8 +98,11 @@ async function main() {
             assert.equal(diskHash, expectedHash);
             results.cases.push('native streamed file ' + size + ' bytes with independent disk SHA-256');
             results['stream' + size] = { ms: Date.now() - start, sha256: expectedHash };
+            await b.evaluate(async name => (await navigator.storage.getDirectory()).removeEntry(name), name);
             await fs.rm(local); console.log('PASS streamed file:', size, 'bytes');
         }
+        results.peakReceiveQueues = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._peakQueuedBytes || 0)));
+        assert.ok(results.peakReceiveQueues.every(bytes => bytes <= 1024 * 1024));
         assert.ok(traffic.every(message => !message.binary && !message.text.includes('PRIVATE_FILE_BODY_SENTINEL') && !message.text.includes('PRIVATE_FILE_SENTINEL')));
         assert.ok(traffic.reduce((sum, message) => sum + message.bytes, 0) < 512 * 1024);
         results.signaling = { messages: traffic.length, bytes: traffic.reduce((sum, message) => sum + message.bytes, 0), fileBodyObserved: false };
@@ -91,11 +114,12 @@ async function main() {
         assert.deepEqual(results.errors, []); results.passed = true;
     } catch (error) {
         results.failure = error.message;
-        results.debug = await Promise.all(pages.map(page => page.evaluate(async () => ({ signal: zeydrop.server._ready, peers: await Promise.all([...zeydrop.peers.peers.values()].map(async peer => ({state: peer._state, ice: peer._conn.iceConnectionState, connection: peer._conn.connectionState, signaling: peer._conn.signalingState, candidates: peer._candidateCounts, channel: peer._channel?.readyState, code: Boolean(peer._code), path:peer._path, stats: [...(await peer._conn.getStats()).values()].filter(s => ['transport','candidate-pair','local-candidate','remote-candidate'].includes(s.type)) }))) })))) ;
+        results.debug = await Promise.all(pages.map(page => page.evaluate(async () => ({ signal: zeydrop.server._ready, notices: window.__testNotices, transfers: window.__testTransfers, storage: await navigator.storage.estimate(), peers: await Promise.all([...zeydrop.peers.peers.values()].map(async peer => ({state: peer._state, ice: peer._conn.iceConnectionState, connection: peer._conn.connectionState, signaling: peer._conn.signalingState, candidates: peer._candidateCounts, channel: peer._channel?.readyState, code: Boolean(peer._code), path:peer._path, reason:peer._reason, stats: [...(await peer._conn.getStats()).values()].filter(s => ['transport','candidate-pair','local-candidate','remote-candidate'].includes(s.type)) }))) })))) ;
         throw error;
     } finally {
         await fs.writeFile('test-results/browser-' + results.engine + '.json', JSON.stringify(results, null, 2));
-        await Promise.all(contexts.map(context => context.close())); await browser.close(); await server.close();
+        await Promise.all(contexts.map(context => context.close())); await browser?.close(); await server.close(); await fs.rm(profileRoot, { recursive: true, force: true });
+        for (const file of await fs.readdir('test-results')) if (/^stream-\d+\.bin$/.test(file)) await fs.rm(path.join('test-results', file));
     }
     console.log(JSON.stringify(results, null, 2));
 }

@@ -237,12 +237,13 @@ class RTCPeer extends TransferPeer {
     }
     _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); }
     _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
-    close() {
+    close(reason = '连接已关闭，文件未完成') {
         if (this._closed) return;
-        this._closed = true; this.abortAll('连接已关闭，文件未完成');
+        this._closed = true; this._state = 'closed'; this._path = { direct: false }; this._verified = false; this._reason = reason;
+        this.abortAll(reason);
         clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); Events.off('online', this._online);
         if (this._channel) { this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
-        this._conn.close();
+        this._conn.close(); this._connectionEvent();
     }
 }
 class PeersManager {
@@ -268,6 +269,7 @@ class PeersManager {
         });
         Events.on('retry-peer', event => {
             const old = this.peers.get(event.detail);
+            if (old?._closed) { Events.fire('notify-user', '此连接已结束，请创建新邀请重新配对并核对安全码'); return; }
             if (old) { old.restart(true); Events.fire('notify-user', old._isCaller ? '正在重新协商直连' : '请让另一台设备点击重试，或创建新邀请'); }
         });
     }

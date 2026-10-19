@@ -2,26 +2,28 @@
 > zeydrop@0.3.0-dev.1 test
 > node --test tests/*.test.cjs
 
-✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (2.947257ms)
-✔ TURN configuration is rejected; STUN can be explicitly disabled (1.699939ms)
-✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (74.07679ms)
-✔ file payloads, invalid nested signaling and TURN candidates are never relayed (58.408497ms)
-✔ expired/missing invitations cannot be resurrected by joining (29.198286ms)
-✔ short reconnect restores server identity and reserves room slot; expiry drops authority (51.946108ms)
-✔ Origin/path checks and message-rate limits reject invalid clients (17.468188ms)
-✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (84.608373ms)
-✔ corruption aborts partial disk file and never exposes a completed file (7.1136ms)
-✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (7.707018ms)
-✔ unverified peers cannot send or receive file offers (1.311084ms)
-✔ fallback multi-file queue waits until user saves/discards the previous Blob (11.156665ms)
-✔ pause holds file reads, resume continues, and cancel aborts native partial writes (279.005837ms)
-✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (121.131339ms)
-✔ receiver cancellation drains only the in-flight window and preserves the channel for a new file (119.323777ms)
-ℹ tests 15
+✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (3.092646ms)
+✔ TURN configuration is rejected; STUN can be explicitly disabled (1.693639ms)
+✔ closing a transport clears previously verified direct status (1.204974ms)
+✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (72.578059ms)
+✔ file payloads, invalid nested signaling and TURN candidates are never relayed (55.343586ms)
+✔ expired/missing invitations cannot be resurrected by joining (29.66731ms)
+✔ short reconnect restores server identity and reserves room slot; expiry drops authority (37.426179ms)
+✔ Origin/path checks and message-rate limits reject invalid clients (13.04065ms)
+✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (75.593384ms)
+✔ corruption aborts partial disk file and never exposes a completed file (6.259402ms)
+✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (7.086032ms)
+✔ unverified peers cannot send or receive file offers (1.044562ms)
+✔ fallback multi-file queue waits until user saves/discards the previous Blob (10.287917ms)
+✔ pause holds file reads, resume continues, and cancel aborts native partial writes (254.762844ms)
+✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (106.932144ms)
+✔ receiver cancellation drains only the in-flight window and preserves the channel for a new file (118.151603ms)
+✔ quota and final-save errors cancel only the file and report the cause (215.116043ms)
+ℹ tests 17
 ℹ suites 0
-ℹ pass 15
+ℹ pass 17
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 758.512433
+ℹ duration_ms 879.924709
