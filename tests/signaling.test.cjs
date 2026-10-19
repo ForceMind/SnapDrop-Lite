@@ -68,6 +68,34 @@ test('short reconnect restores server identity and reserves room slot; expiry dr
     now += RESUME_TTL + 1; server.sweep();
     const fresh = await connect(a.hello.resumeToken); assert.notEqual(fresh.hello.peerId, a.hello.peerId);
 });
+test('pairing seals membership and survives invite expiry until a fixed session deadline', async t => {
+    let now=100000;
+    const {connect,server}=await setup(t,{now:()=>now,roomTTL:100,sessionTTL:1000});
+    const a=await connect(),b=await connect(),c=await connect();
+    a.send({type:'create-room',roomId});await a.wait(msg=>msg.type==='room-joined');
+    b.send({type:'join-room',roomId});
+    const firstStatus=await a.wait(msg=>msg.type==='room-joined' && msg.paired);
+    const secondStatus=await b.wait(msg=>msg.type==='room-joined' && msg.paired);
+    assert.equal(firstStatus.expiresAt,101000);assert.equal(secondStatus.inviteExpiresAt,100100);
+    now+=101;server.sweep();assert.equal(server.rooms.size,1);assert.ok(!a.messages.some(msg=>msg.type==='room-expired'));
+    a.send({type:'signal',to:b.hello.peerId,sdp:{type:'offer',sdp:'v=0\r\n'}});
+    await b.wait(msg=>msg.type==='signal');
+    a.send({type:'leave-room'});await b.wait(msg=>msg.type==='peer-left');
+    c.send({type:'join-room',roomId});assert.equal((await c.wait(msg=>msg.type==='room-error')).code,'full');
+    now=101001;server.sweep();await b.wait(msg=>msg.type==='room-expired');assert.equal(server.rooms.size,0);
+});
+test('original paired member can resume after invite expiry; leaving both ends releases the sealed room', async t => {
+    let now=100000;
+    const {connect,server}=await setup(t,{now:()=>now,roomTTL:100,sessionTTL:1000});
+    const a=await connect(),b=await connect();a.send({type:'create-room',roomId});await a.wait(msg=>msg.type==='room-joined');
+    b.send({type:'join-room',roomId});await b.wait(msg=>msg.type==='room-joined');
+    a.ws.close();await new Promise(resolve=>a.ws.once('close',resolve));await delay(5);
+    now+=101;server.sweep();const resumed=await connect(a.hello.resumeToken);
+    assert.equal(resumed.hello.peerId,a.hello.peerId);
+    assert.equal((await resumed.wait(msg=>msg.type==='room-joined')).expiresAt,101000,'resume must not extend the fixed session deadline');
+    resumed.send({type:'leave-room'});await b.wait(msg=>msg.type==='peer-left');b.send({type:'leave-room'});
+    await b.wait(msg=>msg.type==='peers' && !msg.peers.length);await delay(5);assert.equal(server.rooms.size,0);
+});
 test('Origin/path checks and message-rate limits reject invalid clients', async t => {
     const { connect, url } = await setup(t);
     for (const [target, value] of [[url, 'https://evil.example'], [url.replace('/server/webrtc', '/wrong'), origin], [url + '?resumeToken=should-not-be-in-url', origin]]) {

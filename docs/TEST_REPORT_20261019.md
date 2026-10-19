@@ -22,3 +22,5 @@ Chromium 接收待处理队列峰值 245,844 B，约 256 KiB；这不包含浏�
 协商顺序回归：主动延迟 answerer 的设备发现 250 ms，Chromium 捕获 2 条、Firefox 捕获 3 条先到的 SDP/ICE；缓冲至授权设备出现后建立直连。此证据对应 a520ed9，不包含后续诊断导出 UI 改动。
 
 诊断导出提交 90962c1 的 [CI #8](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39272819405) 于北京时间 22:55 全部通过：21 项 Node 测试及原完整浏览器矩阵，另验证 Chromium/Firefox/WebKit 实际 JSON 下载；回归确认报告不含设备 ID、安全码、邀请/恢复令牌、文件名或正文。evidence/ci8-*.json 保留原始结果。后续握手路径/发布指纹修复本地 22 项通过，仍需最新提交的完整 CI。
+
+握手/服务端发布指纹提交 7c12857 的 [CI #9](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39273386666) 全部通过：22 项 Node 测试与完整浏览器矩阵。原始 JSON 为 evidence/ci9-*.json。此结果不包括后续会话期限分离；后者本地 24 项通过，新增实际文件传输前让邀请到期的浏览器用例，需另查最新 head CI。

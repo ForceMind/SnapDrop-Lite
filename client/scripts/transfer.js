@@ -144,7 +144,7 @@ class TransferPeer {
             const sink = await ReceiveSink.open(state.meta);
             if (this._incoming !== state) { await sink.abort(); return; }
             state.sink = sink; state.accepting = false; clearTimeout(state.timer);
-            state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 30 * 60 * 1000);
+            state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 12 * 60 * 60 * 1000);
             this.sendJSON({ type: 'accept', id });
             this._progress(state, 'receiving');
         } catch (error) { this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message); }

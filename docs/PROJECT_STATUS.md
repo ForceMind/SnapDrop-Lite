@@ -79,3 +79,7 @@ CI #4 在临时 Chromium profile 的 OPFS 1 GiB 测试失败，原日志没有�
 最终审查确认，旧 verifyClient 对未鉴权 request-target 直接调用 URL 构造器；原始 `http://[` 在隔离子进程中触发未捕获 ERR_INVALID_URL 并退出。改为精确匹配 `/server/webrtc`，拒绝 query/路径变体；真实 TCP 回归覆盖四种目标，拒绝后正常 hello 仍成功。本地总计 22 项测试通过，原始问题与回归范围记录在 `evidence/upgrade-target-regression-20261019.json`。
 
 构建指纹原先缺少 server/index.js，单改信令可能复用旧 release 路径。现包括服务端实现/包元数据、部署脚本/模板、客户端和锁文件。实际修改服务端并重建会改变 revision，finally 恢复源码后 revision 回到原值；证据在 `evidence/server-build-revision-20261019.json`。最新完整 CI 尚待验证；这些修复没有部署到生产。
+
+## 邀请与活跃会话期限分离
+
+7c12857 的 CI #9（39273386666）全部通过，22 项测试及原完整浏览器矩阵；evidence/ci9-*.json 已归档。后续发现 15 分钟邀请到期会切断已配对的大文件，已改为：未配对邀请仍为 15 分钟；第二名成员加入即锁定双方且禁止替换设备；配对会话固定最长 12 小时，原有身份的短时恢复不延长，双方离开/预留结束后释放。接收时限同时调整，保留逐窗口 ACK 超时。新增两项真实 WS/可控时钟测试，本地 24 项全部通过。实际浏览器回归把邀请期限提前至当前时间前，然后执行原完整文件矩阵，必须等待最新 CI 才标记该场景通过。

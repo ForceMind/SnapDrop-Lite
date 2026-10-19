@@ -75,7 +75,7 @@
                     <div class="orbit-tag tag-top">P2P / WEBRTC</div><div class="orbit-tag tag-bottom">NO FILE RELAY</div>
                 </div>
                 <div class="trust-strip">
-                    <div><span class="mini-icon">↗</span><strong>端到端直传</strong><small>数据不经过我们的服务器</small></div>
+                    <div><span class="mini-icon">↗</span><strong>端到端直传</strong><small>文件正文不经过服务器</small></div>
                     <div><span class="mini-icon">◎</span><strong>无需安装</strong><small>打开网页即可使用</small></div>
                 </div>
             </section>
@@ -95,7 +95,7 @@
                         <button id="roomBtn" class="join-action" type="button" hidden>加入</button>
                     </div>
                     <div class="invite-created" id="inviteCreated" hidden>
-                        <div><strong>邀请已生成</strong><p id="inviteExpiry">15 分钟有效 · 最多两台设备</p></div><canvas id="inviteQR" width="160" height="160" aria-label="邀请二维码"></canvas>
+                        <div><strong id="inviteTitle">邀请已生成</strong><p id="inviteExpiry">15 分钟有效 · 最多两台设备</p></div><canvas id="inviteQR" width="160" height="160" aria-label="邀请二维码"></canvas>
                         <div class="invite-url"><input id="inviteUrl" aria-label="邀请链接" type="text" readonly><button id="copyInviteBtn" type="button">复制</button></div>
                     <button id="leaveRoomBtn" type="button" class="leave-room">离开房间</button></div>
                     <p id="roomStatus" class="room-status" role="status" aria-live="polite">房间尚未建立 · 仅连接双方直接传输文件</p>

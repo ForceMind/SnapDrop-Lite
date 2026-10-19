@@ -158,12 +158,15 @@ class Zeydrop {
         if (!window.isRtcSupported) Events.fire('notify-user', '请通过 HTTPS 或 localhost 打开，并使用支持 WebRTC 的浏览器');
     }
     rooms() {
-        let currentRoom = null, expires = null;
+        let currentRoom = null, expires = null, paired = false;
         const status = (message, state = '') => { $('roomStatus').textContent = message; $('roomStatus').dataset.state = state; };
-        const clearInvite = () => { currentRoom = null; expires = null; $('inviteCreated').hidden = true; $('inviteUrl').value = ''; $('inviteQR').getContext('2d').clearRect(0, 0, 200, 200); $('roomInput').value = ''; $('roomBtn').hidden = true; history.replaceState({}, '', location.pathname); };
+        const clearInvite = () => { currentRoom = null; expires = null; paired = false; $('inviteCreated').hidden = true; $('inviteUrl').value = ''; $('inviteQR').getContext('2d').clearRect(0, 0, 200, 200); $('roomInput').value = ''; $('roomBtn').hidden = true; history.replaceState({}, '', location.pathname); };
         const showInvite = async id => {
             const url = new URL(location.pathname, location.origin); url.hash = 'room=' + id;
             $('inviteUrl').value = url.href; $('inviteCreated').hidden = false;
+            $('inviteTitle').textContent = paired ? '双方设备已配对' : '邀请已生成';
+            $('inviteUrl').parentElement.hidden = paired; $('inviteQR').hidden = paired;
+            if (paired) return;
             try { await window.ZeydropQR.toCanvas($('inviteQR'), url.href, { width: 160, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#163f31', light: '#ffffff' } }); } catch { $('inviteQR').hidden = true; }
         };
         const normalize = raw => {
@@ -180,7 +183,7 @@ class Zeydrop {
         const join = (raw, create = false) => {
             const id = normalize(raw);
             if (!/^[a-f0-9]{32}$/.test(id)) return status('邀请码无效，请使用本站生成的完整邀请链接', 'error');
-            currentRoom = id; expires = null; $('inviteCreated').hidden = true;
+            currentRoom = id; expires = null; paired = false; $('inviteCreated').hidden = true;
             this.server.joinRoom(id, create); status(create ? '正在创建邀请…' : '正在加入邀请…', 'waiting');
         };
         $('createRoomBtn').onclick = () => { if (!crypto.getRandomValues) return; join(hex(crypto.getRandomValues(new Uint8Array(16))), true); };
@@ -192,15 +195,15 @@ class Zeydrop {
             catch { $('inviteUrl').focus(); $('inviteUrl').select(); Events.fire('notify-user', '请复制选中的邀请链接'); }
         };
         $('leaveRoomBtn').onclick = () => { this.server.leaveRoom(); clearInvite(); status('已离开，可创建新的邀请'); };
-        Events.on('room-joined', event => { if (event.detail.roomId !== currentRoom) return; expires = event.detail.expiresAt; showInvite(currentRoom); status('房间已就绪，等待另一台设备加入并核对安全码', 'connected'); history.replaceState({}, '', location.pathname + '#room=' + currentRoom); });
-        Events.on('room-expired', () => { clearInvite(); status('邀请已过期，连接已结束。请创建新邀请', 'error'); });
+        Events.on('room-joined', event => { if (event.detail.roomId !== currentRoom) return; expires = event.detail.expiresAt; paired = event.detail.paired === true; showInvite(currentRoom); status(paired ? '配对已锁定，请核对安全码；此邀请不再接受其他设备' : '房间已就绪，等待另一台设备加入并核对安全码', 'connected'); history.replaceState({}, '', location.pathname + '#room=' + currentRoom); });
+        Events.on('room-expired', () => { clearInvite(); status('邀请或会话已过期，连接已结束。请创建新邀请', 'error'); });
         Events.on('room-error', event => { if (['expired', 'missing', 'invalid', 'exists'].includes(event.detail.code)) clearInvite(); status(event.detail.message, 'error'); });
         Events.on('signal-state', event => {
             const state = event.detail.state; $('signalStatus').dataset.state = state;
             $('signalStatus').querySelector('.signal-label').textContent = { connected: '信令服务在线', connecting: '正在连接信令', offline: '信令连接断开' }[state];
             if (state === 'offline' && currentRoom) status('信令中断，正在恢复；文件需要重新选择', 'waiting');
         });
-        setInterval(() => { if (expires) $('inviteExpiry').textContent = '邀请剩余 ' + Math.max(0, Math.ceil((expires - Date.now()) / 60000)) + ' 分钟 · 最多两台设备'; }, 1000);
+        setInterval(() => { if (expires) $('inviteExpiry').textContent = (paired ? '会话剩余 ' : '邀请剩余 ') + Math.max(0, Math.ceil((expires - Date.now()) / 60000)) + (paired ? ' 分钟 · 已锁定双方 · 最长 12 小时' : ' 分钟 · 最多两台设备'); }, 1000);
         const url = new URL(location.href); const id = new URLSearchParams(url.hash.slice(1)).get('room') || url.searchParams.get('room');
         if (id) { history.replaceState({}, '', location.pathname + '#room=' + id); join(id); }
     }

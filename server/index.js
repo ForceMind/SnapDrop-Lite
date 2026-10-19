@@ -3,6 +3,7 @@ const { randomUUID, randomBytes } = require('node:crypto');
 const { WebSocketServer } = require('ws');
 const MAX_MESSAGE = 64 * 1024;
 const ROOM_TTL = 15 * 60 * 1000;
+const SESSION_TTL = 12 * 60 * 60 * 1000;
 const RESUME_TTL = 2 * 60 * 1000;
 const token = () => randomBytes(32).toString('hex');
 const validRoom = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
@@ -16,6 +17,7 @@ class ZeydropServer {
         this.connections = new Map();
         this.origins = new Set((options.origins || process.env.ALLOWED_ORIGINS || 'http://localhost:8080,http://127.0.0.1:8080').split(',').map(v => v.trim()));
         this.roomTTL = options.roomTTL || ROOM_TTL;
+        this.sessionTTL = options.sessionTTL || SESSION_TTL;
         this._wss = new WebSocketServer({
             ...(options.noServer ? { noServer: true } : { host: options.host || process.env.WS_HOST || '127.0.0.1', port: options.port ?? Number(process.env.PORT || 3001) }),
             maxPayload: MAX_MESSAGE, perMessageDeflate: false,
@@ -75,7 +77,7 @@ class ZeydropServer {
             this.send(peer, { type: 'hello', peerId: peer.id, resumeToken: session.token, deviceName: session.name });
             if (session.room) {
                 const room = this.rooms.get(session.room);
-                if (room && room.expires > now) this.joinActive(peer, session.room, room);
+                if (room && this.roomDeadline(room) > now) this.joinActive(peer, session.room, room);
                 else session.room = null;
             }
             return;
@@ -86,26 +88,31 @@ class ZeydropServer {
         if (msg.type === 'create-room' || msg.type === 'join-room') {
             if (!onlyKeys(msg, ['type', 'roomId']) || !validRoom(msg.roomId)) return this.error(peer, 'invalid', '请使用完整的 Zeydrop 邀请链接');
             const existing = this.rooms.get(msg.roomId);
-            if (existing && existing.expires <= now) { this.expire(msg.roomId); return this.error(peer, 'expired', '邀请已过期，请创建新邀请'); }
+            if (existing && this.roomDeadline(existing) <= now) { this.expire(msg.roomId); return this.error(peer, 'expired', '邀请或会话已过期，请创建新邀请'); }
             if (msg.type === 'create-room') {
                 if (existing) return this.error(peer, 'exists', '邀请已存在，请创建新邀请');
                 if (this.rooms.size >= 1000) return this.error(peer, 'capacity', '服务繁忙，请稍后重试');
                 // Rate limit creation independently from ICE/pong traffic.
                 if (peer.lastCreate && now - peer.lastCreate < 5000) return this.error(peer, 'rate', '请稍后再创建邀请');
                 peer.lastCreate = now;
-                this.rooms.set(msg.roomId, { expires: now + this.roomTTL, members: new Map() });
+                this.rooms.set(msg.roomId, { expires: now + this.roomTTL, sessionExpires: null, members: new Map() });
             } else if (!existing) return this.error(peer, 'missing', '邀请不存在或已过期，请让对方创建新邀请');
             const room = this.rooms.get(msg.roomId);
+            // Once paired, the invitation can never admit a replacement device.
+            // Original members may resume only while their session reservation
+            // and the separate, fixed active-session deadline remain valid.
+            if (room.sessionExpires && !room.members.has(peer.id)) return this.error(peer, 'full', '此邀请已完成配对，请创建新邀请');
             if (!room.members.has(peer.id) && room.members.size >= 2) return this.error(peer, 'full', '此邀请已配对其他设备');
             if (peer.session.room !== msg.roomId) this.leave(peer);
             peer.session.room = msg.roomId;
             room.members.set(peer.id, peer.session);
+            if (room.members.size === 2 && !room.sessionExpires) room.sessionExpires = now + this.sessionTTL;
             this.joinActive(peer, msg.roomId, room);
             return;
         }
         if (msg.type !== 'signal') return; // No binary, text, files or arbitrary WS forwarding.
         const room = this.rooms.get(peer.session.room);
-        if (!room || room.expires <= now || !room.members.has(peer.id)) return;
+        if (!room || this.roomDeadline(room) <= now || !room.members.has(peer.id)) return;
         const recipient = room.members.get(msg.to)?.peer;
         if (!recipient || recipient === peer) return;
         let payload;
@@ -131,19 +138,25 @@ class ZeydropServer {
         return os + ' · ' + browser;
     }
     info(session) { return { id: session.id, name: { deviceName: session.name, displayName: session.name }, rtcSupported: true }; }
+    roomDeadline(room) { return room.sessionExpires || room.expires; }
     joinActive(peer, id, room) {
         const others = [...room.members.values()].filter(s => s.id !== peer.id && s.peer);
-        for (const other of others) this.send(other.peer, { type: 'peer-joined', peer: this.info(peer.session) });
+        const status = { type: 'room-joined', roomId: id, expiresAt: this.roomDeadline(room), inviteExpiresAt: room.expires, paired: !!room.sessionExpires };
+        for (const other of others) {
+            this.send(other.peer, { type: 'peer-joined', peer: this.info(peer.session) });
+            this.send(other.peer, status);
+        }
         this.send(peer, { type: 'peers', peers: others.map(s => this.info(s)) });
-        this.send(peer, { type: 'room-joined', roomId: id, expiresAt: room.expires });
+        this.send(peer, status);
     }
     error(peer, code, message) { this.send(peer, { type: 'room-error', code, message }); }
     leave(peer) {
         if (!peer.session?.room) return;
-        const room = this.rooms.get(peer.session.room);
+        const id = peer.session.room, room = this.rooms.get(id);
         room?.members.delete(peer.id);
         for (const session of room?.members.values() || []) this.send(session.peer, { type: 'peer-left', peerId: peer.id });
         peer.session.room = null;
+        if (room?.sessionExpires && !room.members.size) this.rooms.delete(id);
         this.send(peer, { type: 'peers', peers: [] });
     }
     detach(peer) {
@@ -164,10 +177,11 @@ class ZeydropServer {
     }
     sweep() {
         const now = this.now();
-        for (const [id, room] of this.rooms) if (room.expires <= now) this.expire(id);
+        for (const [id, room] of this.rooms) if (this.roomDeadline(room) <= now) this.expire(id);
         for (const [key, session] of this.sessions) if (!session.peer && now - session.detached > RESUME_TTL) {
             this.rooms.get(session.room)?.members.delete(session.id); this.sessions.delete(key);
         }
+        for (const [id, room] of this.rooms) if (room.sessionExpires && !room.members.size) this.rooms.delete(id);
         for (const peer of this.connections.values()) {
             if ((!peer.session && now - peer.connected > 10000) || now - peer.lastBeat > 60000) peer.socket.terminate();
             else this.send(peer, { type: 'ping' });
@@ -179,7 +193,7 @@ class ZeydropServer {
         await new Promise(resolve => this._wss.close(resolve));
     }
 }
-module.exports = { ZeydropServer, validRoom, ROOM_TTL, RESUME_TTL };
+module.exports = { ZeydropServer, validRoom, ROOM_TTL, SESSION_TTL, RESUME_TTL };
 if (require.main === module) {
     if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) throw Error('ALLOWED_ORIGINS is required in production');
     const server = new ZeydropServer();

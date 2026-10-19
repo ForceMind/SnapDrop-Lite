@@ -49,6 +49,11 @@ async function main() {
         const paths = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._path)));
         assert.ok(paths.every(info => info.direct && info.protocol === 'udp' && info.localType !== 'relay' && info.remoteType !== 'relay'));
         results.paths = paths; results.cases.push('real UDP DataChannel, selected host path, matching DTLS code');
+        // Expiring the invitation must not stop this already sealed pair.
+        for (const room of server.signaling.rooms.values()) room.expires=server.signaling.now()-1;
+        server.signaling.sweep();
+        for (const page of pages) { assert.equal(await page.locator('#inviteQR').isHidden(),true); assert.match(await page.locator('#inviteTitle').innerText(),/已配对/); }
+        results.cases.push('sealed pair continues actual file transfers after the invitation deadline');
         const traffic = []; for (const peer of server.signaling.connections.values()) peer.socket.on('message', (bytes, binary) => traffic.push({ binary, text: bytes.toString(), bytes: bytes.length }));
         const file = { name: 'PRIVATE_FILE_SENTINEL.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_FILE_BODY_SENTINEL\n'.repeat(12000)) };
         const send = () => a.locator('x-peer input[type=file]').setInputFiles(file);
@@ -104,6 +109,8 @@ async function main() {
         results.peakReceiveQueues = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._peakQueuedBytes || 0)));
         assert.ok(results.peakReceiveQueues.every(bytes => bytes <= 1024 * 1024));
         assert.ok(traffic.every(message => !message.binary && !message.text.includes('PRIVATE_FILE_BODY_SENTINEL') && !message.text.includes('PRIVATE_FILE_SENTINEL')));
+        const fileHashes = [expected, ...Object.entries(results).filter(([key])=>/^stream\d+$/.test(key)).map(([,value])=>value.sha256)];
+        assert.ok(traffic.every(message => fileHashes.every(hash => !message.text.includes(hash))), 'file hashes must stay on DataChannel');
         assert.ok(traffic.reduce((sum, message) => sum + message.bytes, 0) < 512 * 1024);
         results.signaling = { messages: traffic.length, bytes: traffic.reduce((sum, message) => sum + message.bytes, 0), fileBodyObserved: false };
         results.cases.push('server WebSocket captured: no file name, hash or body; no binary frames');
