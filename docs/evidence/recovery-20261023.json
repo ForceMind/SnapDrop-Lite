@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-23",
+  "baseline_commit": "e10f3fbdb7ce665e3aae206707b35ba6b23ab61e",
+  "scope": "Actual network.js evaluated in Node VM with mocked RTCPeerConnection, timers and transfer cancellation; not browser, NAT or full-suite verification.",
+  "runtime": "v22.16.0",
+  "command": "node --test tests/path.test.cjs tests/discovery.test.cjs tests/recovery.test.cjs",
+  "syntax_checks": [
+    "node --check client/scripts/network.js",
+    "node --check tests/recovery.test.cjs"
+  ],
+  "baseline_recovery_tests": {
+    "total": 20,
+    "passed": 5,
+    "failed": 15
+  },
+  "patched_targeted_tests": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0
+  },
+  "repeat_runs": {
+    "total": 10,
+    "passed": 10
+  },
+  "input_blob_sha1": {
+    "client/scripts/network.js": "1d2a595de6277df89046a3537ff6226cce287884",
+    "tests/discovery.test.cjs": "65445c910fd0ea8d1359c776965497a4a632b3e1",
+    "tests/path.test.cjs": "31931b8a1fe624266ce935c58323461476577f33",
+    "tests/recovery.test.cjs": "71ff620727d450859721954687c26d255f00225c"
+  },
+  "passed_tests": [
+    "ICE/SDP arriving before discovery waits for the authorized peer and preserves order",
+    "early signals have a bounded lifetime and budget and clear when a room is left",
+    "only selected non-relay paths count as direct; nomination alone cannot prove selection",
+    "TURN configuration is rejected; STUN can be explicitly disabled",
+    "closing a transport clears previously verified direct status",
+    "ICE failure revokes directness and consent on the non-offerer",
+    "a pre-disconnect stats result cannot authorize the recovered transport",
+    "a late stats success cannot overwrite a terminal failure",
+    "older stats cannot overwrite a newer unverified route",
+    "a current stats failure revokes previous authorization instead of retaining it",
+    "ICE checking revokes the old route and cancels the in-progress file",
+    "DTLS transport failure is not hidden by a connected ICE state",
+    "remote renegotiation invalidates the route before awaiting SDP processing",
+    "a pending fingerprint digest cannot publish after the peer closes",
+    "duplicate failure notifications do not consume separate restart attempts",
+    "fresh remote renegotiation recovers a failed callee without restoring consent",
+    "verify checks current transport health rather than a stale direct flag",
+    "a valid current sample records directness but never auto-confirms identity",
+    "a currently selected relay is still rejected and closes the peer",
+    "stats are not sampled from an SDP negotiation still in progress",
+    "duplicate callee failures cannot extend the remote recovery deadline",
+    "repeated missing-path samples cannot extend the verification deadline",
+    "an old fingerprint digest cannot overwrite the code from a newer negotiation",
+    "closing during createOffer prevents a late SDP from entering signaling",
+    "both browser failure callbacks still produce only one outstanding restart"
+  ],
+  "not_run": [
+    "Full npm test dependency-backed suite",
+    "Chromium/Firefox/WebKit E2E on this patch",
+    "Real NAT/IPv6/mobile network tests",
+    "Production deployment"
+  ],
+  "release_status": "Draft PR only; cross-connection file resume is not implemented."
+}

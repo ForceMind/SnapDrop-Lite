@@ -99,6 +99,7 @@ class RTCPeer extends TransferPeer {
         this._isCaller = server._peerId > peerId; this._closed = false; this._restarts = 0;
         this._state = 'connecting'; this._path = { direct: false }; this._candidateCounts = { host: 0, srflx: 0, prflx: 0 };
         this._signalChain = Promise.resolve(); this._pendingIce = [];
+        this._pathEpoch = 0; this._statsRequest = 0; this._identityEpoch = 0; this._negotiating = false;
         this._conn = new RTCPeerConnection({ iceServers: getIceServers(), iceTransportPolicy: 'all' });
         this._conn.onicecandidate = event => {
             if (!event.candidate) return;
@@ -125,8 +126,11 @@ class RTCPeer extends TransferPeer {
     async _offer(restart) {
         try {
             if (this._closed || this._conn.signalingState !== 'stable') return;
+            this._negotiating = true;
             const offer = await this._conn.createOffer({ iceRestart: restart });
+            if (this._closed || this._state === 'failed') return;
             await this._conn.setLocalDescription(offer);
+            if (this._closed || this._state === 'failed') return;
             this._server.send({ type: 'signal', to: this._peerId, sdp: { type: offer.type, sdp: offer.sdp } });
         } catch (error) { if (!this._closed) this._fail(error.message); }
     }
@@ -135,17 +139,30 @@ class RTCPeer extends TransferPeer {
             if (this._closed) return;
             if (msg.sdp) {
                 if (msg.sdp.type === 'offer' && this._isCaller) return; // Deterministic single offerer.
-                if (msg.sdp.type === 'offer' && this._conn.remoteDescription) {
-                    this.abortAll('连接正在重新协商，请在重连后重新选择文件');
-                    this._verified = false;
-                }
-                await this._conn.setRemoteDescription(msg.sdp);
                 if (msg.sdp.type === 'offer') {
-                    const answer = await this._conn.createAnswer(); await this._conn.setLocalDescription(answer);
+                    this._revokePath('connecting', '连接正在重新协商，请在重连后重新选择文件', true);
+                    this._reason = null; this._waitingForRemote = false;
+                    clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer);
+                    this._disconnectTimer = null; this._pathWaitTimer = null;
+                    this._deadline = setTimeout(() => this._fail('重新协商直连超时，请重试或创建新邀请'), 30000);
+                    clearInterval(this._statsTimer);
+                    if (this._isConnected()) this._statsTimer = setInterval(() => this._samplePath(), 2000);
+                    this._connectionEvent();
+                }
+                this._negotiating = true;
+                await this._conn.setRemoteDescription(msg.sdp);
+                if (this._closed || this._state === 'failed') return;
+                if (msg.sdp.type === 'offer') {
+                    const answer = await this._conn.createAnswer();
+                    if (this._closed || this._state === 'failed') return;
+                    await this._conn.setLocalDescription(answer);
+                    if (this._closed || this._state === 'failed') return;
                     this._server.send({ type: 'signal', to: this._peerId, sdp: { type: answer.type, sdp: answer.sdp } });
                 }
                 for (const ice of this._pendingIce.splice(0)) await this._conn.addIceCandidate(ice);
+                this._negotiating = false;
                 await this._securityCode();
+                await this._samplePath();
             } else if (msg.ice) {
                 if (this._conn.remoteDescription) await this._conn.addIceCandidate(msg.ice);
                 else if (this._pendingIce.length < 64) this._pendingIce.push(msg.ice);
@@ -153,23 +170,28 @@ class RTCPeer extends TransferPeer {
         }).catch(error => { if (!this._closed) this._fail('连接协商失败：' + error.message); });
     }
     async _securityCode() {
-        const sdps = [this._conn.localDescription?.sdp, this._conn.remoteDescription?.sdp];
+        const conn = this._conn, epoch = this._identityEpoch;
+        const sdps = [conn.localDescription?.sdp, conn.remoteDescription?.sdp];
         const fingerprints = sdps.map(sdp => (sdp?.match(/a=fingerprint:sha-256 ([A-Fa-f0-9:]+)/) || [])[1]);
         if (fingerprints.some(value => !value)) return;
         const bytes = new TextEncoder().encode(fingerprints.map(v => v.toUpperCase()).sort().join('|'));
         const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+        if (this._closed || this._state === 'failed' || conn !== this._conn || epoch !== this._identityEpoch
+            || conn.localDescription?.sdp !== sdps[0] || conn.remoteDescription?.sdp !== sdps[1]) return;
         this._code = hex(digest).slice(0, 12).toUpperCase().match(/.{4}/g).join(' ');
         this._connectionEvent();
     }
     verify() {
-        if (!this._code || !this._path.direct || !this._remoteHello) return;
+        if (!this._code || !this._path.direct || !this._remoteHello || !this._canInspectPath()) return;
         this._verified = true; this._connectionEvent();
     }
     _bindChannel(channel) {
+        this._remoteHello = false;
         this._channel = channel; channel.binaryType = 'arraybuffer'; channel.bufferedAmountLowThreshold = 128 * 1024;
         channel.onopen = () => {
+            if (this._closed || this._channel !== channel) return;
             this.sendJSON({ type: 'hello', version: 2 });
-            this._statsTimer = setInterval(() => this._samplePath(), 2000);
+            clearInterval(this._statsTimer); this._statsTimer = setInterval(() => this._samplePath(), 2000);
             this._samplePath(); this._securityCode();
         };
         channel.onmessage = event => this._receive(event.data);
@@ -193,56 +215,104 @@ class RTCPeer extends TransferPeer {
             if (channel.bufferedAmount <= channel.bufferedAmountLowThreshold) done();
         });
     }
+    _canInspectPath() {
+        return !this._closed && this._state !== 'failed' && !this._negotiating && this._isConnected()
+            && this._conn?.signalingState === 'stable'
+            && ['connected', 'completed'].includes(this._conn.iceConnectionState)
+            && !['failed', 'disconnected', 'closed'].includes(this._conn.connectionState);
+    }
+    _revokePath(state, reason, resetIdentity = false) {
+        // Invalidate every outstanding stats request before aborting asynchronous file work.
+        this._pathEpoch = (this._pathEpoch || 0) + 1;
+        this._state = state; this._path = { direct: false }; this._verified = false;
+        if (resetIdentity) { this._identityEpoch = (this._identityEpoch || 0) + 1; this._code = null; }
+        if (reason) this.abortAll(reason);
+    }
+    _pathUnavailable(reason) {
+        this._revokePath('connecting', reason); this._reason = reason;
+        // Polling failures cannot keep the UI in "connecting" forever or extend this deadline.
+        if (!this._pathWaitTimer) this._pathWaitTimer = setTimeout(() => this._fail('无法核验直连路径，请重试连接'), 30000);
+        this._connectionEvent();
+    }
     async _samplePath() {
-        const conn = this._conn;
-        if (this._closed || !conn || !this._isConnected()) return;
-        if (!['connected', 'completed'].includes(conn.iceConnectionState)) { this._path = { direct: false }; this._connectionEvent(); return; }
+        if (!this._canInspectPath()) return;
+        const conn = this._conn, epoch = this._pathEpoch, request = ++this._statsRequest;
+        const current = () => conn === this._conn && epoch === this._pathEpoch
+            && request === this._statsRequest && this._canInspectPath();
         try {
-            const path = selectedPath(await conn.getStats());
-            if (this._closed || conn !== this._conn) return;
+            const stats = await conn.getStats();
+            if (!current()) return;
+            const path = selectedPath(stats);
             if (path.status === 'relay') return this._protocolError('检测到中继路径，已停止连接');
-            this._path = path;
-            if (path.direct) { this._reason = null; this._state = 'connected'; clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); }
+            if (!path.direct) return this._pathUnavailable('直连路径暂时无法核验，当前文件已停止；恢复后请重新核对安全码');
+            this._path = path; this._reason = null; this._state = 'connected';
+            this._restartPending = false; this._waitingForRemote = false;
+            clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer);
+            this._disconnectTimer = null; this._pathWaitTimer = null;
             this._connectionEvent();
-        } catch { this._connectionEvent(); }
+        } catch {
+            if (current()) this._pathUnavailable('无法读取直连路径，当前文件已停止；恢复后请重新核对安全码');
+        }
+    }
+    _waitForRemoteRestart() {
+        if (this._waitingForRemote) return;
+        this._waitingForRemote = true;
+        clearTimeout(this._deadline);
+        this._deadline = setTimeout(() => this._fail('对端未能恢复直连，请让另一台设备重试或创建新邀请'), 30000);
     }
     _onConnectionStateChange() {
-        if (this._closed) return;
-        const state = this._conn.iceConnectionState;
-        if (['connected', 'completed'].includes(state)) { clearTimeout(this._disconnectTimer); this._samplePath(); }
-        else if (state === 'disconnected') {
-            this.abortAll('网络中断，当前传输已停止，请重连后重新选择文件');
-            this._state = 'disconnected'; this._path = { direct: false }; this._verified = false;
-            clearTimeout(this._disconnectTimer); this._disconnectTimer = setTimeout(() => this.restart(), 5000); this._connectionEvent();
-        } else if (state === 'failed') this.restart();
+        if (this._closed || this._state === 'failed') return;
+        const state = this._conn.iceConnectionState, transport = this._conn.connectionState;
+        if (state === 'closed' || transport === 'closed') return this.close();
+        // DTLS can fail while ICE still reports connected; it is not a usable file channel.
+        if (transport === 'failed' && state !== 'failed') return this._fail('安全传输通道失败，请重新建立连接');
+        if (['connected', 'completed'].includes(state) && transport !== 'disconnected') {
+            clearTimeout(this._disconnectTimer); this._disconnectTimer = null; this._samplePath();
+        } else if (state === 'failed') {
+            this._revokePath('disconnected', '直连失败，当前文件已停止；恢复后请重新选择文件');
+            this._connectionEvent();
+            if (this._isCaller) this.restart(); else this._waitForRemoteRestart();
+        } else if (state === 'disconnected' || transport === 'disconnected') {
+            this._revokePath('disconnected', '网络中断，当前传输已停止，请重连后重新选择文件');
+            if (!this._disconnectTimer) this._disconnectTimer = setTimeout(() => {
+                this._disconnectTimer = null;
+                if (this._isCaller) this.restart(); else this._waitForRemoteRestart();
+            }, 5000);
+            this._connectionEvent();
+        } else if (state === 'checking' || state === 'new') {
+            this._revokePath('connecting', '直连路径正在重新核验，当前文件已停止');
+            this._connectionEvent();
+        }
     }
     restart(manual = false) {
-        if (this._closed || !this._isCaller) return;
-        if (!manual && this._restartPending) return;
+        if (this._closed || !this._isCaller || this._restartPending) return;
         if (manual) this._restarts = 0;
         if (this._restarts++ >= 2) return this._fail('无法建立直连。请尝试更换网络或启用 IPv6；此服务不会切换到文件中继。');
-        this._reason = null; this._restartPending = true;
+        this._reason = null; this._restartPending = true; this._waitingForRemote = false; this._negotiating = true;
+        this._revokePath('connecting', '网络变化，当前文件已停止；连接恢复后请重新选择文件', true);
         if (this._channel?.readyState === 'closed') this._bindChannel(this._conn.createDataChannel('zeydrop-v2', { ordered: true }));
         clearInterval(this._statsTimer); this._statsTimer = setInterval(() => this._samplePath(), 2000);
-        this._verified = false; this._path = { direct: false }; this._state = 'connecting';
-        this.abortAll('网络变化，当前文件已停止；连接恢复后请重新选择文件');
-        this._connectionEvent();
-        this._offer(true).finally(() => { this._restartPending = false; });
-        clearTimeout(this._deadline); this._deadline = setTimeout(() => this.restart(), 20000);
+        clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer);
+        this._disconnectTimer = null; this._pathWaitTimer = null;
+        // Keep one attempt pending until a fresh selected route succeeds or this deadline expires.
+        this._deadline = setTimeout(() => { this._restartPending = false; this.restart(); }, 20000);
+        this._connectionEvent(); this._offer(true);
     }
     _fail(reason) {
-        this._state = 'failed'; this._path = { direct: false }; this._verified = false;
-        this.abortAll(reason); clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer);
+        this._revokePath('failed', reason, true);
+        this._restartPending = false; this._waitingForRemote = false; this._negotiating = false;
+        clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer);
+        this._disconnectTimer = null; this._pathWaitTimer = null;
         this._reason = reason; this._connectionEvent();
     }
     _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); }
     _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
     close(reason = '连接已关闭，文件未完成') {
         if (this._closed) return;
-        this._closed = true; this._state = 'closed'; this._path = { direct: false }; this._verified = false; this._reason = reason;
-        this.abortAll(reason);
-        clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); Events.off('online', this._online);
-        if (this._channel) { this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
+        this._closed = true; this._reason = reason; this._restartPending = false;
+        this._revokePath('closed', reason, true);
+        clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer); Events.off('online', this._online);
+        if (this._channel) { this._channel.onopen = null; this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
         this._conn.close(); this._connectionEvent();
     }
 }
