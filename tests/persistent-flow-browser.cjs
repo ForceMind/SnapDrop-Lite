@@ -73,11 +73,17 @@ async function main() {
         });
         assert.ok(partial?.phase === 'partial' && partial.offset >= 1024 * 1024, JSON.stringify(partial));
         await sender.locator('#leaveRoomBtn').click();
+        // Keep the production anti-spam 5-second create-room rate limit intact.
+        // A fast 1 MiB transfer can finish before that window has elapsed.
+        await new Promise(resolve => setTimeout(resolve, 5500));
         await sender.locator('#createRoomBtn').click();
-        await sender.waitForFunction(old => {
-            const value = document.querySelector('#inviteUrl').value;
-            return value.includes('#room=') && value !== old;
-        }, ''); // Fresh room is required, old server identity is not resumed.
+        try {
+            await sender.waitForFunction(() =>
+                document.querySelector('#inviteUrl').value.includes('#room='), null, { timeout: 15000 });
+        } catch (error) {
+            const status = await sender.locator('#roomStatus').innerText();
+            throw Error('Failed to create a fresh invitation: ' + status + ' / ' + error.message);
+        }
         await pair(await sender.locator('#inviteUrl').inputValue());
         await sender.evaluate(() => {
             window.__newSessionBinary = 0;
