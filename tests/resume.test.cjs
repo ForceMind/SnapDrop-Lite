@@ -6,6 +6,8 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const { webcrypto, randomBytes, createHash } = require('node:crypto');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Do not let a failed regression keep CI alive for a 12-hour file timer.
+const unrefTimeout = (fn, ms) => { const timer = setTimeout(fn, ms); timer.unref?.(); return timer; };
 
 async function rig({ corruptPrefix = false } = {}) {
     const { sha256 } = await import('@noble/hashes/sha2.js');
@@ -13,7 +15,7 @@ async function rig({ corruptPrefix = false } = {}) {
     const wire = { open: true, threshold: 5 * 16384, delivered: 0, transmitted: 0, resumed: 0, corruptPrefix };
     let finished = 0, aborted = 0, prefixAltered = false;
     const context = {
-        crypto: webcrypto, performance, TextEncoder, Blob, File, Uint8Array, setTimeout, clearTimeout,
+        crypto: webcrypto, performance, TextEncoder, Blob, File, Uint8Array, setTimeout: unrefTimeout, clearTimeout,
         window: {
             ZeydropHash: sha256, ZEYDROP_CONFIG: {},
             showSaveFilePicker: async () => ({
