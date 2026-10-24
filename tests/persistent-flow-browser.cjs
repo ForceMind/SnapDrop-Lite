@@ -34,7 +34,11 @@ async function main() {
             }, null, { timeout: 40000 });
         };
         async function pair(url) {
-            await receiver.goto(url);
+            // Changing only the hash on an already-open page does not reload
+            // the application. Join explicitly through the real UI instead.
+            if (receiver.url() === 'about:blank') await receiver.goto(server.origin);
+            await receiver.locator('#roomInput').fill(url);
+            await receiver.locator('#roomBtn').click();
             await Promise.all(pages.map(waitPeer));
             const codes = await Promise.all(pages.map(p => p.locator('.security-code').innerText()));
             assert.equal(codes[0], codes[1]);
