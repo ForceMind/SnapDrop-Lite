@@ -110,6 +110,11 @@ async function main() {
         assert.equal(received.length, bytes.length);
         assert.equal(crypto.createHash('sha256').update(received).digest('hex'),
             crypto.createHash('sha256').update(bytes).digest('hex'));
+        // Never destroy the OPFS source before the browser has obtained it.
+        const durableRecords = await receiver.evaluate(() => window.ZeydropRecovery.list());
+        const completed = durableRecords.find(x => x.name === name && x.phase === 'complete');
+        assert.ok(completed, 'OPFS original must remain after clicking save');
+        await receiver.evaluate(id => window.ZeydropRecovery.erase(id), completed.id);
         const newSessionBytes = await sender.evaluate(() => window.__newSessionBinary);
         assert.ok(newSessionBytes >= bytes.length - partial.offset
             && newSessionBytes <= bytes.length - partial.offset + 262144,

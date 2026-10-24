@@ -150,13 +150,14 @@ async function completed(id) {
     return { meta, blob };
 }
 async function probe() {
-    const dir = await folder(), handle = await dir.getFileHandle('capability-probe', { create: true });
+    const dir = await folder(), name = 'capability-probe-' + crypto.randomUUID();
+    const handle = await dir.getFileHandle(name, { create: true });
     try {
         if (typeof handle.createSyncAccessHandle !== 'function') return false;
         const access = await handle.createSyncAccessHandle();
         access.close();
         return true;
-    } finally { await dir.removeEntry('capability-probe').catch(() => {}); }
+    } finally { await dir.removeEntry(name).catch(() => {}); }
 }
 async function finish(id, sha256) {
     const item = active.get(id);

@@ -86,13 +86,24 @@ class ReceiveDialog extends Dialog {
         if (this.active || !this.queue.length) return;
         this.active = this.queue.shift(); this.url = URL.createObjectURL(this.active.blob);
         const link = $('download'); link.href = this.url; link.download = this.active.name;
-        $('fileName').textContent = this.active.name; $('fileSize').textContent = fmt(this.active.size) + ' · SHA-256 ' + this.active.sha256;
+        $('fileName').textContent = this.active.name; $('fileSize').textContent = fmt(this.active.size) + ' · SHA-256 ' + this.active.sha256
+            + (this.active.locallyStored ? ' · 本机暂存副本不会自动删除' : '');
         this.show();
     }
     hide() {
         super.hide();
-        if (this.url) { const url = this.url; setTimeout(() => URL.revokeObjectURL(url), 1000); }
-        this.active?.release?.();
+        if (this.url) {
+            const url = this.url;
+            if (this.active?.locallyStored) {
+                // A download has no reliable completion event. Revoking the Blob
+                // URL or deleting the OPFS source during the click can cancel it.
+                // Keep the URL until page exit; the user manages the local copy.
+                window.addEventListener('pagehide', () => URL.revokeObjectURL(url), { once: true });
+            } else setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+        if (this.active?.locallyStored) {
+            Events.fire('notify-user', '下载使用的本机副本仍保留；可在“管理本机暂存文件”中删除，或等待过期清理。');
+        } else this.active?.release?.();
         if (this.active) Events.fire('file-saved', { sender: this.active.sender, id: this.active.id });
         this.active = null; this.url = null; this.next();
     }
