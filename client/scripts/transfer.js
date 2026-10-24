@@ -51,9 +51,12 @@ class TransferPeer {
         this._filesQueue = []; this._outgoing = null; this._incoming = null;
         this._messageChain = Promise.resolve(); this._queuedBytes = 0;
         this._verified = false; this._remoteHello = false;
+        // Page-memory only: no file bytes, handles or resume metadata enter signaling.
+        this._held = null; this._pendingResumeOffer = null; this._resumeReady = Promise.resolve();
     }
     sendJSON(message) { this._send(JSON.stringify(message)); }
     _receive(data) {
+        if (this._held && typeof data !== 'string') return; // Drop stale channel frames.
         this._queuedBytes += typeof data === 'string' ? data.length : data.byteLength;
         this._peakQueuedBytes = Math.max(this._peakQueuedBytes || 0, this._queuedBytes);
         if (this._queuedBytes > 1024 * 1024) { this._protocolError('接收缓冲超限'); return; }
@@ -62,18 +65,20 @@ class TransferPeer {
             .finally(() => { this._queuedBytes -= typeof data === 'string' ? data.length : data.byteLength; });
     }
     async _onMessage(data) {
+        // Already queued chunks from a dead channel must not become protocol errors.
+        if (this._held && typeof data !== 'string') return;
         if (typeof data !== 'string') {
             // An accepted transfer can be cancelled while its final bounded window
             // is already in flight. Drain those bytes without saving or closing DC.
             if (this._discard && !this._incoming && data.byteLength > 0 && data.byteLength <= CHUNK_SIZE && data.byteLength <= this._discard.remaining) { this._discard.remaining -= data.byteLength; return; }
             const state = this._incoming;
-            if (!state?.sink || state.accepting || data.byteLength < 1 || data.byteLength > CHUNK_SIZE
+            if (!state?.sink || state.accepting || state.awaitingResume || data.byteLength < 1 || data.byteLength > CHUNK_SIZE
                 || state.offset + data.byteLength > state.meta.size || state.offset + data.byteLength - state.acked > WINDOW_SIZE) throw Error('未授权或无效的文件分块');
             try { await state.sink.write(data); }
             catch (error) { this.cancel(state.meta.id, saveError(error)); return; }
-            if (this._incoming !== state) return;
+            if (this._incoming !== state && this._held?.incoming !== state) return;
             state.hash.update(new Uint8Array(data)); state.offset += data.byteLength;
-            this._progress(state, 'receiving');
+            if (this._incoming === state) this._progress(state, 'receiving');
             return;
         }
         if (data.length > 8192) throw Error('控制消息超限');
@@ -82,9 +87,34 @@ class TransferPeer {
         if (!msg || typeof msg !== 'object' || Array.isArray(msg)) throw Error('无效的传输消息');
         if (msg.type === 'hello') {
             if (msg.version !== 2) throw Error('双方版本不兼容，请刷新网页');
-            this._remoteHello = true; this._connectionEvent(); return;
+            this._remoteHello = true; this._connectionEvent(); this.restoreTransfers(); return;
         }
         if (!this._remoteHello) throw Error('传输协议尚未就绪');
+        // Resume control is valid only for an existing, user-approved file from the
+        // same locked pair. Never turn a resume request into a fresh file offer.
+        if (msg.type === 'resume-offer') {
+            const held = this._incoming || this._held?.incoming;
+            const matches = held && held.meta.id === msg.id && held.meta.name === msg.name
+                && held.meta.size === msg.size && held.meta.mime === msg.mime;
+            if (!matches) { this.sendJSON({ type: 'reject', id: msg.id, reason: '本机没有可恢复的文件，请重新选择文件' }); return; }
+            this._pendingResumeOffer = msg;
+            if (this._incoming && this._verified && this._path?.direct) await this._replyResumeOffer(msg);
+            return;
+        }
+        if (this._held && msg.type !== 'cancel') return;
+        if (msg.type === 'resume-at') {
+            await this._resumeFromOffset(msg); return;
+        }
+        if (msg.type === 'resume-confirm') {
+            const state = this._incoming;
+            if (!state?.awaitingResume || state.meta.id !== msg.id || msg.offset !== state.offset
+                || msg.sha256 !== hex(state.hash.clone().digest())) throw Error('续传前缀校验失败');
+            if (!this._verified || !this._path?.direct) throw Error('续传直连或身份未重新确认');
+            clearTimeout(state.timer);
+            state.awaitingResume = false; state.acked = state.offset;
+            state.timer = setTimeout(() => this.cancel(msg.id, '续传接收超时'), 12 * 60 * 60 * 1000);
+            this._progress(state, 'receiving'); return;
+        }
         if (msg.type === 'offer') {
             if (typeof msg.id !== 'string' || !/^[a-f0-9-]{32,36}$/.test(msg.id)
                 || typeof msg.name !== 'string' || msg.name.length > 255 || !Number.isSafeInteger(msg.size) || msg.size < 0
@@ -115,9 +145,9 @@ class TransferPeer {
             this._progress(outgoing, 'sending'); return;
         }
         if (msg.type === 'finish' && incoming?.sink && msg.id === incoming.meta.id) {
-            if (incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
+            if (incoming.awaitingResume || incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
             let result;
-            try { result = await incoming.sink.finish(); }
+            try { incoming.finishing = true; result = await incoming.sink.finish(); }
             catch (error) { this.cancel(msg.id, saveError(error)); return; }
             if (this._incoming !== incoming) { result.release?.(); return; }
             clearTimeout(incoming.timer); this._incoming = null;
@@ -135,6 +165,112 @@ class TransferPeer {
         if (['pause', 'resume'].includes(msg.type) && outgoing?.meta.id === msg.id) { outgoing.remotePaused = msg.type === 'pause'; return; }
         if (msg.type === 'cancel' && typeof msg.id === 'string') { this.cancel(msg.id, '对方取消传输', false); return; }
         if (msg.type === 'text' && this._verified && typeof msg.text === 'string' && msg.text.length <= 4096) Events.fire('text-received', { text: msg.text, sender: this._peerId });
+    }
+    // Retain only accepted in-page File objects and opened native/memory sinks.
+    // No storage-backed persistence: page reload or browser exit cancels recovery.
+    suspendTransfers(reason) {
+        if (this._held) return true;
+        const outgoing = this._outgoing && ['sending', 'verifying', 'resuming'].includes(this._outgoing.phase) ? this._outgoing : null;
+        const incoming = this._incoming?.sink && !this._incoming.finishing ? this._incoming : null;
+        if (!outgoing && !incoming) { this.abortAll(reason); return false; }
+        if (this._outgoing && !outgoing) this.cancel(this._outgoing.meta.id, reason, false);
+        if (this._incoming && !incoming) this.cancel(this._incoming.meta.id, reason, false);
+        const deadline = Date.now() + 120000;
+        for (const state of [outgoing, incoming]) {
+            if (!state) continue;
+            state.resumeDeadline = Math.min(state.resumeDeadline || deadline, deadline);
+            clearTimeout(state.timer);
+            state.awaitingResume = true;
+            this._progress(state, 'reconnecting');
+        }
+        const hold = { outgoing, incoming, deadline: Math.min(...[outgoing, incoming].filter(Boolean).map(state => state.resumeDeadline)) };
+        // An in-flight sink.write may finish after the transport disappears. Its
+        // hash/offset is accounted for before the receiver advertises a prefix.
+        this._held = hold;
+        this._outgoing = null; this._incoming = null;
+        this._filesQueue = []; this._queueWaitId = null; this._discard = null;
+        if (outgoing?.waiter) { const waiter = outgoing.waiter; outgoing.waiter = null; waiter.reject(Error('正在恢复连接')); }
+        hold.ready = this._messageChain.catch(() => {});
+        hold.timer = setTimeout(() => this._dropHeld('续传窗口已过期，请重新选择文件'), Math.max(0, hold.deadline - Date.now()));
+        return true;
+    }
+    _dropHeld(reason) {
+        const hold = this._held; if (!hold) return;
+        this._held = null; clearTimeout(hold.timer); this._pendingResumeOffer = null;
+        for (const state of [hold.outgoing, hold.incoming]) {
+            if (!state) continue;
+            clearTimeout(state.timer); state.error = reason;
+            state.waiter?.reject(Error(reason));
+            if (state.sink) state.sink.abort().catch(() => {});
+            this._progress(state, 'cancelled');
+            Events.fire('file-offer-cancelled', { id: state.meta.id, sender: this._peerId });
+        }
+        Events.fire('notify-user', reason);
+    }
+    takeHeldTransfers() { return this._held; }
+    adoptHeldTransfers(hold) {
+        if (!hold || this._held || this._incoming || this._outgoing) return false;
+        if (Date.now() >= hold.deadline) { hold.incoming?.sink?.abort().catch(() => {}); return false; }
+        clearTimeout(hold.timer);
+        this._held = hold;
+        hold.timer = setTimeout(() => this._dropHeld('续传窗口已过期，请重新选择文件'), Math.max(0, hold.deadline - Date.now()));
+        this.restoreTransfers(); return true;
+    }
+    restoreTransfers() {
+        if (!this._verified || !this._remoteHello || !this._path?.direct || !this._isConnected()) return false;
+        const hold = this._held;
+        if (hold) {
+            if (Date.now() >= hold.deadline) { this._dropHeld('续传窗口已过期，请重新选择文件'); return false; }
+            clearTimeout(hold.timer); this._held = null;
+            this._resumeReady = hold.ready;
+            this._incoming = hold.incoming; this._outgoing = hold.outgoing;
+            for (const state of [this._incoming, this._outgoing]) {
+                if (!state) continue;
+                state.timer = setTimeout(() => this.cancel(state.meta.id, '续传协商超时'), Math.max(0, state.resumeDeadline - Date.now()));
+            }
+            if (this._outgoing) {
+                this._outgoing.phase = 'resuming';
+                this.sendJSON({ type: 'resume-offer', ...this._outgoing.meta });
+            }
+        }
+        if (this._pendingResumeOffer && this._incoming) {
+            const offer = this._pendingResumeOffer;
+            this._replyResumeOffer(offer).catch(error => this.cancel(offer.id, error.message));
+        }
+        return !!hold;
+    }
+    async _replyResumeOffer(msg) {
+        const state = this._incoming;
+        if (!state?.awaitingResume || !this._verified || !this._path?.direct || state.meta.id !== msg.id) return;
+        await this._resumeReady;
+        if (this._incoming !== state || !this._verified || !this._path?.direct) return;
+        this._pendingResumeOffer = null;
+        this.sendJSON({ type: 'resume-at', id: state.meta.id, offset: state.offset, sha256: hex(state.hash.clone().digest()) });
+    }
+    async _resumeFromOffset(msg) {
+        const state = this._outgoing;
+        if (!state || state.phase !== 'resuming' || msg.id !== state.meta.id
+            || !Number.isSafeInteger(msg.offset) || msg.offset < 0 || msg.offset > state.meta.size
+            || typeof msg.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(msg.sha256)
+            || !this._verified || !this._path?.direct) throw Error('无效的续传确认');
+        if (state.resumeBusy) throw Error('重复续传确认');
+        state.resumeBusy = true;
+        const hash = window.ZeydropHash.create();
+        for (let pos = 0; pos < msg.offset; pos += WINDOW_SIZE) {
+            const bytes = await state.file.slice(pos, Math.min(pos + WINDOW_SIZE, msg.offset)).arrayBuffer();
+            if (this._outgoing !== state || !this._verified || !this._path?.direct) return;
+            hash.update(new Uint8Array(bytes));
+        }
+        if (hex(hash.clone().digest()) !== msg.sha256) {
+            this.cancel(msg.id, '文件前缀与接收方记录不一致，已取消续传');
+            return;
+        }
+        if (this._outgoing !== state || !this._verified || !this._path?.direct) return;
+        state.hash = hash; state.offset = msg.offset; state.acked = msg.offset;
+        state.phase = 'sending'; state.resumeBusy = false;
+        clearTimeout(state.timer);
+        this.sendJSON({ type: 'resume-confirm', id: msg.id, offset: msg.offset, sha256: msg.sha256 });
+        this._pump(state).catch(error => this.cancel(msg.id, error.message));
     }
     async acceptIncoming(id) {
         const state = this._incoming;
@@ -208,6 +344,11 @@ class TransferPeer {
     cancel(id, reason = '已取消传输', notify = true) {
         const outgoing = this._outgoing?.meta.id === id && this._outgoing;
         const incoming = this._incoming?.meta.id === id && this._incoming;
+        if (!outgoing && !incoming && this._held && [this._held.outgoing?.meta.id, this._held.incoming?.meta.id].includes(id)) {
+            this._dropHeld(reason);
+            if (notify && this._isConnected()) this.sendJSON({ type: 'cancel', id });
+            return;
+        }
         const state = outgoing || incoming;
         if (!state) return;
         clearTimeout(state.timer); state.error = reason;
@@ -225,6 +366,7 @@ class TransferPeer {
         if (this._outgoing) this.cancel(this._outgoing.meta.id, reason, false);
         if (this._incoming) this.cancel(this._incoming.meta.id, reason, false);
         this._filesQueue = []; this._queueWaitId = null; this._discard = null;
+        this._dropHeld(reason);
     }
     sendText(text) {
         if (!this._verified || !this._path?.direct) return Events.fire('notify-user', '请先核对安全码');

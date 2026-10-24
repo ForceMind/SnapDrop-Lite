@@ -54,7 +54,8 @@ class ServerConnection {
             if (this._socket !== ws) return;
             this._ready = false; this._socket = null;
             Events.fire('signal-state', { state: 'offline' });
-            // Pairing must be revalidated; old peers must not survive a new WS session.
+            // Suspend only within this page; a new server identity drops the checkpoint.
+            Events.fire('peer-session-paused');
             Events.fire('peers', []);
             if (!this._closing) this._retry = setTimeout(() => this._connect(), Math.min(1000 * 2 ** this._attempt++, 15000) + Math.random() * 500);
         };
@@ -64,6 +65,7 @@ class ServerConnection {
         try { msg = JSON.parse(raw); } catch { return; }
         if (!msg || typeof msg !== 'object') return;
         if (msg.type === 'hello') {
+            if (this._peerId && this._peerId !== msg.peerId) Events.fire('resume-clear', '服务端身份已变更，不能续传旧会话');
             this._peerId = msg.peerId; this._resumeToken = msg.resumeToken; this._ready = true; this._attempt = 0;
             Events.fire('display-name', { message: { deviceName: msg.deviceName } });
             Events.fire('signal-state', { state: 'connected' });
@@ -71,9 +73,16 @@ class ServerConnection {
         } else if (msg.type === 'ping') this.send({ type: 'pong' });
         else if (msg.type === 'room-joined') { this._desiredType = 'join-room'; Events.fire(msg.type, msg); }
         else if (msg.type === 'room-error') {
-            if (['expired', 'missing', 'invalid', 'exists'].includes(msg.code)) this._desiredRoomId = null;
+            if (['expired', 'missing', 'invalid', 'exists'].includes(msg.code)) {
+                this._desiredRoomId = null;
+                Events.fire('resume-clear', '房间不再有效，不能续传旧文件');
+            }
             Events.fire(msg.type, msg);
-        } else if (msg.type === 'room-expired') { this._desiredRoomId = null; Events.fire('room-expired', msg); }
+        } else if (msg.type === 'room-expired') {
+            this._desiredRoomId = null;
+            Events.fire('resume-clear', '会话过期，不能续传');
+            Events.fire('room-expired', msg);
+        }
         else if (msg.type === 'peer-left') Events.fire('peer-left', msg.peerId);
         else if (msg.type === 'peer-joined') Events.fire('peer-joined', msg.peer);
         else if (msg.type === 'peers') Events.fire('peers', msg.peers || []);
@@ -85,12 +94,19 @@ class ServerConnection {
     }
     joinRoom(roomId, create = false) {
         if (!/^[a-f0-9]{32}$/.test(roomId)) return false;
-        if (this._desiredRoomId && this._desiredRoomId !== roomId) { this.send({ type: 'leave-room' }); Events.fire('peers', []); }
+        if (this._desiredRoomId && this._desiredRoomId !== roomId) {
+            Events.fire('resume-clear', '切换邀请后不能续传旧会话');
+            this.send({ type: 'leave-room' }); Events.fire('peers', []);
+        }
         this._desiredRoomId = roomId; this._desiredType = create ? 'create-room' : 'join-room';
         if (this._ready) this.send({ type: this._desiredType, roomId });
         return true;
     }
-    leaveRoom() { this._desiredRoomId = null; this._desiredType = null; this.send({ type: 'leave-room' }); Events.fire('peers', []); }
+    leaveRoom() {
+        Events.fire('resume-clear', '主动退出会话，已丢弃未完成文件');
+        this._desiredRoomId = null; this._desiredType = null;
+        this.send({ type: 'leave-room' }); Events.fire('peers', []);
+    }
     _disconnect() { this._closing = true; clearTimeout(this._retry); this._socket?.close(); }
 }
 class RTCPeer extends TransferPeer {
@@ -184,6 +200,7 @@ class RTCPeer extends TransferPeer {
     verify() {
         if (!this._code || !this._path.direct || !this._remoteHello || !this._canInspectPath()) return;
         this._verified = true; this._connectionEvent();
+        this.restoreTransfers?.();
     }
     _bindChannel(channel) {
         this._remoteHello = false;
@@ -195,7 +212,13 @@ class RTCPeer extends TransferPeer {
             this._samplePath(); this._securityCode();
         };
         channel.onmessage = event => this._receive(event.data);
-        channel.onclose = () => { if (!this._closed) this._fail('文件通道已断开，请重试连接后重新选择文件'); };
+        channel.onclose = () => {
+            if (this._closed || this._state === 'failed' || this._channel !== channel) return;
+            this._revokePath('disconnected', '文件通道断开，正在尝试恢复未完成文件', true);
+            this._connectionEvent();
+            if (this._isCaller) this.restart();
+            else this._waitForRemoteRestart();
+        };
         channel.onerror = () => { if (!this._closed) this._fail('文件通道发生错误'); };
     }
     _send(data) {
@@ -226,7 +249,11 @@ class RTCPeer extends TransferPeer {
         this._pathEpoch = (this._pathEpoch || 0) + 1;
         this._state = state; this._path = { direct: false }; this._verified = false;
         if (resetIdentity) { this._identityEpoch = (this._identityEpoch || 0) + 1; this._code = null; }
-        if (reason) this.abortAll(reason);
+        if (reason) {
+            // Transient loss retains a bounded local checkpoint; terminal failure aborts.
+            if (['connecting', 'disconnected'].includes(state) && typeof this.suspendTransfers === 'function') this.suspendTransfers(reason);
+            else this.abortAll(reason);
+        }
     }
     _pathUnavailable(reason) {
         this._revokePath('connecting', reason); this._reason = reason;
@@ -307,27 +334,33 @@ class RTCPeer extends TransferPeer {
     }
     _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); }
     _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
-    close(reason = '连接已关闭，文件未完成') {
-        if (this._closed) return;
+    close(reason = '连接已关闭，文件未完成', preserve = false) {
+        if (this._closed) return null;
+        if (preserve) this.suspendTransfers?.(reason);
         this._closed = true; this._reason = reason; this._restartPending = false;
-        this._revokePath('closed', reason, true);
+        this._revokePath('closed', preserve ? null : reason, true);
         clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer); Events.off('online', this._online);
         if (this._channel) { this._channel.onopen = null; this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
         this._conn.close(); this._connectionEvent();
+        return preserve ? this.takeHeldTransfers?.() : null;
     }
 }
 class PeersManager {
     constructor(server) {
         this.peers = new Map(); this._server = server; this._earlySignals = []; this._earlySignalBytes = 0;
+        this._resumeSlots = new Map(); this._preserveOnNextPeers = false;
+        Events.on('peer-session-paused', () => { this._preserveOnNextPeers = true; });
+        Events.on('resume-clear', event => this._clearResumeSlots(event.detail));
         Events.on('peers', event => {
             const ids = new Set(event.detail.map(peer => peer.id));
             this._earlySignals = this._earlySignals.filter(item => ids.has(item.message.sender));
             this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0);
-            for (const id of this.peers.keys()) if (!ids.has(id)) this._remove(id);
+            for (const id of this.peers.keys()) if (!ids.has(id)) this._remove(id, this._preserveOnNextPeers);
+            this._preserveOnNextPeers = false;
             event.detail.forEach(peer => this._ensure(peer));
         });
         Events.on('peer-joined', event => this._ensure(event.detail));
-        Events.on('peer-left', event => this._remove(event.detail));
+        Events.on('peer-left', event => this._remove(event.detail, true));
         Events.on('signal', event => this._onSignal(event.detail));
         Events.on('files-selected', event => this.peers.get(event.detail.to)?.sendFiles(event.detail.files));
         Events.on('send-text', event => this.peers.get(event.detail.to)?.sendText(event.detail.text));
@@ -356,13 +389,47 @@ class PeersManager {
         this._earlySignals.push({ message, bytes, expires: Date.now() + 10000 });
         this._earlySignalBytes += bytes;
     }
+    _clearResumeSlots(reason) {
+        for (const [id, slot] of this._resumeSlots) {
+            clearTimeout(slot.timer); slot.peer._dropHeld?.(reason || '已结束旧会话');
+            this._resumeSlots.delete(id);
+        }
+    }
     _ensure(info) {
         if (!info?.id || !window.isRtcSupported) return;
-        if (!this.peers.has(info.id)) this.peers.set(info.id, new RTCPeer(this._server, info.id));
+        if (!this.peers.has(info.id)) {
+            const peer = new RTCPeer(this._server, info.id);
+            this.peers.set(info.id, peer);
+            const slot = this._resumeSlots.get(info.id);
+            if (slot) {
+                this._resumeSlots.delete(info.id); clearTimeout(slot.timer);
+                if (slot.localId === this._server._peerId && slot.roomId === this._server._desiredRoomId
+                    && Date.now() < slot.hold.deadline) {
+                    peer.adoptHeldTransfers?.(slot.hold);
+                } else slot.peer._dropHeld?.('身份或会话不匹配，旧文件不能续传');
+            }
+        }
         const waiting = this._earlySignals.filter(item => item.message.sender === info.id);
         this._earlySignals = this._earlySignals.filter(item => item.message.sender !== info.id);
         this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0);
         for (const item of waiting) if (item.expires > Date.now()) this.peers.get(info.id).onServerMessage(item.message);
     }
-    _remove(id) { this.peers.get(id)?.close(); this.peers.delete(id); this._earlySignals = this._earlySignals.filter(item => item.message.sender !== id); this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0); }
+    _remove(id, preserve = false) {
+        const peer = this.peers.get(id);
+        const held = peer?.close('连接中断，等待原设备恢复', preserve);
+        this.peers.delete(id);
+        if (held && preserve) {
+            const old = this._resumeSlots.get(id);
+            if (old) { clearTimeout(old.timer); old.peer._dropHeld?.('旧续传请求已被替换'); }
+            const slot = { peer, hold: held, roomId: this._server._desiredRoomId, localId: this._server._peerId };
+            slot.timer = setTimeout(() => {
+                if (this._resumeSlots.get(id) !== slot) return;
+                this._resumeSlots.delete(id);
+                peer._dropHeld?.('原设备未及时恢复，续传已取消');
+            }, Math.max(0, held.deadline - Date.now()));
+            this._resumeSlots.set(id, slot);
+        }
+        this._earlySignals = this._earlySignals.filter(item => item.message.sender !== id);
+        this._earlySignalBytes = this._earlySignals.reduce((sum, item) => sum + item.bytes, 0);
+    }
 }

@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const fmt = bytes => bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + ' GiB' : bytes >= 1024 ** 2 ? (bytes / 1024 ** 2).toFixed(1) + ' MiB' : bytes >= 1024 ? (bytes / 1024).toFixed(1) + ' KiB' : bytes + ' B';
-const labels = { offered: '等待对方同意', sending: '正在发送', receiving: '正在接收', paused: '已暂停', verifying: '正在校验并保存', complete: 'SHA-256 校验通过', cancelled: '传输已停止' };
+const labels = { offered: '等待对方同意', sending: '正在发送', receiving: '正在接收', paused: '已暂停', verifying: '正在校验并保存', reconnecting: '等待原设备恢复（最多 2 分钟）', resuming: '正在核对续传进度', complete: 'SHA-256 校验通过', cancelled: '传输已停止' };
 let toastTimer;
 Events.on('notify-user', event => {
     $('toast').textContent = event.detail; $('toast').setAttribute('show', '1');
@@ -201,7 +201,7 @@ class Zeydrop {
         Events.on('signal-state', event => {
             const state = event.detail.state; $('signalStatus').dataset.state = state;
             $('signalStatus').querySelector('.signal-label').textContent = { connected: '信令服务在线', connecting: '正在连接信令', offline: '信令连接断开' }[state];
-            if (state === 'offline' && currentRoom) status('信令中断，正在恢复；文件需要重新选择', 'waiting');
+            if (state === 'offline' && currentRoom) status('信令中断，正在恢复；已接受的文件可在短时间内继续，超时需重新选择', 'waiting');
         });
         setInterval(() => { if (expires) $('inviteExpiry').textContent = (paired ? '会话剩余 ' : '邀请剩余 ') + Math.max(0, Math.ceil((expires - Date.now()) / 60000)) + (paired ? ' 分钟 · 已锁定双方 · 最长 12 小时' : ' 分钟 · 最多两台设备'); }, 1000);
         const url = new URL(location.href); const id = new URLSearchParams(url.hash.slice(1)).get('room') || url.searchParams.get('room');
