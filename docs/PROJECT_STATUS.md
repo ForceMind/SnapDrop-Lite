@@ -8,6 +8,8 @@
 
 收到新文件邀请后，接收方必须再次明确勾选匹配的本机断点；仅同文件名、大小和 MIME 类型可尝试，重新验证本地前缀 SHA-256，再通过新 DataChannel 的 `resume-at → resume-confirm` 与发送端重新选择的本地 File 逐字节比对前缀。成功后只传剩余部分，完成后仍需全文件 SHA-256。完全不通过信令服务器传文件名、哈希或正文，也不使用 TURN/DERP。中断的本机副本仍可能因浏览器配额/数据清理丢失；跨设备、Safari/iOS、真实公网 NAT、双标签锁、持久化 UI 端到端实测仍待验证。跨刷新需要新邀请，并不恢复已丢失的服务器身份。
 
+新增独立双浏览器上下文 WebRTC 跨刷新测试 `tests/persistent-flow-browser.cjs`，在真实 1 MiB 持久化检查点中断后让接收方刷新、新邀请重新核对安全码、重新选择原文件并验证文件 SHA-256；CI 是否通过以当前 PR 记录为准。
+
 新增 Playwright Chromium **真实 OPFS Worker** 测试 `tests/recovery-browser.cjs`：创建/写入/刷新/回滚未提交尾部/再次写入/完整性校验/清理。新提交需要以实际 CI 状态判断成败；不得沿用 CI #16/#18 的旧绿灯。PR #2 保持 Draft，不合并、正式部署或强推。
 
 ## 2026-10-24：Firefox DataChannel error/close 竞态修复（待新提交 CI 验证）
