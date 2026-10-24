@@ -131,7 +131,7 @@ class TransferPeer {
         const incoming = this._incoming;
         if (msg.type === 'accept' && outgoing?.meta.id === msg.id && outgoing.phase === 'offered') {
             clearTimeout(outgoing.timer); outgoing.phase = 'sending';
-            this._pump(outgoing).catch(error => this.cancel(msg.id, error.message)); return;
+            this._pump(outgoing).catch(error => { if (this._outgoing === outgoing) this.cancel(msg.id, error.message); }); return;
         }
         if (msg.type === 'reject' && outgoing?.meta.id === msg.id) { this.cancel(msg.id, typeof msg.reason === 'string' ? msg.reason.slice(0, 150) : '对方拒绝接收', false); return; }
         if (msg.type === 'checkpoint' && incoming?.sink && msg.id === incoming.meta.id) {
@@ -270,7 +270,7 @@ class TransferPeer {
         state.phase = 'sending'; state.resumeBusy = false;
         clearTimeout(state.timer);
         this.sendJSON({ type: 'resume-confirm', id: msg.id, offset: msg.offset, sha256: msg.sha256 });
-        this._pump(state).catch(error => this.cancel(msg.id, error.message));
+        this._pump(state).catch(error => { if (this._outgoing === state) this.cancel(msg.id, error.message); });
     }
     async acceptIncoming(id) {
         const state = this._incoming;
