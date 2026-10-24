@@ -12,7 +12,8 @@ function saveError(error) {
     return '文件保存失败：' + String(error?.message || error).slice(0, 160);
 }
 class ReceiveSink {
-    static async open(meta) {
+    static async open(meta, options = {}) {
+        if (options.durable && window.ZeydropRecovery?.supported) return window.ZeydropRecovery.open(meta);
         const sink = new ReceiveSink(meta);
         if (typeof window.showSaveFilePicker === 'function') {
             // Must be invoked from the receiver's explicit click/user activation.
@@ -129,6 +130,11 @@ class TransferPeer {
         if (msg.type === 'checkpoint' && this._discard?.id === msg.id) { this._discard = null; return; }
         const outgoing = this._outgoing;
         const incoming = this._incoming;
+        if (msg.type === 'resume-preparing' && outgoing?.meta.id === msg.id && outgoing.phase === 'offered') {
+            clearTimeout(outgoing.timer);
+            outgoing.timer = setTimeout(() => this.cancel(msg.id, '接收端准备本地断点超时'), 5 * 60 * 1000);
+            return;
+        }
         if (msg.type === 'accept' && outgoing?.meta.id === msg.id && outgoing.phase === 'offered') {
             clearTimeout(outgoing.timer); outgoing.phase = 'sending';
             this._pump(outgoing).catch(error => { if (this._outgoing === outgoing) this.cancel(msg.id, error.message); }); return;
@@ -136,6 +142,8 @@ class TransferPeer {
         if (msg.type === 'reject' && outgoing?.meta.id === msg.id) { this.cancel(msg.id, typeof msg.reason === 'string' ? msg.reason.slice(0, 150) : '对方拒绝接收', false); return; }
         if (msg.type === 'checkpoint' && incoming?.sink && msg.id === incoming.meta.id) {
             if (msg.offset !== incoming.offset) throw Error('文件偏移不一致');
+            if (incoming.sink.checkpoint) await incoming.sink.checkpoint(hex(incoming.hash.clone().digest()));
+            if (this._incoming !== incoming) return;
             incoming.acked = incoming.offset;
             this.sendJSON({ type: 'ack', id: msg.id, offset: incoming.offset }); return;
         }
@@ -147,7 +155,7 @@ class TransferPeer {
         if (msg.type === 'finish' && incoming?.sink && msg.id === incoming.meta.id) {
             if (incoming.awaitingResume || incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
             let result;
-            try { incoming.finishing = true; result = await incoming.sink.finish(); }
+            try { incoming.finishing = true; result = await incoming.sink.finish(msg.sha256); }
             catch (error) { this.cancel(msg.id, saveError(error)); return; }
             if (this._incoming !== incoming) { result.release?.(); return; }
             clearTimeout(incoming.timer); this._incoming = null;
@@ -201,7 +209,11 @@ class TransferPeer {
             if (!state) continue;
             clearTimeout(state.timer); state.error = reason;
             state.waiter?.reject(Error(reason));
-            if (state.sink) state.sink.abort().catch(() => {});
+            if (state.sink) {
+                const cleanup = hold.ready.then(() => state.sink.park
+                    ? state.sink.park(hex(state.hash.clone().digest())) : state.sink.abort());
+                cleanup.catch(() => state.sink.abort().catch(() => {}));
+            }
             this._progress(state, 'cancelled');
             Events.fire('file-offer-cancelled', { id: state.meta.id, sender: this._peerId });
         }
@@ -249,12 +261,14 @@ class TransferPeer {
     }
     async _resumeFromOffset(msg) {
         const state = this._outgoing;
-        if (!state || state.phase !== 'resuming' || msg.id !== state.meta.id
+        if (!state || !['resuming', 'offered'].includes(state.phase) || msg.id !== state.meta.id
             || !Number.isSafeInteger(msg.offset) || msg.offset < 0 || msg.offset > state.meta.size
             || typeof msg.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(msg.sha256)
             || !this._verified || !this._path?.direct) throw Error('无效的续传确认');
         if (state.resumeBusy) throw Error('重复续传确认');
-        state.resumeBusy = true;
+        state.resumeBusy = true; state.phase = 'resuming';
+        clearTimeout(state.timer);
+        state.timer = setTimeout(() => this.cancel(msg.id, '本机前缀比对超时'), 5 * 60 * 1000);
         const hash = window.ZeydropHash.create();
         for (let pos = 0; pos < msg.offset; pos += WINDOW_SIZE) {
             const bytes = await state.file.slice(pos, Math.min(pos + WINDOW_SIZE, msg.offset)).arrayBuffer();
@@ -272,12 +286,37 @@ class TransferPeer {
         this.sendJSON({ type: 'resume-confirm', id: msg.id, offset: msg.offset, sha256: msg.sha256 });
         this._pump(state).catch(error => { if (this._outgoing === state) this.cancel(msg.id, error.message); });
     }
-    async acceptIncoming(id) {
+    async acceptIncoming(id, options = {}) {
         const state = this._incoming;
         if (!state || state.meta.id !== id || state.sink || state.accepting) return;
         state.accepting = true;
         try {
-            const sink = await ReceiveSink.open(state.meta);
+            if (options.resumeLocalId) {
+                if (!window.ZeydropRecovery?.supported) throw Error('此浏览器无法读取本机断点');
+                // Only a fresh, explicitly accepted offer may attach a stored partial.
+                this.sendJSON({ type: 'resume-preparing', id });
+                clearTimeout(state.timer);
+                state.timer = setTimeout(() => this.cancel(id, '读取本机断点超时'), 5 * 60 * 1000);
+                const { sink, snapshot, offset, prefixSha256 } =
+                    await window.ZeydropRecovery.restore(options.resumeLocalId, state.meta);
+                if (this._incoming !== state) { await sink.park(prefixSha256); return; }
+                state.sink = sink;
+                const hash = window.ZeydropHash.create();
+                for await (const bytes of snapshot.slice(0, offset).stream()) {
+                    if (this._incoming !== state) return;
+                    hash.update(new Uint8Array(bytes));
+                }
+                if (hex(hash.clone().digest()) !== prefixSha256) throw Error('本机断点校验失败，请删除断点后重新接收');
+                if (this._incoming !== state) return;
+                state.hash = hash; state.offset = offset; state.acked = offset;
+                state.awaitingResume = true; state.accepting = false;
+                clearTimeout(state.timer);
+                state.timer = setTimeout(() => this.cancel(id, '续传协商超时'), 120000);
+                this.sendJSON({ type: 'resume-at', id, offset, sha256: prefixSha256 });
+                this._progress(state, 'resuming');
+                return;
+            }
+            const sink = await ReceiveSink.open(state.meta, options);
             if (this._incoming !== state) { await sink.abort(); return; }
             state.sink = sink; state.accepting = false; clearTimeout(state.timer);
             state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 12 * 60 * 60 * 1000);
@@ -341,7 +380,7 @@ class TransferPeer {
         if (state === this._incoming) this.sendJSON({ type: paused ? 'pause' : 'resume', id });
         this._progress(state, paused ? 'paused' : state === this._outgoing ? 'sending' : 'receiving');
     }
-    cancel(id, reason = '已取消传输', notify = true) {
+    cancel(id, reason = '已取消传输', notify = true, keepDurable = false) {
         const outgoing = this._outgoing?.meta.id === id && this._outgoing;
         const incoming = this._incoming?.meta.id === id && this._incoming;
         if (!outgoing && !incoming && this._held && [this._held.outgoing?.meta.id, this._held.incoming?.meta.id].includes(id)) {
@@ -355,16 +394,20 @@ class TransferPeer {
         if (outgoing) { this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
         if (incoming) {
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
-            this._incoming = null; state.sink?.abort();
+            this._incoming = null;
+            if (keepDurable && state.sink?.park) {
+                this._messageChain.then(() => state.sink.park(hex(state.hash.clone().digest())))
+                    .catch(() => state.sink.abort().catch(() => {}));
+            } else state.sink?.abort();
         }
         if (notify && this._isConnected()) this.sendJSON({ type: 'cancel', id });
         this._progress(state, 'cancelled');
         Events.fire('file-offer-cancelled', { id, sender: this._peerId });
         Events.fire('notify-user', reason);
     }
-    abortAll(reason) {
+    abortAll(reason, keepDurable = false) {
         if (this._outgoing) this.cancel(this._outgoing.meta.id, reason, false);
-        if (this._incoming) this.cancel(this._incoming.meta.id, reason, false);
+        if (this._incoming) this.cancel(this._incoming.meta.id, reason, false, keepDurable);
         this._filesQueue = []; this._queueWaitId = null; this._discard = null;
         this._dropHeld(reason);
     }
