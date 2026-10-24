@@ -212,14 +212,19 @@ class RTCPeer extends TransferPeer {
             this._samplePath(); this._securityCode();
         };
         channel.onmessage = event => this._receive(event.data);
-        channel.onclose = () => {
+        // Firefox can emit 'error' before 'close' for an interrupted RTCDataChannel.
+        // Neither event alone proves protocol corruption. Preserve the bounded
+        // approved checkpoint while ICE recovers; _protocolError stays terminal.
+        const channelLost = () => {
             if (this._closed || this._state === 'failed' || this._channel !== channel) return;
+            if (this._state === 'disconnected' || this._restartPending) return;
             this._revokePath('disconnected', '文件通道断开，正在尝试恢复未完成文件', true);
             this._connectionEvent();
             if (this._isCaller) this.restart();
             else this._waitForRemoteRestart();
         };
-        channel.onerror = () => { if (!this._closed) this._fail('文件通道发生错误'); };
+        channel.onclose = channelLost;
+        channel.onerror = channelLost;
     }
     _send(data) {
         if (!this._isConnected()) throw Error('文件通道尚未就绪');

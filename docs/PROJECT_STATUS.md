@@ -2,6 +2,10 @@
 
 更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
+## 2026-10-24：Firefox DataChannel error/close 竞态修复（待新提交 CI 验证）
+
+CI #16 已通过 Chromium/Firefox 续传，归档文档提交的 CI #17 则在 Firefox 8 MiB 恢复时出现一次 180 秒超时；接收端报告“续传协商超时”，发送端报告“文件通道发生错误”。这是实际测试失败，不应将 CI #17 标记为通过。原因定位为旧 RTCDataChannel 的 `error` 在 Firefox 可先于 `close` 到达，而该事件此前直接调用终止性 `_fail`，提前删除同页续传断点。现已把 transient `error/close` 统一为有界重连入口；协议违规仍调用不可恢复的 `_protocolError`。新增同次 error+close 去重、接收端等待截止及协议致命性回归测试。本段变更仍以之后新 PR head 的 CI 为准，真实公网和 Safari 实机继续未测。
+
 ## 2026-10-24：同页短时 P2P 文件续传首版
 
 在 `6e88e5312b29e3645d6d20a356ac2f70ad8c68fa` 已合并入开发分支的代码中，增加 `resume-offer → resume-at → resume-confirm` DataChannel 协商：原设备在同一页面内短时重连，双方重新核对安全码、重新核验 selected 非 relay 路径后，以已写入偏移和 SHA-256 前缀进行确认，发送端只传余下字节。原 File 和接收 sink 仅保留在本页内存中、最长 120 秒；刷新/关闭浏览器、身份变化、跨会话及服务端重启后不支持恢复。多文件队列的待发文件暂不保留。不会经 WSS/服务器转发文件名、哈希、偏移或文件内容。

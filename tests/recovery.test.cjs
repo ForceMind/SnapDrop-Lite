@@ -187,3 +187,44 @@ test('both browser failure callbacks still produce only one outstanding restart'
     assert.equal(h.peer._restarts, 1); assert.equal(h.conn.offers, 1);
     assert.equal(h.peer._path.direct, false); assert.equal(h.peer._verified, false);
 });
+
+test('Firefox-like DataChannel error preserves the non-offerer for bounded recovery', () => {
+    const h = harness();
+    const channel = { readyState: 'open', send() {}, close() {} };
+    h.peer._bindChannel(channel);
+    h.peer._state = 'connected'; h.peer._path = { direct: true }; h.peer._verified = true;
+    channel.onerror(new Error('RTCDataChannel transport error'));
+    assert.equal(h.peer._closed, false);
+    assert.equal(h.peer._state, 'disconnected');
+    assert.equal(h.peer._path.direct, false); assert.equal(h.peer._verified, false);
+    assert.equal(h.peer._waitingForRemote, true);
+    const deadline = h.peer._deadline;
+    channel.onclose();
+    assert.equal(h.peer._deadline, deadline, 'double error/close must not prolong the recovery window');
+    assert.notEqual(h.peer._state, 'failed');
+});
+
+test('DataChannel error and close together consume no more than one caller restart', async () => {
+    const h = harness();
+    h.peer._isCaller = true;
+    const channel = { readyState: 'open', send() {}, close() {} };
+    h.peer._bindChannel(channel);
+    h.peer._state = 'connected'; h.peer._path = { direct: true }; h.peer._verified = true;
+    channel.onerror(new Error('Firefox close race'));
+    channel.onclose();
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    assert.equal(h.peer._restarts, 1);
+    assert.equal(h.peer._closed, false);
+    assert.equal(h.peer._path.direct, false);
+    assert.equal(h.peer._verified, false);
+});
+
+test('explicit protocol errors remain fatal and never restore transfer consent', () => {
+    const h = harness();
+    const channel = { readyState: 'open', send() {}, close() {} };
+    h.peer._bindChannel(channel); h.peer._path = { direct: true }; h.peer._verified = true;
+    h.peer._protocolError('unauthorized file chunk');
+    assert.equal(h.peer._closed, true);
+    assert.equal(h.peer._path.direct, false);
+    assert.equal(h.peer._verified, false);
+});
