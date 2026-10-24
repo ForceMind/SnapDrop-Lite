@@ -106,6 +106,68 @@ async function main() {
             await b.evaluate(async name => (await navigator.storage.getDirectory()).removeEntry(name), name);
             await fs.rm(local); console.log('PASS streamed file:', size, 'bytes');
         }
+        // Real two-profile in-page cross-connection resume: close the receiver WSS
+        // while the OPFS sink is actively writing, then require fresh manual code
+        // confirmation before the sender can hash the checkpoint and send the tail.
+        const resumeName = 'resume-browser.bin', resumeFile = Buffer.alloc(8 * 1024 * 1024, 0x6d);
+        await a.evaluate(() => {
+            window.__resumeBinaryBytes = 0;
+            const send = RTCPeer.prototype._send;
+            RTCPeer.prototype._send = function(data) {
+                if (typeof data !== 'string') window.__resumeBinaryBytes += data.byteLength;
+                return send.call(this, data);
+            };
+        });
+        await b.evaluate(() => {
+            window.__resumeProbe = { disconnects: 0, writtenAtBreak: 0 };
+            window.showSaveFilePicker = async ({ suggestedName }) => {
+                const handle = await (await navigator.storage.getDirectory()).getFileHandle(suggestedName, { create: true });
+                return { createWritable: async () => {
+                    const sink = await handle.createWritable(); let written = 0;
+                    return {
+                        write: async bytes => {
+                            await sink.write(bytes); written += bytes.byteLength;
+                            if (written >= 128 * 1024 && window.__resumeProbe.disconnects === 0) {
+                                window.__resumeProbe.disconnects = 1;
+                                window.__resumeProbe.writtenAtBreak = written;
+                                zeydrop.server._socket.close();
+                            }
+                        },
+                        close: () => sink.close(),
+                        abort: () => sink.abort()
+                    };
+                } };
+            };
+        });
+        await a.locator('x-peer input[type=file]').setInputFiles({ name: resumeName, mimeType: 'application/octet-stream', buffer: resumeFile });
+        await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
+        await b.waitForFunction(() => window.__resumeProbe.disconnects === 1, null, { timeout: 30000 });
+        for (const page of pages) {
+            await page.waitForFunction(() => {
+                const peer = [...zeydrop.peers.peers.values()][0];
+                return peer?._path?.direct && peer?._remoteHello && peer?._code && !peer?._verified;
+            }, null, { timeout: 60000 });
+        }
+        const resumedCodes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
+        assert.equal(resumedCodes[0], resumedCodes[1]);
+        for (const page of pages) await page.locator('.verify-peer').click();
+        await a.waitForFunction(name => window.__testTransfers[name]?.phase === 'complete', resumeName, { timeout: 180000 });
+        const resumeDiskHash = await b.evaluate(async name => {
+            const file = await (await (await navigator.storage.getDirectory()).getFileHandle(name)).getFile();
+            const hash = window.ZeydropHash.create();
+            const reader = file.stream().getReader();
+            while (true) { const { value, done } = await reader.read(); if (done) break; hash.update(value); }
+            return { length: file.size, sha256: hex(hash.digest()) };
+        }, resumeName);
+        const resumeExpected = crypto.createHash('sha256').update(resumeFile).digest('hex');
+        assert.equal(resumeDiskHash.length, resumeFile.length);
+        assert.equal(resumeDiskHash.sha256, resumeExpected);
+        const resumeBytes = await a.evaluate(() => window.__resumeBinaryBytes);
+        assert.ok(resumeBytes >= resumeFile.length && resumeBytes <= resumeFile.length + 256 * 1024,
+            'Sender must resume from the recorded checkpoint, not resend the whole file');
+        results.resume = { name: resumeName, size: resumeFile.length, writtenAtBreak: await b.evaluate(() => window.__resumeProbe.writtenAtBreak), dataChannelBytes: resumeBytes, sha256: resumeExpected };
+        results.cases.push('real WebSocket peer rebuild resumes 8 MiB native OPFS sink after fresh matching safety codes and SHA-256 prefix check');
+        await b.evaluate(async name => (await navigator.storage.getDirectory()).removeEntry(name), resumeName);
         results.peakReceiveQueues = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._peakQueuedBytes || 0)));
         assert.ok(results.peakReceiveQueues.every(bytes => bytes <= 1024 * 1024));
         assert.ok(traffic.every(message => !message.binary && !message.text.includes('PRIVATE_FILE_BODY_SENTINEL') && !message.text.includes('PRIVATE_FILE_SENTINEL')));
