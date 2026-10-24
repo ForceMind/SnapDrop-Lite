@@ -1,0 +1,36 @@
+
+> zeydrop@0.3.0-dev.1 test
+> node --test tests/*.test.cjs
+
+✔ diagnostic export allowlists state and never exposes tokens, SDP, addresses, codes or file data (2.617701ms)
+✔ diagnostics retain a bounded history and reject arbitrary field values (3.725268ms)
+✔ ICE/SDP arriving before discovery waits for the authorized peer and preserves order (2.716149ms)
+✔ early signals have a bounded lifetime and budget and clear when a room is left (4.732474ms)
+✔ only selected non-relay paths count as direct; nomination alone cannot prove selection (3.569043ms)
+✔ TURN configuration is rejected; STUN can be explicitly disabled (1.739318ms)
+✔ closing a transport clears previously verified direct status (0.852944ms)
+✔ server IDs, private discovery, create/join, two-person cap and cross-room isolation (72.512823ms)
+✔ file payloads, invalid nested signaling and TURN candidates are never relayed (55.272568ms)
+✔ expired/missing invitations cannot be resurrected by joining (31.621644ms)
+✔ short reconnect restores server identity and reserves room slot; expiry drops authority (38.957427ms)
+✔ pairing seals membership and survives invite expiry until a fixed session deadline (52.156763ms)
+✔ original paired member can resume after invite expiry; leaving both ends releases the sealed room (48.2157ms)
+✔ Origin/path checks and message-rate limits reject invalid clients (14.247479ms)
+✔ malformed unauthenticated upgrade targets are rejected without crashing signaling (9.003775ms)
+✔ no file bytes before acceptance; verified SHA-256 and bounded disk writes, including empty files (76.039848ms)
+✔ corruption aborts partial disk file and never exposes a completed file (6.852115ms)
+✔ memory fallback rejects oversized files before acceptance; malicious oversized chunks abort (6.502259ms)
+✔ unverified peers cannot send or receive file offers (0.976059ms)
+✔ fallback multi-file queue waits until user saves/discards the previous Blob (9.955487ms)
+✔ pause holds file reads, resume continues, and cancel aborts native partial writes (258.622737ms)
+✔ write failure cannot produce complete, and an incorrect ACK cannot advance a sender (109.662133ms)
+✔ receiver cancellation drains only the in-flight window and preserves the channel for a new file (111.69608ms)
+✔ quota and final-save errors cancel only the file and report the cause (211.824932ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 894.960485

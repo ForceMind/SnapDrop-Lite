@@ -1,0 +1,78 @@
+{
+  "engine": "chromium",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "storage quota failure reports cancellation without closing the direct channel",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "native streamed file 1073741824 bytes with independent disk SHA-256",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P",
+    "real delayed discovery: earlier SDP/ICE buffered until authorized peer appears"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "profiles": "two persistent profiles (disk-backed OPFS)",
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "family": "地址族未公开",
+      "rtt": 4
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 1
+    }
+  ],
+  "storageBefore": {
+    "quota": 10737841861,
+    "usage": 423621,
+    "usageDetails": {
+      "caches": 421888,
+      "serviceWorkerRegistrations": 1733
+    }
+  },
+  "stream0": {
+    "ms": 103,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 12771,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "stream1073741824": {
+    "ms": 126617,
+    "sha256": "49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14"
+  },
+  "peakReceiveQueues": [
+    157,
+    245844
+  ],
+  "signaling": {
+    "messages": 56,
+    "bytes": 840,
+    "fileBodyObserved": false
+  },
+  "delayedEarlySignals": [
+    2,
+    0
+  ],
+  "passed": true,
+  "evidenceSource": {
+    "commit": "a520ed9c501799aeb56857ec62879ccb1395cc51",
+    "runId": 39271609507,
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39271609507",
+    "scope": "GitHub Actions same-host test, not WAN/NAT or physical device validation"
+  }
+}

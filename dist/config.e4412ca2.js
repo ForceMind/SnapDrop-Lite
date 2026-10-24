@@ -1,1 +1,0 @@
-window.SNAPDROP_ENABLE_STUN=!1;

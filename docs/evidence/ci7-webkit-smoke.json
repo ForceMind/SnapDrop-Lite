@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "engine": "webkit",
+  "tests": [
+    "render",
+    "WS session",
+    "invite + QR",
+    "leave",
+    "mobile overflow",
+    "visible consent dialog and reject"
+  ],
+  "limitation": "UI smoke only; no Safari WebRTC or iOS device claim",
+  "evidenceSource": {
+    "commit": "a520ed9c501799aeb56857ec62879ccb1395cc51",
+    "runId": 39271609507,
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39271609507",
+    "scope": "GitHub Actions same-host test, not WAN/NAT or physical device validation"
+  }
+}

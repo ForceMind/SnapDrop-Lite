@@ -1,0 +1,51 @@
+{
+  "engine": "chromium",
+  "cases": [],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "failure": "page.waitForFunction: Timeout 30000ms exceeded.",
+  "debug": [
+    {
+      "signal": true,
+      "peers": [
+        {
+          "state": "failed",
+          "ice": "new",
+          "connection": "new",
+          "signaling": "stable",
+          "candidates": {
+            "host": 0,
+            "srflx": 0,
+            "prflx": 0
+          },
+          "channel": "connecting",
+          "code": true,
+          "path": {
+            "direct": false
+          }
+        }
+      ]
+    },
+    {
+      "signal": true,
+      "peers": [
+        {
+          "state": "failed",
+          "ice": "new",
+          "connection": "new",
+          "signaling": "stable",
+          "candidates": {
+            "host": 0,
+            "srflx": 0,
+            "prflx": 0
+          },
+          "code": true,
+          "path": {
+            "direct": false
+          }
+        }
+      ]
+    }
+  ],
+  "note": "Local Chromium 153.0.8010.0. No usable host candidates in restricted execution network; no direct path and no file-transfer pass claim."
+}

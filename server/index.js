@@ -1,430 +1,202 @@
-var process = require('process')
-process.on('SIGINT', () => {
-  console.info("收到 SIGINT 信号，正在退出...")
-  process.exit(0)
-})
+'use strict';
+const { randomUUID, randomBytes } = require('node:crypto');
+const { WebSocketServer } = require('ws');
+const MAX_MESSAGE = 64 * 1024;
+const ROOM_TTL = 15 * 60 * 1000;
+const SESSION_TTL = 12 * 60 * 60 * 1000;
+const RESUME_TTL = 2 * 60 * 1000;
+const token = () => randomBytes(32).toString('hex');
+const validRoom = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
+const onlyKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
 
-process.on('SIGTERM', () => {
-  console.info("收到 SIGTERM 信号，正在退出...")
-  process.exit(0)
-})
-
-const parser = require('ua-parser-js');
-const { uniqueNamesGenerator, animals, colors } = require('unique-names-generator');
-
-class SnapdropServer {
-
-    constructor(port) {
-        const WebSocket = require('ws');
-        this._wss = new WebSocket.Server({ port: port });
-        this._wss.on('connection', (socket, request) => this._onConnection(new Peer(socket, request)));
-        this._wss.on('headers', (headers, response) => this._onHeaders(headers, response));
-
-        this._rooms = {};
-
-        console.log('闪投服务已启动，端口:', port);
-    }
-
-    _onConnection(peer) {
-        this._joinRoom(peer);
-        peer.socket.on('message', message => this._onMessage(peer, message));
-        peer.socket.on('error', console.error);
-        this._keepAlive(peer);
-
-        // 记录连接日志
-        const roomPeers = this._rooms[peer.roomKey] ? Object.keys(this._rooms[peer.roomKey]).length : 0;
-        console.log(`[连接] ${peer.name.deviceName} | IP: ${peer.ip} | 房间: ${peer.roomKey} | 房间人数: ${roomPeers}`);
-
-        this._send(peer, {
-            type: 'display-name',
-            message: {
-                displayName: peer.name.displayName,
-                deviceName: peer.name.deviceName
-            }
+class ZeydropServer {
+    constructor(options = {}) {
+        this.now = options.now || Date.now;
+        this.rooms = new Map();
+        this.sessions = new Map();
+        this.connections = new Map();
+        this.origins = new Set((options.origins || process.env.ALLOWED_ORIGINS || 'http://localhost:8080,http://127.0.0.1:8080').split(',').map(v => v.trim()));
+        this.roomTTL = options.roomTTL || ROOM_TTL;
+        this.sessionTTL = options.sessionTTL || SESSION_TTL;
+        this._wss = new WebSocketServer({
+            ...(options.noServer ? { noServer: true } : { host: options.host || process.env.WS_HOST || '127.0.0.1', port: options.port ?? Number(process.env.PORT || 3001) }),
+            maxPayload: MAX_MESSAGE, perMessageDeflate: false,
+            verifyClient: info => this.origins.has(info.origin)
+                // The untrusted request-target may be a malformed absolute URI.
+                // Exact matching also rejects query credentials and avoids parsing
+                // exceptions escaping the upgrade handler before authentication.
+                && info.req.url === '/server/webrtc'
+                && this.sessions.size < 1000 && this.connections.size < 1000
         });
+        this._wss.on('connection', (socket, request) => this.connect(socket, request));
+        this.timer = setInterval(() => this.sweep(), 5000);
+        this.timer.unref();
     }
 
-    _onHeaders(headers, response) {
-        if (response.headers.cookie && response.headers.cookie.indexOf('peerid=') > -1) return;
-        response.peerId = Peer.uuid();
-        const secure = process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true' ? '; Secure' : '';
-        headers.push('Set-Cookie: peerid=' + response.peerId + "; SameSite=Strict" + secure);
-    }
-
-    _onMessage(sender, message) {
-        try {
-            message = JSON.parse(message);
-        } catch (e) {
-            return;
-        }
-
-        switch (message.type) {
-            case 'disconnect':
-                this._leaveRoom(sender);
-                break;
-            case 'pong':
-                sender.lastBeat = Date.now();
-                break;
-            case 'local-ip':
-                // 客户端报告局域网 IP 列表，更新房间分组
-                console.log(`[收到] ${sender.name.deviceName} 报告 IP:`, message.ips);
-                if (!this._isLanMode()) {
-                    console.log(`[局域网IP] 当前为公网模式，忽略客户端局域网 IP 报告`);
-                    return;
-                }
-                if (message.ips && message.ips.length > 0) {
-                    // 优先使用 IPv4 局域网地址（192.168.x.x, 10.x.x.x, 172.16-31.x.x）
-                    const localIP = this._selectLocalIP(message.ips, sender.ip);
-
-                    const newRoomKey = this._getRoomKey(localIP);
-                    if (sender.roomKey !== newRoomKey) {
-                        console.log(`[局域网IP] ${sender.name.deviceName} 切换房间: ${sender.roomKey} -> ${newRoomKey}`);
-                        this._leaveRoom(sender, false); // 不终止连接
-                        sender.ip = localIP;
-                        sender.roomKey = newRoomKey;
-                        this._joinRoom(sender);
-                        this._keepAlive(sender);
-                    } else {
-                        console.log(`[局域网IP] ${sender.name.deviceName} 房间未变: ${newRoomKey}`);
-                    }
-                } else {
-                    console.log(`[局域网IP] ${sender.name.deviceName} 未获取到局域网 IP，保持使用公网 IP 分组: ${sender.roomKey}`);
-                }
-                return;
-            case 'join-room':
-                // 用户手动加入房间
-                if (message.roomId) {
-                    const newRoom = 'room:' + message.roomId;
-                    if (sender.roomKey !== newRoom) {
-                        console.log(`[房间] ${sender.name.deviceName} 加入房间: ${message.roomId}`);
-                        this._leaveRoom(sender, false); // 不终止连接
-                        sender.roomKey = newRoom;
-                        this._joinRoom(sender);
-                        this._keepAlive(sender);
-                    }
-                }
-                return;
-        }
-
-        // 转发消息给目标设备
-        if (message.to && this._rooms[sender.roomKey]) {
-            const recipientId = message.to; // TODO: sanitize
-            const recipient = this._rooms[sender.roomKey][recipientId];
-            delete message.to;
-            // add sender id
-            message.sender = sender.id;
-            this._send(recipient, message);
-            return;
-        }
-    }
-
-    _joinRoom(peer) {
-        const roomKey = peer.roomKey;
-        if (!this._rooms[roomKey]) {
-            this._rooms[roomKey] = {};
-        }
-
-        for (const otherPeerId in this._rooms[roomKey]) {
-            const otherPeer = this._rooms[roomKey][otherPeerId];
-            this._send(otherPeer, {
-                type: 'peer-joined',
-                peer: peer.getInfo()
-            });
-        }
-
-        const otherPeers = [];
-        for (const otherPeerId in this._rooms[roomKey]) {
-            otherPeers.push(this._rooms[roomKey][otherPeerId].getInfo());
-        }
-
-        this._send(peer, {
-            type: 'peers',
-            peers: otherPeers
+    connect(socket, request) {
+        const now = this.now();
+        socket._zeydropUA = String(request.headers['user-agent'] || '').slice(0, 512);
+        // Tokens are sent as the first WS message, never in access-log query strings.
+        const peer = { socket, id: null, session: null, lastBeat: now, count: 0, bytes: 0, window: now, connected: now };
+        this.connections.set(socket, peer);
+        socket.on('message', (bytes, binary) => {
+            if (binary) { socket.close(1008, 'Signaling only'); return; }
+            this.message(peer, bytes.toString());
         });
-
-        this._rooms[roomKey][peer.id] = peer;
+        socket.on('close', () => this.detach(peer));
+        socket.on('error', () => {});
+        this.send(peer, { type: 'hello-required' });
     }
 
-    _leaveRoom(peer, terminate = true) {
-        const roomKey = peer.roomKey;
-        if (!this._rooms[roomKey] || !this._rooms[roomKey][peer.id]) return;
-        this._cancelKeepAlive(this._rooms[roomKey][peer.id]);
+    send(peer, message) {
+        if (peer?.socket.readyState !== 1) return;
+        if (peer.socket.bufferedAmount > 128 * 1024) { peer.socket.close(1008, 'Slow signaling client'); return; }
+        peer.socket.send(JSON.stringify(message));
+    }
 
-        delete this._rooms[roomKey][peer.id];
-
-        if (terminate) {
-            peer.socket.terminate();
+    message(peer, raw) {
+        const now = this.now();
+        if (now - peer.window >= 60000) { peer.window = now; peer.count = 0; peer.bytes = 0; }
+        peer.count++; peer.bytes += Buffer.byteLength(raw);
+        if (peer.count > 240 || peer.bytes > 512 * 1024 || Buffer.byteLength(raw) > MAX_MESSAGE) {
+            peer.socket.close(1008, 'Signaling limit'); return;
         }
-
-        if (!Object.keys(this._rooms[roomKey]).length) {
-            delete this._rooms[roomKey];
-        } else {
-            for (const otherPeerId in this._rooms[roomKey]) {
-                const otherPeer = this._rooms[roomKey][otherPeerId];
-                this._send(otherPeer, { type: 'peer-left', peerId: peer.id });
+        let msg;
+        try { msg = JSON.parse(raw); } catch { return; }
+        if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
+        if (msg.type === 'hello' && !peer.session && onlyKeys(msg, ['type', 'resumeToken'])) {
+            let session = typeof msg.resumeToken === 'string' && this.sessions.get(msg.resumeToken);
+            if (session && (!session.peer && now - session.detached > RESUME_TTL)) session = null;
+            if (session?.peer) { peer.socket.close(1008, 'Session already online'); return; }
+            if (!session) {
+                const ua = String(this._userAgent(peer) || '');
+                session = { id: randomUUID(), token: token(), room: null, detached: now, name: this.deviceName(ua) };
+                this.sessions.set(session.token, session);
             }
-        }
-    }
-
-    _send(peer, message) {
-        if (!peer) return;
-        if (peer.socket.readyState !== 1) return; // 1 = WebSocket.OPEN
-        message = JSON.stringify(message);
-        peer.socket.send(message, error => '');
-    }
-
-    _keepAlive(peer) {
-        this._cancelKeepAlive(peer);
-        var timeout = 30000;
-        if (!peer.lastBeat) {
-            peer.lastBeat = Date.now();
-        }
-        if (Date.now() - peer.lastBeat > 2 * timeout) {
-            this._leaveRoom(peer);
+            peer.session = session; peer.id = session.id; session.peer = peer;
+            this.send(peer, { type: 'hello', peerId: peer.id, resumeToken: session.token, deviceName: session.name });
+            if (session.room) {
+                const room = this.rooms.get(session.room);
+                if (room && this.roomDeadline(room) > now) this.joinActive(peer, session.room, room);
+                else session.room = null;
+            }
             return;
         }
-
-        this._send(peer, { type: 'ping' });
-
-        peer.timerId = setTimeout(() => this._keepAlive(peer), timeout);
+        if (!peer.session) return;
+        if (msg.type === 'pong') { peer.lastBeat = now; return; }
+        if (msg.type === 'leave-room') { this.leave(peer); return; }
+        if (msg.type === 'create-room' || msg.type === 'join-room') {
+            if (!onlyKeys(msg, ['type', 'roomId']) || !validRoom(msg.roomId)) return this.error(peer, 'invalid', '请使用完整的 Zeydrop 邀请链接');
+            const existing = this.rooms.get(msg.roomId);
+            if (existing && this.roomDeadline(existing) <= now) { this.expire(msg.roomId); return this.error(peer, 'expired', '邀请或会话已过期，请创建新邀请'); }
+            if (msg.type === 'create-room') {
+                if (existing) return this.error(peer, 'exists', '邀请已存在，请创建新邀请');
+                if (this.rooms.size >= 1000) return this.error(peer, 'capacity', '服务繁忙，请稍后重试');
+                // Rate limit creation independently from ICE/pong traffic.
+                if (peer.lastCreate && now - peer.lastCreate < 5000) return this.error(peer, 'rate', '请稍后再创建邀请');
+                peer.lastCreate = now;
+                this.rooms.set(msg.roomId, { expires: now + this.roomTTL, sessionExpires: null, members: new Map() });
+            } else if (!existing) return this.error(peer, 'missing', '邀请不存在或已过期，请让对方创建新邀请');
+            const room = this.rooms.get(msg.roomId);
+            // Once paired, the invitation can never admit a replacement device.
+            // Original members may resume only while their session reservation
+            // and the separate, fixed active-session deadline remain valid.
+            if (room.sessionExpires && !room.members.has(peer.id)) return this.error(peer, 'full', '此邀请已完成配对，请创建新邀请');
+            if (!room.members.has(peer.id) && room.members.size >= 2) return this.error(peer, 'full', '此邀请已配对其他设备');
+            if (peer.session.room !== msg.roomId) this.leave(peer);
+            peer.session.room = msg.roomId;
+            room.members.set(peer.id, peer.session);
+            if (room.members.size === 2 && !room.sessionExpires) room.sessionExpires = now + this.sessionTTL;
+            this.joinActive(peer, msg.roomId, room);
+            return;
+        }
+        if (msg.type !== 'signal') return; // No binary, text, files or arbitrary WS forwarding.
+        const room = this.rooms.get(peer.session.room);
+        if (!room || this.roomDeadline(room) <= now || !room.members.has(peer.id)) return;
+        const recipient = room.members.get(msg.to)?.peer;
+        if (!recipient || recipient === peer) return;
+        let payload;
+        if (onlyKeys(msg, ['type', 'to', 'sdp']) && onlyKeys(msg.sdp, ['type', 'sdp'])
+            && ['offer', 'answer'].includes(msg.sdp.type) && typeof msg.sdp.sdp === 'string'
+            && msg.sdp.sdp.startsWith('v=0') && msg.sdp.sdp.length <= 60000) {
+            payload = { sdp: { type: msg.sdp.type, sdp: msg.sdp.sdp } };
+        } else if (onlyKeys(msg, ['type', 'to', 'ice']) && onlyKeys(msg.ice, ['candidate', 'sdpMid', 'sdpMLineIndex', 'usernameFragment'])
+            && typeof msg.ice.candidate === 'string' && msg.ice.candidate.startsWith('candidate:') && msg.ice.candidate.length <= 4096
+            && / typ (host|srflx|prflx)( |$)/.test(msg.ice.candidate)
+            && (msg.ice.sdpMid === null || (typeof msg.ice.sdpMid === 'string' && msg.ice.sdpMid.length <= 128))
+            && (msg.ice.sdpMLineIndex === null || (Number.isInteger(msg.ice.sdpMLineIndex) && msg.ice.sdpMLineIndex >= 0 && msg.ice.sdpMLineIndex <= 16))
+            && (msg.ice.usernameFragment === undefined || (typeof msg.ice.usernameFragment === 'string' && msg.ice.usernameFragment.length <= 128))) {
+            payload = { ice: msg.ice };
+        }
+        if (payload) this.send(recipient, { type: 'signal', sender: peer.id, ...payload });
     }
 
-    _cancelKeepAlive(peer) {
-        if (peer && peer.timerId) {
-            clearTimeout(peer.timerId);
+    _userAgent(peer) { return peer.socket._zeydropUA; }
+    deviceName(ua) {
+        const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : 'Linux';
+        const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '浏览器';
+        return os + ' · ' + browser;
+    }
+    info(session) { return { id: session.id, name: { deviceName: session.name, displayName: session.name }, rtcSupported: true }; }
+    roomDeadline(room) { return room.sessionExpires || room.expires; }
+    joinActive(peer, id, room) {
+        const others = [...room.members.values()].filter(s => s.id !== peer.id && s.peer);
+        const status = { type: 'room-joined', roomId: id, expiresAt: this.roomDeadline(room), inviteExpiresAt: room.expires, paired: !!room.sessionExpires };
+        for (const other of others) {
+            this.send(other.peer, { type: 'peer-joined', peer: this.info(peer.session) });
+            this.send(other.peer, status);
+        }
+        this.send(peer, { type: 'peers', peers: others.map(s => this.info(s)) });
+        this.send(peer, status);
+    }
+    error(peer, code, message) { this.send(peer, { type: 'room-error', code, message }); }
+    leave(peer) {
+        if (!peer.session?.room) return;
+        const id = peer.session.room, room = this.rooms.get(id);
+        room?.members.delete(peer.id);
+        for (const session of room?.members.values() || []) this.send(session.peer, { type: 'peer-left', peerId: peer.id });
+        peer.session.room = null;
+        if (room?.sessionExpires && !room.members.size) this.rooms.delete(id);
+        this.send(peer, { type: 'peers', peers: [] });
+    }
+    detach(peer) {
+        this.connections.delete(peer.socket);
+        if (!peer.session || peer.session.peer !== peer) return;
+        peer.session.peer = null; peer.session.detached = this.now();
+        const room = this.rooms.get(peer.session.room);
+        for (const session of room?.members.values() || []) this.send(session.peer, { type: 'peer-left', peerId: peer.id });
+    }
+    expire(id) {
+        const room = this.rooms.get(id);
+        for (const session of room?.members.values() || []) {
+            session.room = null;
+            this.send(session.peer, { type: 'peers', peers: [] });
+            this.send(session.peer, { type: 'room-expired' });
+        }
+        this.rooms.delete(id);
+    }
+    sweep() {
+        const now = this.now();
+        for (const [id, room] of this.rooms) if (this.roomDeadline(room) <= now) this.expire(id);
+        for (const [key, session] of this.sessions) if (!session.peer && now - session.detached > RESUME_TTL) {
+            this.rooms.get(session.room)?.members.delete(session.id); this.sessions.delete(key);
+        }
+        for (const [id, room] of this.rooms) if (room.sessionExpires && !room.members.size) this.rooms.delete(id);
+        for (const peer of this.connections.values()) {
+            if ((!peer.session && now - peer.connected > 10000) || now - peer.lastBeat > 60000) peer.socket.terminate();
+            else this.send(peer, { type: 'ping' });
         }
     }
-
-    _isLanMode() {
-        return process.env.LAN_MODE !== 'false';
-    }
-
-    _selectLocalIP(ips, fallbackIP) {
-        const fallback = Peer.normalizeIP(fallbackIP);
-        if (Peer.canUseForLanRoom(fallback)) {
-            return fallback;
-        }
-
-        const normalized = ips
-            .map(ip => Peer.normalizeIP(ip))
-            .filter(ip => !!ip && Peer.canUseForLanRoom(ip));
-
-        // If the server only sees localhost, use the browser-reported LAN IP as a dev fallback.
-        if (fallback === '127.0.0.1') {
-            return normalized[0] || fallback;
-        }
-
-        return fallback;
-    }
-
-    _isPrivateIP(ip) {
-        return Peer.isPrivateIP(ip);
-    }
-
-    _getRoomKey(ip) {
-        ip = Peer.normalizeIP(ip);
-        if (!this._isLanMode()) return ip;
-        return Peer.canUseForLanRoom(ip) ? this._getSubnet(ip) : ip;
-    }
-
-    _getSubnet(ip) {
-        return Peer.getSubnet(ip);
+    async close() {
+        clearInterval(this.timer);
+        for (const peer of this.connections.values()) peer.socket.terminate();
+        await new Promise(resolve => this._wss.close(resolve));
     }
 }
-
-
-
-class Peer {
-
-    constructor(socket, request) {
-        this.socket = socket;
-        this._setIP(request);
-        this._setPeerId(request)
-        this.rtcSupported = request.url.indexOf('webrtc') > -1;
-        this._setName(request);
-        this.timerId = 0;
-        this.lastBeat = Date.now();
-    }
-
-    _setIP(request) {
-        if (request.headers['x-forwarded-for']) {
-            this.ip = request.headers['x-forwarded-for'].split(/\s*,\s*/)[0];
-        } else {
-            this.ip = request.connection.remoteAddress;
-        }
-        this.ip = Peer.normalizeIP(this.ip);
-
-        // 局域网模式按 IPv4 私网 /24 或 IPv6 /64 分组；公网模式按精确 IP 分组。
-        this.roomKey = process.env.LAN_MODE === 'false' || !Peer.canUseForLanRoom(this.ip)
-            ? this.ip
-            : this._getSubnet(this.ip);
-    }
-
-    _getSubnet(ip) {
-        return Peer.getSubnet(ip);
-    }
-
-    _setPeerId(request) {
-        // 优先从 URL 参数获取（客户端 localStorage 生成的唯一 ID）
-        const url = new URL(request.url, 'http://localhost');
-        const peerId = url.searchParams.get('peerId');
-        if (peerId) {
-            this.id = peerId;
-            return;
-        }
-        // 其次从 cookie 获取
-        if (request.headers.cookie) {
-            const match = request.headers.cookie.match(/peerid=([^;]+)/);
-            if (match) {
-                this.id = match[1];
-                return;
-            }
-        }
-        // 最后生成新的 UUID
-        this.id = Peer.uuid();
-    }
-
-    toString() {
-        return `<Peer id=${this.id} ip=${this.ip} roomKey=${this.roomKey} rtcSupported=${this.rtcSupported}>`
-    }
-
-    _setName(req) {
-        let ua = parser(req.headers['user-agent']);
-
-        let deviceName = '';
-
-        if (ua.os && ua.os.name) {
-            deviceName = ua.os.name.replace('Mac OS', 'Mac') + ' ';
-        }
-
-        if (ua.device.model) {
-            deviceName += ua.device.model;
-        } else {
-            deviceName += ua.browser.name;
-        }
-
-        if(!deviceName)
-            deviceName = '未知设备';
-
-        this.name = {
-            model: ua.device.model,
-            os: ua.os.name,
-            browser: ua.browser.name,
-            type: ua.device.type,
-            deviceName,
-            displayName: deviceName
-        };
-    }
-
-    getInfo() {
-        return {
-            id: this.id,
-            name: this.name,
-            rtcSupported: this.rtcSupported
-        }
-    }
-
-    static uuid() {
-        let uuid = '',
-            ii;
-        for (ii = 0; ii < 32; ii += 1) {
-            switch (ii) {
-                case 8:
-                case 20:
-                    uuid += '-';
-                    uuid += (Math.random() * 16 | 0).toString(16);
-                    break;
-                case 12:
-                    uuid += '-';
-                    uuid += '4';
-                    break;
-                case 16:
-                    uuid += '-';
-                    uuid += (Math.random() * 4 | 8).toString(16);
-                    break;
-                default:
-                    uuid += (Math.random() * 16 | 0).toString(16);
-            }
-        }
-        return uuid;
-    };
-
-    static normalizeIP(ip) {
-        if (!ip) return '';
-        ip = ip.toLowerCase();
-        if (ip === '::1') return '127.0.0.1';
-        if (ip.startsWith('::ffff:')) return ip.substring(7);
-        return ip;
-    }
-
-    static isPrivateIP(ip) {
-        ip = Peer.normalizeIP(ip);
-        if (!ip || !ip.includes('.')) return false;
-        if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
-        if (ip.startsWith('172.')) {
-            const second = parseInt(ip.split('.')[1]);
-            return second >= 16 && second <= 31;
-        }
-        return false;
-    }
-
-    static isLikelyVirtualIP(ip) {
-        ip = Peer.normalizeIP(ip);
-        return /^172\.(1[6-9]|2\d|3[01])\.0\.1$/.test(ip);
-    }
-
-    static isUsableIPv6ForLan(ip) {
-        ip = Peer.normalizeIP(ip);
-        return ip.includes(':') && !ip.startsWith('fe80:') && ip !== '::';
-    }
-
-    static canUseForLanRoom(ip) {
-        ip = Peer.normalizeIP(ip);
-        return (Peer.isPrivateIP(ip) && !Peer.isLikelyVirtualIP(ip)) || Peer.isUsableIPv6ForLan(ip);
-    }
-
-    static getSubnet(ip) {
-        ip = Peer.normalizeIP(ip);
-        if (ip.includes('.')) {
-            const parts = ip.split('.');
-            if (parts.length === 4) {
-                return parts.slice(0, 3).join('.') + '.0/24';
-            }
-        }
-        if (ip.includes(':')) {
-            const parts = Peer.expandIPv6(ip);
-            if (parts.length >= 4) {
-                return parts.slice(0, 4).join(':') + '::/64';
-            }
-        }
-        return ip;
-    }
-
-    static expandIPv6(ip) {
-        ip = Peer.normalizeIP(ip);
-        const pieces = ip.split('::');
-        if (pieces.length === 1) return ip.split(':').filter(part => part.length);
-
-        const left = pieces[0] ? pieces[0].split(':') : [];
-        const right = pieces[1] ? pieces[1].split(':') : [];
-        const missing = 8 - left.length - right.length;
-        return left
-            .concat(Array(Math.max(missing, 0)).fill('0'))
-            .concat(right)
-            .map(part => part || '0');
-    }
+module.exports = { ZeydropServer, validRoom, ROOM_TTL, SESSION_TTL, RESUME_TTL };
+if (require.main === module) {
+    if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) throw Error('ALLOWED_ORIGINS is required in production');
+    const server = new ZeydropServer();
+    console.info('Zeydrop signaling listening on loopback; file relay disabled');
+    for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close().then(() => process.exit(0)));
 }
-
-Object.defineProperty(String.prototype, 'hashCode', {
-  value: function() {
-    var hash = 0, i, chr;
-    for (i = 0; i < this.length; i++) {
-      chr   = this.charCodeAt(i);
-      hash  = ((hash << 5) - hash) + chr;
-      hash |= 0; // Convert to 32bit integer
-    }
-    return hash;
-  }
-});
-
-const server = new SnapdropServer(process.env.PORT || 3000);
