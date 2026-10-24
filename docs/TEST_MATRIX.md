@@ -11,7 +11,7 @@
 | 接收前零字节、0 / 3 / 2 MiB 文件 | 协议双端模拟 + sink | 通过 |
 | SHA-256 损坏、超限、内存上限、未核对身份 | 协议模拟 | 通过 |
 | 已接受文件的同页短时恢复、写入中的偏移、前缀篡改拒绝、伪造恢复请求 | 新增状态机与模拟原生 writer 测试 | CI #15 通过，不等于公网/实机 |
-| 真正 WSS 中断 / 新 peer / 原生 OPFS 8 MiB 恢复 / 独立 SHA-256 | 新增 Chromium + Firefox 双上下文 E2E | 待新 PR head CI 验证，CI #15 未覆盖该用例 |
+| 真正 WSS 中断 / 新 peer / 原生 OPFS 8 MiB 恢复 / 独立 SHA-256 | Chromium + Firefox 双上下文 E2E | CI #16 均通过；同机 STUN 关闭，不代表公网 NAT 实测 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
 | Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 双 profile 浏览器 | CI #10 完整通过 |
 | Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #10 全部通过（原生 OPFS） |

@@ -6,7 +6,7 @@
 
 在 `6e88e5312b29e3645d6d20a356ac2f70ad8c68fa` 已合并入开发分支的代码中，增加 `resume-offer → resume-at → resume-confirm` DataChannel 协商：原设备在同一页面内短时重连，双方重新核对安全码、重新核验 selected 非 relay 路径后，以已写入偏移和 SHA-256 前缀进行确认，发送端只传余下字节。原 File 和接收 sink 仅保留在本页内存中、最长 120 秒；刷新/关闭浏览器、身份变化、跨会话及服务端重启后不支持恢复。多文件队列的待发文件暂不保留。不会经 WSS/服务器转发文件名、哈希、偏移或文件内容。
 
-这一阶段增加 `tests/resume.test.cjs` 的真实代码级状态机测试：写入过程中断线、原 peer 对象替换、成功恢复并全文件校验、篡改前缀拒绝、伪造续传请求不能绕过接收授权；修复旧 ACK 等待 Promise 结束时误取消恢复对象的竞态。CI #15（提交 `6e88e53`）通过 47 项 Node 测试、构建/依赖/Nginx 检查及原有 Chromium、Firefox、WebKit 矩阵。该 CI 尚未覆盖**真实浏览器中进行中的文件断线再续传**；已在后续提交的 `tests/browser.cjs` 中增加两页真实 DataChannel / OPFS 的 8 MiB 中断续传与独立磁盘哈希测试，须以**新 PR head 的 CI 结果**确认，不提前宣布通过。
+这一阶段增加 `tests/resume.test.cjs` 的真实代码级状态机测试：写入过程中断线、原 peer 对象替换、成功恢复并全文件校验、篡改前缀拒绝、伪造续传请求不能绕过接收授权；修复旧 ACK 等待 Promise 结束时误取消恢复对象的竞态。CI #15（提交 `6e88e53`）通过 47 项 Node 测试、构建/依赖/Nginx 检查及原有 Chromium、Firefox、WebKit 矩阵。**CI #16（开发提交 `51685d9`）已完整通过**：47 项 Node 单测、构建/审计/Nginx/Chromium/Firefox/WebKit。新增 Chromium 与 Firefox 双浏览器上下文实际 DataChannel + OPFS：写入 131,072 B 时中断 WSS，同一会话重新配对并核对安全码后续传 8,388,608 B；Chromium 发送 8,486,912 B、Firefox 8,437,760 B，最终 SHA-256 均正确。这是同机 STUN 关闭条件，不代表公网 NAT 成功。证据见 `docs/evidence/ci16-resume.json` 和 GitHub Actions run 40090569875。
 
 仍需真实双网络/移动设备与 Safari 测试、跨页面重新打开后的持久化恢复、真正用户文件 picker 授权、服务端重启及生产部署。当前 PR 保持 Draft，不合并稳定版、不部署。
 
@@ -54,16 +54,16 @@ Chromium 1 GiB 历史用时 99.919 秒（含独立磁盘读取/哈希），接�
 | M0 | 仓库最终更名由用户手动完成；更深的最初导入历史溯源 |
 | M1 | 真实跨公网 STUN/NAT、跨运营商连接证据；显式同意的 LAN 发现 |
 | M2 | 真实 IPv6/双栈/严格 NAT、Wi-Fi/蜂窝切换、后台冻结；本轮恢复改动的浏览器与实机回归 |
-| M3 | 同页短时续传首版已提交；仍待真实浏览器续传 CI / 跨公网实机验收、页面重载后的持久化恢复、真实 picker/磁盘/移动端权限与大文件能力 |
+| M3 | 同页短时续传 + Chromium/Firefox 真实 DataChannel/OPFS 回归 CI #16 通过；仍待跨公网实机、页面重载持久化恢复、真实 picker/磁盘/移动端权限与大文件能力 |
 | M4 | 屏幕阅读器、平台安装/升级、触屏实机 |
-| M5 | TEST_MATRIX 的真实设备/跨网络全部发布门槛；本轮完整 CI |
+| M5 | CI #16 全部自动化已通过；TEST_MATRIX 真实设备/跨网络发布门槛仍未完成 |
 | M6 | 正式主机及已确认域名/TLS；安装、证书续期、重启、迁移和回滚演练 |
 
 CI 同机且关闭 STUN 不证明公网 NAT 成功率。历史 OPFS 是原生 writer，但 picker 选择由测试替代；WebKit UI 不等于 iOS Safari 文件实传。Firefox 历史未跑 1 GiB。页面刷新会新建身份，不能把从零重发宣传成续传；无流式能力接收中/待保存 Blob 合计最多 64 MiB。邀请未配对 15 分钟，配对后最长 12 小时，离线席位保留 2 分钟，恢复不延长固定会话期限。
 
 ## 下一步与工作边界
 
-先核验**新增真实浏览器续传 E2E** 的新 PR head CI，再按 REAL_DEVICE_TESTING / TEST_MATRIX 采集真实两端、selected pair 或无 pair 的成功/失败证据。持久化续传仍需独立设计文件句柄重获授权、接收端可靠落盘 checkpoint/原子恢复、接收同意与失效清理；不得跳过接收授权、凭旧身份替换对端或改走服务器文件中继。LAN 发现必须显式同意。
+CI #16 已核验新增同机浏览器续传 E2E；下一步按 REAL_DEVICE_TESTING / TEST_MATRIX 采集真实跨网络 selected pair 或无 pair 的成功/失败证据。持久化续传仍需独立设计文件句柄重获授权、接收端可靠落盘 checkpoint/原子恢复、接收同意与失效清理；不得跳过接收授权、凭旧身份替换对端或改走服务器文件中继。LAN 发现必须显式同意。
 
 当前环境没有第二个真实网络设备、Safari/iOS 硬件、用户生产主机或已确认域名/证书。本轮没有正式部署、Release 或稳定版合并，也没有操作用户电脑、购买域名或创建定时任务。
 
