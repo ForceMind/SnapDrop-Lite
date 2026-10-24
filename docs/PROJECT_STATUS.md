@@ -2,6 +2,14 @@
 
 更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
+## 2026-10-24：跨刷新本机断点恢复候选（等待新 CI）
+
+新增 `client/scripts/recovery-worker.js` 与桥接 `client/scripts/recovery.js`：只有接收方主动选择“在本机保存断点”时，才写入当前浏览器 Origin Private File System (OPFS)。专用 Worker 的同步访问句柄分块写入/flush，每达到约 1 MiB 或传输结束持久化一次；先落盘再更新元信息，页面异常中断后以已提交 offset 截断未提交尾部。记录最长 24 小时，最多保留 20 项，可从页面主动查看与删除。未启用选项时沿用原生保存器/64 MiB 内存回退，不改变默认文件通路。
+
+收到新文件邀请后，接收方必须再次明确勾选匹配的本机断点；仅同文件名、大小和 MIME 类型可尝试，重新验证本地前缀 SHA-256，再通过新 DataChannel 的 `resume-at → resume-confirm` 与发送端重新选择的本地 File 逐字节比对前缀。成功后只传剩余部分，完成后仍需全文件 SHA-256。完全不通过信令服务器传文件名、哈希或正文，也不使用 TURN/DERP。中断的本机副本仍可能因浏览器配额/数据清理丢失；跨设备、Safari/iOS、真实公网 NAT、双标签锁、持久化 UI 端到端实测仍待验证。跨刷新需要新邀请，并不恢复已丢失的服务器身份。
+
+新增 Playwright Chromium **真实 OPFS Worker** 测试 `tests/recovery-browser.cjs`：创建/写入/刷新/回滚未提交尾部/再次写入/完整性校验/清理。新提交需要以实际 CI 状态判断成败；不得沿用 CI #16/#18 的旧绿灯。PR #2 保持 Draft，不合并、正式部署或强推。
+
 ## 2026-10-24：Firefox DataChannel error/close 竞态修复（待新提交 CI 验证）
 
 CI #16 已通过 Chromium/Firefox 续传，归档文档提交的 CI #17 则在 Firefox 8 MiB 恢复时出现一次 180 秒超时；接收端报告“续传协商超时”，发送端报告“文件通道发生错误”。这是实际测试失败，不应将 CI #17 标记为通过。原因定位为旧 RTCDataChannel 的 `error` 在 Firefox 可先于 `close` 到达，而该事件此前直接调用终止性 `_fail`，提前删除同页续传断点。现已把 transient `error/close` 统一为有界重连入口；协议违规仍调用不可恢复的 `_protocolError`。新增同次 error+close 去重、接收端等待截止及协议致命性回归测试。本段变更仍以之后新 PR head 的 CI 为准，真实公网和 Safari 实机继续未测。

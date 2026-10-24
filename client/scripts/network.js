@@ -257,7 +257,7 @@ class RTCPeer extends TransferPeer {
         if (reason) {
             // Transient loss retains a bounded local checkpoint; terminal failure aborts.
             if (['connecting', 'disconnected'].includes(state) && typeof this.suspendTransfers === 'function') this.suspendTransfers(reason);
-            else this.abortAll(reason);
+            else this.abortAll(reason, state === 'failed');
         }
     }
     _pathUnavailable(reason) {
@@ -369,7 +369,7 @@ class PeersManager {
         Events.on('signal', event => this._onSignal(event.detail));
         Events.on('files-selected', event => this.peers.get(event.detail.to)?.sendFiles(event.detail.files));
         Events.on('send-text', event => this.peers.get(event.detail.to)?.sendText(event.detail.text));
-        Events.on('file-accepted', event => this.peers.get(event.detail.from)?.acceptIncoming(event.detail.id));
+        Events.on('file-accepted', event => this.peers.get(event.detail.from)?.acceptIncoming(event.detail.id, { durable: event.detail.durable, resumeLocalId: event.detail.resumeLocalId }));
         Events.on('file-rejected', event => this.peers.get(event.detail.from)?.rejectIncoming(event.detail.id));
         Events.on('file-saved', event => { const peer = this.peers.get(event.detail.sender); if (peer?._isConnected()) peer.sendJSON({ type: 'ready-next', id: event.detail.id }); });
         Events.on('verify-peer', event => this.peers.get(event.detail)?.verify());

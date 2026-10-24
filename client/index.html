@@ -113,10 +113,11 @@
                     </div>
                     <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
                     <div class="diagnostics-action"><button id="exportDiagnostics" type="button">导出连接诊断</button><small>仅在本机下载连接状态，不含 IP、邀请或文件信息</small></div>
+                    <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>仅存在当前浏览器，24 小时后自动过期；可随时删除</small><div id="localStorageRecords" hidden></div></div>
                 </div>
             </section>
         </main>
-        <section id="transferSection" class="transfer-section" hidden aria-label="传输记录"><h2>文件传输</h2><p>当前连接内可暂停和继续；断线后请重新选择文件。只有校验通过才显示完成。</p><div id="transfers" aria-live="polite"></div></section>
+        <section id="transferSection" class="transfer-section" hidden aria-label="传输记录"><h2>文件传输</h2><p>当前连接内可暂停和继续，短时重连可保留本页断点；实验性本地暂存需接收时主动选择。只有校验通过才显示完成。</p><div id="transfers" aria-live="polite"></div></section>
 
         <footer class="site-footer">
             <div id="displayName" class="local-device" placeholder="正在识别当前设备"></div>
@@ -133,6 +134,11 @@
                 <div class="offer-file">
                     <span class="offer-file-icon" aria-hidden="true">▤</span>
                     <div><strong id="offerFileName">文件名</strong><span id="offerFileSize">文件大小</span></div>
+                </div>
+                <div id="recoveryReceiveOptions" class="recovery-options" hidden>
+                    <label><input type="checkbox" id="durableLocalReceive"> 在本机保存断点（实验功能，占用浏览器存储；24 小时后自动清理）</label>
+                    <label id="localResumeOption" hidden><input type="checkbox" id="useLocalCheckpoint"> 发现匹配的未完成文件：尝试从已保存位置续传</label>
+                    <small>恢复时双方重新配对、核对安全码，发送方需要重新选择原文件。</small>
                 </div>
                 <div class="row-reverse">
                     <button class="button offer-accept" id="acceptFileOffer" type="button" close>接收文件</button>
@@ -207,7 +213,7 @@
             <div class="about-desc">
                 <p>无需注册、无需安装。通过邀请链接配对后，在网络允许时通过 WebRTC 在两台设备之间直接传输文件。</p>
                 <p>服务器只用于页面加载和交换连接信令，不中转文件内容。部分严格 NAT 和防火墙环境无法直连。</p>
-                <p>网页、信令和 STUN 探测仍会产生少量流量。邀请链接是访问凭证，请只发给信任的人。请在双方核对与 DTLS 指纹绑定的安全码。</p><p>支持流式保存的桌面 Chrome / Edge 可直接写入文件；其他浏览器最多合计保存 64 MiB。断线不支持跨连接续传，必须重新选择文件。</p><p class="about-features">支持文件、文本、图片传输 | 拖拽发送 | PWA 支持</p>
+                <p>网页、信令和 STUN 探测仍会产生少量流量。邀请链接是访问凭证，请只发给信任的人。请在双方核对与 DTLS 指纹绑定的安全码。</p><p>支持流式保存的桌面 Chrome / Edge 可直接写入文件；其他浏览器最多合计保存 64 MiB。同页短时中断支持经重新核验的续传；跨刷新恢复须手动选择浏览器本地断点，仍属实验功能。</p><p class="about-features">支持文件、文本、图片传输 | 拖拽发送 | PWA 支持</p>
                 <p class="about-version">0.3.0-dev.1 · Zeydrop</p>
             </div>
         </section>
@@ -258,6 +264,7 @@
     <!-- Scripts -->
     <script src="config.js"></script>
     <script src="scripts/vendor.js"></script>
+    <script src="scripts/recovery.js"></script>
     <script src="scripts/transfer.js"></script>
     <script src="scripts/network.js"></script>
     <script src="scripts/diagnostics.js"></script>

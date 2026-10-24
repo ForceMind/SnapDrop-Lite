@@ -23,7 +23,7 @@
 - 16 KiB 分块，256 KiB 接收写入确认窗口；DataChannel 背压和接收消息队列均有上限。
 - 增量 SHA-256，完整长度和哈希均匹配后才报告完成。
 - 支持多文件发送队列、当前连接内暂停 / 继续和取消。**同一页面中短时断线可尝试续传已同意接收的文件**：原设备在 120 秒内重新配对，双方重新核对安全码，先校验接收端实际已写入偏移与 SHA-256 前缀，成功后只发剩余字节；不一致则取消。
-- **不支持刷新网页、关闭浏览器或服务器会话丢失后的持久化续传**。接收写入句柄和发送 File 对象仅保存在当前页内存中；续传失败或超时需重新选择文件。仅保留当前已接受的文件，尚不保留断线时的多文件队列。
+- **跨刷新本机断点恢复是实验功能，仅接收端主动勾选后使用**：原始文件分块在当前浏览器 OPFS 保存，每约 1 MiB 提交持久化检查点；刷新/重新开页后需建立新邀请、重新核对安全码，发送端重新选择原文件并对比已存前缀 SHA-256，不匹配必须取消。默认保存模式不会产生持久化断点；浏览器清站点数据、磁盘配额不足、崩溃或存储驱逐仍可能导致丢失，绝不保证恢复成功。服务器重启后需要新配对，不恢复旧信令身份。仅保留已接受的当前文件，多文件队列不跨页保留。详见 [本地恢复说明](docs/RECOVERY_STORAGE.md)。
 - 支持 `showSaveFilePicker` 的浏览器直接写入接收方选择的文件；必须由接收按钮触发授权。兼容性和用户操作仍需实机验证。
 - 无流式文件保存能力时，接收中与待保存文件合计最多 **64 MiB**；超限在传输前拒绝。Safari / iOS 不宣称支持 1 GiB 文件。
 - 拒绝、超时或校验失败不交付完成文件；接收方取消时尽力 abort 未完成写入。中断恢复不保留未经验证的进度。
@@ -50,6 +50,7 @@ npx playwright install --with-deps chromium firefox webkit
 LARGE_FILE_TEST=1 npm run test:browser
 BROWSER_TYPE=firefox npm run test:browser
 BROWSER_TYPE=webkit npm run test:smoke
+node tests/recovery-browser.cjs
 ```
 
 `dist/` 由确定性构建生成，不再提交旧构建。固定路径的 Service Worker 预缓存完整同版本 shell；新版本等待旧标签关闭后激活，避免传输中强制刷新。配置、信令和邀请 URL 不进入动态缓存。
@@ -74,6 +75,7 @@ sudo DOMAIN=transfer.example.com \
 - [UI 设计](docs/UI_DESIGN_V1.md)
 - [协议、安全和架构](docs/ARCHITECTURE.md)
 - [测试矩阵](docs/TEST_MATRIX.md) / [实机方法](docs/REAL_DEVICE_TESTING.md)
+- [实验性本机断点存储与隐私](docs/RECOVERY_STORAGE.md)
 - [STUN 配置与官方来源](docs/STUN_CONFIGURATION.md)
 - [许可证来源](docs/LICENSE_PROVENANCE.md)
 

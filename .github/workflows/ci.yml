@@ -31,6 +31,7 @@ jobs:
       - id: browsers
         if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium firefox webkit
+      - run: node tests/recovery-browser.cjs
       - run: LARGE_FILE_TEST=1 npm run test:browser
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=firefox npm run test:browser

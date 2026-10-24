@@ -29,7 +29,9 @@ class ZeydropRecoveryStore {
             catch (e) { this.pending.delete(request); reject(e); }
         });
     }
+    async available() { try { return await this.request('probe'); } catch { return false; } }
     list() { return this.request('list'); }
+    completed(id) { return this.request('completed', id); }
     erase(id) { return this.request('erase', id); }
     async open(meta) {
         await this.request('start', meta);
@@ -49,13 +51,16 @@ class ZeydropDurableSink {
     async write(bytes) {
         if (this.size + bytes.byteLength > this.meta.size) throw Error('文件超出声明大小');
         // Dedicated OPFS worker owns the exclusive access handle.
-        await this.store.request('append', this.id, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        const chunk = bytes instanceof ArrayBuffer ? bytes
+            : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+        await this.store.request('append', this.id, chunk);
         this.size += bytes.byteLength;
     }
     async checkpoint(sha256, force = false) {
         this.lastCommitted = await this.store.request('checkpoint', this.id, sha256, force);
         return this.lastCommitted;
     }
+    async park(sha256) { await this.store.request('park', this.id, sha256); }
     async finish(sha256) {
         if (this.size !== this.meta.size) throw Error('文件长度不一致');
         const result = await this.store.request('finish', this.id, sha256);

@@ -132,6 +132,32 @@ async function checkpoint(id, sha256, force) {
     item.meta = updated; item.committed = item.offset;
     return item.committed;
 }
+async function park(id, sha256) {
+    const item = active.get(id);
+    if (!item) return false;
+    await checkpoint(id, sha256, true);
+    item.access.close(); active.delete(id);
+    return true;
+}
+async function completed(id) {
+    const meta = await readMeta(id);
+    if (!meta || meta.phase !== 'complete' || !validHash(meta.completeSha256))
+        throw Error('本机没有已验证完成的文件');
+    const file = await existing(partName(id));
+    if (!file) throw Error('本机文件不存在');
+    const blob = await file.getFile();
+    if (blob.size !== meta.size) throw Error('本机文件大小已变化');
+    return { meta, blob };
+}
+async function probe() {
+    const dir = await folder(), handle = await dir.getFileHandle('capability-probe', { create: true });
+    try {
+        if (typeof handle.createSyncAccessHandle !== 'function') return false;
+        const access = await handle.createSyncAccessHandle();
+        access.close();
+        return true;
+    } finally { await dir.removeEntry('capability-probe').catch(() => {}); }
+}
 async function finish(id, sha256) {
     const item = active.get(id);
     if (!item || item.offset !== item.meta.size || !validHash(sha256)) throw Error('本机文件尚未完成校验');
@@ -142,7 +168,7 @@ async function finish(id, sha256) {
     return { meta: complete, file: await item.file.getFile() };
 }
 async function list() { return listing(); }
-const tasks = { start, resume, append, checkpoint, finish, erase, list };
+const tasks = { probe, start, resume, append, checkpoint, park, finish, completed, erase, list };
 self.onmessage = async event => {
     const { request, type, args = [] } = event.data || {};
     if (!Number.isSafeInteger(request) || !Object.hasOwn(tasks, type) || !Array.isArray(args)) return;

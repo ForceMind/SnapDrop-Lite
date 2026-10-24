@@ -38,14 +38,38 @@ class FileOfferDialog extends Dialog {
     next() {
         if (this.active || !this.queue.length) return;
         this.active = this.queue.shift(); $('offerFileName').textContent = this.active.name;
-        $('offerFileSize').textContent = fmt(this.active.size) + (window.showSaveFilePicker ? ' · 直接写入你选择的文件' : ' · 此浏览器最多合计 64 MiB');
+        $('offerFileSize').textContent = fmt(this.active.size) + (window.showSaveFilePicker ? ' · 默认保存到你选择的文件' : ' · 默认内存保存最多 64 MiB');
+        $('durableLocalReceive').checked = false;
+        $('useLocalCheckpoint').checked = false;
+        $('localResumeOption').hidden = true; this.candidate = null;
         this.show();
+        if (window.ZeydropRecovery?.supported) {
+            const active = this.active;
+            window.ZeydropRecovery.available().then(available => {
+                if (this.active !== active || !available) return;
+                $('recoveryReceiveOptions').hidden = false;
+                return window.ZeydropRecovery.list();
+            }).then(items => {
+                if (this.active !== active || !items) return;
+                const match = items.find(item => item.phase === 'partial' && item.offset > 0
+                    && item.name === active.name && item.size === active.size && item.mime === active.mime);
+                if (!match) return;
+                this.candidate = match;
+                $('localResumeOption').hidden = false;
+                $('localResumeOption').lastChild.textContent = ' 本机已有 ' + fmt(match.offset)
+                    + ' 断点：重新配对后校验并从这里续传';
+            }).catch(() => {});
+        }
     }
     decide(accept) {
         if (!this.active) return;
         const offer = this.active; this.active = null;
+        // Only a user click chooses a partial. Never auto-bind stored files to a new peer.
+        const resumeLocalId = accept && $('useLocalCheckpoint').checked ? this.candidate?.id : null;
+        const durable = accept && ($('durableLocalReceive').checked || !!resumeLocalId);
         // Synchronous event preserves activation for showSaveFilePicker.
-        Events.fire(accept ? 'file-accepted' : 'file-rejected', { from: offer.sender, id: offer.id });
+        Events.fire(accept ? 'file-accepted' : 'file-rejected', { from: offer.sender, id: offer.id, durable, resumeLocalId });
+        $('recoveryReceiveOptions').hidden = true;
         this.hide(); this.next();
     }
     dismiss() { this.decide(false); }
@@ -215,6 +239,58 @@ class Zeydrop {
         $('copy').onclick = () => navigator.clipboard.writeText($('text').textContent).catch(() => Events.fire('notify-user', '请手动选择并复制文本'));
     }
 }
+
+// Files are private to this origin and only enumerated after a local user click.
+// Completed files are independently rehashed before a download link is shown.
+const localRecovery = window.ZeydropRecovery;
+if (localRecovery?.supported) localRecovery.available().then(available => {
+    if (!available) return;
+    $('localStorageSection').hidden = false;
+    const records = $('localStorageRecords');
+    $('localStorageManage').onclick = async () => {
+        records.hidden = !records.hidden;
+        if (records.hidden) return;
+        const refresh = async () => {
+            records.replaceChildren();
+            const items = await localRecovery.list();
+            if (!items.length) { const empty = document.createElement('p'); empty.textContent = '当前没有暂存文件'; records.append(empty); return; }
+            for (const item of items) {
+                const row = document.createElement('div'); row.className = 'recovery-record';
+                const title = document.createElement('span');
+                title.textContent = item.name + ' · ' + fmt(item.offset) + '/' + fmt(item.size)
+                    + (item.phase === 'complete' ? ' · 已完成（待下载）' : ' · 未完成');
+                row.append(title);
+                if (item.phase === 'complete') {
+                    const load = document.createElement('button'); load.type = 'button'; load.textContent = '验证并准备保存';
+                    load.onclick = async () => {
+                        load.disabled = true;
+                        try {
+                            const { blob, meta } = await localRecovery.completed(item.id);
+                            const hash = window.ZeydropHash.create();
+                            for await (const chunk of blob.stream()) hash.update(new Uint8Array(chunk));
+                            if (hex(hash.digest()) !== meta.completeSha256) throw Error('本机文件校验失败，请删除损坏记录');
+                            const link = document.createElement('a');
+                            link.textContent = '点击保存'; link.href = URL.createObjectURL(blob);
+                            link.download = meta.name; link.className = 'button';
+                            link.addEventListener('click', () => setTimeout(() => URL.revokeObjectURL(link.href), 60000), { once: true });
+                            row.append(link); load.remove();
+                        } catch (e) { load.disabled = false; Events.fire('notify-user', e.message); }
+                    };
+                    row.append(load);
+                }
+                const del = document.createElement('button'); del.type = 'button'; del.textContent = '删除本机数据';
+                del.onclick = async () => {
+                    del.disabled = true;
+                    try { await localRecovery.erase(item.id); await refresh(); }
+                    catch (e) { del.disabled = false; Events.fire('notify-user', e.message); }
+                };
+                row.append(del); records.append(row);
+            }
+        };
+        try { await refresh(); } catch (e) { Events.fire('notify-user', e.message); }
+    };
+}).catch(() => {});
+
 const zeydrop = new Zeydrop();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').then(registration => {
     registration.addEventListener('updatefound', () => {
