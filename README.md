@@ -4,7 +4,7 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。CI #16 已通过 47 项 Node 测试、Chromium 1 GiB / Firefox 100 MiB 实际 DataChannel 与独立磁盘 SHA-256、两种浏览器的 8 MiB 同页断线续传回归，以及 WebKit UI 检查；这些均为同一 CI 主机测试，详见 [测试报告](docs/TEST_REPORT_20261019.md)。仓库正式更名留待最后由用户手动完成，不阻塞研发；当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和原始历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
+当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。实现提交 `202de19` 的 [CI #28](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/41990699426) 已通过 **60/60 Node 测试**、Chromium 1 GiB / Firefox 100 MiB 的实际 DataChannel 流式传输与独立 SHA-256、两种浏览器的 8 MiB 同页短时续传，以及 Chromium 4 MiB 文件跨刷新 OPFS 断点恢复（1 MiB 已保存 / 3 MiB 补传）、双标签锁检查与 WebKit UI smoke。**这些均在同一 CI 主机进行，关闭 STUN，不能代表公网 NAT 穿透、真实移动设备或 Safari/iOS 文件传输测试。** 最新功能和测试证据见 [项目状态](docs/PROJECT_STATUS.md)、[测试矩阵](docs/TEST_MATRIX.md)。仓库正式更名留待最后由用户手动完成；当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
 
 ## 使用流程
 
@@ -51,6 +51,7 @@ LARGE_FILE_TEST=1 npm run test:browser
 BROWSER_TYPE=firefox npm run test:browser
 BROWSER_TYPE=webkit npm run test:smoke
 node tests/recovery-browser.cjs
+node tests/persistent-flow-browser.cjs
 ```
 
 `dist/` 由确定性构建生成，不再提交旧构建。固定路径的 Service Worker 预缓存完整同版本 shell；新版本等待旧标签关闭后激活，避免传输中强制刷新。配置、信令和邀请 URL 不进入动态缓存。
