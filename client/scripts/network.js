@@ -218,7 +218,11 @@ class RTCPeer extends TransferPeer {
             && channel.readyState === 'open'
             && !['disconnected', 'failed', 'closed'].includes(this._state);
         channel.onmessage = event => {
-            if (isCurrentWire()) this._receive(event.data, isCurrentWire);
+            // Even when ICE recovers on the SAME DataChannel, a control frame
+            // queued before route revocation cannot apply to the new epoch.
+            const epoch = this._pathEpoch;
+            const valid = () => isCurrentWire() && this._pathEpoch === epoch;
+            if (valid()) this._receive(event.data, valid);
         };
         // Firefox can emit 'error' before 'close' for an interrupted RTCDataChannel.
         // Neither event alone proves protocol corruption. Preserve the bounded

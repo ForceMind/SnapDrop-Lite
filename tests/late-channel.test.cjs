@@ -81,5 +81,12 @@ test('obsolete channel callbacks cannot enqueue messages after rebind', () => {
     second.readyState = 'closed';
     second.onmessage({ data: JSON.stringify({ type:'hello', version:2 }) });
     assert.equal(received, 1, 'closing channel must reject frames');
+    second.readyState = 'open';
+    let queuedGuard;
+    peer._receive = (_, guard) => { queuedGuard = guard; };
+    second.onmessage({ data: JSON.stringify({ type: 'cancel', id:'a'.repeat(32) }) });
+    assert.equal(queuedGuard(), true);
+    peer._pathEpoch++;
+    assert.equal(queuedGuard(), false, 'ICE path epoch change rejects an already queued same-channel control');
     clearTimeout(peer._deadline);
 });
