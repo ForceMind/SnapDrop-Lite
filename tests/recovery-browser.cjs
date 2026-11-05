@@ -85,6 +85,86 @@ async function main() {
             return { phase: meta.phase, hash: sum, count: (await store.list()).length };
         }, id);
         assert.deepEqual(complete, { phase: 'complete', hash: fullSha, count: 0 });
+        // True cross-tab contention: never steal a partial held by another
+        // OPFS worker. The first tab must remain able to release it normally.
+        const lockId = crypto.randomUUID();
+        const lockMeta = { id: lockId, name: 'locked.bin', size: 2048, mime: 'application/octet-stream' };
+        const lockSha = digest(Buffer.alloc(1024, 4));
+        await page.evaluate(async ({ meta, sha }) => {
+            const sink = await window.ZeydropRecovery.open(meta);
+            await sink.write(new Uint8Array(1024).fill(4));
+            await sink.checkpoint(sha, true);
+            window.__testLockedSink = sink;
+        }, { meta: lockMeta, sha: lockSha });
+        const other = await context.newPage();
+        await other.goto(url);
+        const lockError = await other.evaluate(async ({ id, meta }) => {
+            try { await window.ZeydropRecovery.restore(id, meta); return 'no error'; }
+            catch (e) { return String(e.message); }
+        }, { id: lockId, meta: lockMeta });
+        assert.match(lockError, /另一标签页/);
+        await page.evaluate(sha => window.__testLockedSink.park(sha), lockSha);
+        const released = await other.evaluate(async ({ id, meta, sha }) => {
+            const { sink, snapshot, offset } = await window.ZeydropRecovery.restore(id, meta);
+            const sum = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await snapshot.arrayBuffer())))
+                .map(byte => byte.toString(16).padStart(2, '0')).join('');
+            await sink.park(sha); await window.ZeydropRecovery.erase(id);
+            return { offset, sum };
+        }, { id: lockId, meta: lockMeta, sha: lockSha });
+        assert.deepEqual(released, { offset: 1024, sum: lockSha });
+        await other.close();
+
+        // Corrupted indexes must stay visible and deletable even if the item
+        // count is above the normal creation limit; silently slicing prevents cleanup.
+        const corruptIds = await page.evaluate(async () => {
+            const dir = await (await navigator.storage.getDirectory())
+                .getDirectoryHandle('zeydrop-recovery-v1', { create: true });
+            const ids = [];
+            for (let i = 0; i < 21; i++) {
+                const id = crypto.randomUUID(), file = await dir.getFileHandle(id + '.json', { create: true });
+                const writer = await file.createWritable();
+                await writer.write('{truncated metadata');
+                await writer.close();
+                ids.push(id);
+            }
+            return ids;
+        });
+        const found = await page.evaluate(() => window.ZeydropRecovery.list());
+        assert.equal(found.length, 21, 'do not hide corrupted overflow records');
+        assert.ok(found.every(record => record.phase === 'invalid'));
+        await assert.rejects(page.evaluate(async id => {
+            await window.ZeydropRecovery.open({
+                id, name: 'one-too-many.bin', size: 512, mime: 'application/octet-stream'
+            });
+        }, crypto.randomUUID()), /最多保留 20 个断点/);
+        await page.evaluate(async ids => {
+            for (const id of ids) await window.ZeydropRecovery.erase(id);
+        }, corruptIds);
+        assert.equal((await page.evaluate(() => window.ZeydropRecovery.list())).length, 0);
+
+        // Propagate actionable quota/permission errors through the worker bridge.
+        const typed = await page.evaluate(async () => {
+            const store = window.ZeydropRecovery, realWorker = store.worker;
+            const names = [];
+            try {
+                for (const errorName of ['QuotaExceededError', 'NotAllowedError']) {
+                    const fake = {
+                        onmessage: realWorker.onmessage,
+                        postMessage({ request }) {
+                            queueMicrotask(() => fake.onmessage({
+                                data: { request, ok: false, errorName, error: 'simulated storage failure' }
+                            }));
+                        }
+                    };
+                    store.worker = fake;
+                    try { await store.request('probe'); names.push('no error'); }
+                    catch (error) { names.push(error.name); }
+                }
+            } finally { store.worker = realWorker; }
+            return names;
+        });
+        assert.deepEqual(typed, ['QuotaExceededError', 'NotAllowedError']);
+        console.log('PASS real Chromium OPFS: exclusive second-tab lock, corrupted 21-record cleanup, typed failures');
         assert.deepEqual(errors, []);
         console.log('PASS actual Chromium OPFS: checkpoint, abrupt reload, rollback, prefix verify, finish, cleanup');
         await context.close();

@@ -257,6 +257,13 @@ const localRecovery = window.ZeydropRecovery;
 if (localRecovery?.supported) localRecovery.available().then(available => {
     if (!available) return;
     $('localStorageSection').hidden = false;
+    // Expired entries are cleaned on the next site visit and periodically
+    // while this page is open; there is no background task when it is closed.
+    void localRecovery.list().catch(() => {});
+    const recoverySweep = setInterval(() => {
+        void localRecovery.list().catch(() => {});
+    }, 60 * 60 * 1000);
+    window.addEventListener('pagehide', () => clearInterval(recoverySweep), { once: true });
     const records = $('localStorageRecords');
     $('localStorageManage').onclick = async () => {
         records.hidden = !records.hidden;

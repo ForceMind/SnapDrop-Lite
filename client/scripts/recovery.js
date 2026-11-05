@@ -15,7 +15,12 @@ class ZeydropRecoveryStore {
                 if (!job) return;
                 this.pending.delete(data.request);
                 if (data.ok) job.resolve(data.value);
-                else job.reject(Error(data.error || '本机文件操作失败'));
+                else {
+                    const error = Error(data.error || '本机文件操作失败');
+                    if (['QuotaExceededError', 'NotAllowedError', 'NoModificationAllowedError']
+                        .includes(data.errorName)) error.name = data.errorName;
+                    job.reject(error);
+                }
             };
             this.worker.onerror = () => {
                 for (const job of this.pending.values()) job.reject(Error('本机存储进程已中断'));

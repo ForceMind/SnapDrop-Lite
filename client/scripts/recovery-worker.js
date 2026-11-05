@@ -35,7 +35,10 @@ async function readMeta(id) {
         || typeof data.name !== 'string' || data.name.length > 255
         || typeof data.mime !== 'string' || data.mime.length > 128
         || !validHash(data.prefixSha256) || !Number.isSafeInteger(data.createdAt)
-        || !['partial', 'complete'].includes(data.phase)) throw Error('本机断点元数据损坏');
+        || !['partial', 'complete'].includes(data.phase)
+        || (data.phase === 'complete' && (data.offset !== data.size
+            || !validHash(data.completeSha256) || data.completeSha256 !== data.prefixSha256)))
+        throw Error('本机断点元数据损坏');
     return data;
 }
 async function writeMeta(meta) {
@@ -55,22 +58,63 @@ async function erase(id) {
     }
     return true;
 }
+// Cleanup is lazy while the site is open (and at the next visit), not a
+// background task that can run when every Zeydrop tab is closed. Never delete
+// an active or recently changed partial from a different tab.
 async function listing() {
-    const dir = await folder(), result = [];
+    const dir = await folder(), result = [], metadataIds = new Set(), orphanParts = [];
+    const now = Date.now();
+    const stale = file => Number.isFinite(file?.lastModified) && now - file.lastModified >= TTL_MS;
     for await (const [name] of dir.entries()) {
+        if (/^[a-f0-9-]{32,36}\.part$/.test(name)) {
+            orphanParts.push(name.slice(0, -5)); continue;
+        }
         if (!/^[a-f0-9-]{32,36}\.json$/.test(name)) continue;
         const id = name.slice(0, -5);
+        metadataIds.add(id);
         let meta;
-        try { meta = await readMeta(id); } catch { continue; }
-        if (!meta) continue;
-        if (Date.now() - meta.createdAt >= TTL_MS || meta.createdAt > Date.now() + 60000) {
-            if (!active.has(id)) await erase(id); continue;
+        try { meta = await readMeta(id); }
+        catch {
+            // Corrupted metadata stays visible for manual deletion. If both
+            // files are older than the TTL, it is safe to attempt garbage collection.
+            const header = await existing(metaName(id));
+            const part = await existing(partName(id));
+            if (!header) continue;
+            const headerFile = await header.getFile();
+            let partFile = null;
+            try { partFile = part && await part.getFile(); } catch {}
+            if (!active.has(id) && stale(headerFile) && (!part || (partFile && stale(partFile)))) {
+                try { await erase(id); } catch {} // A different tab may have a lock.
+            } else result.push({
+                version: 1, id, name: '损坏的本机断点元数据（可删除）',
+                size: 0, offset: 0, phase: 'invalid', createdAt: headerFile.lastModified
+            });
+            continue;
         }
+        if (!meta) continue;
         const part = await existing(partName(id));
-        if (!part) { if (!active.has(id)) await erase(id); continue; }
+        if (now - meta.createdAt >= TTL_MS || meta.createdAt > now + 60000 || !part) {
+            // Deletion may be blocked by another tab. Never erase a file
+            // with a recent write time even if the header timestamp is old.
+            let recentPart = false;
+            try { recentPart = !!part && !stale(await part.getFile()); } catch { recentPart = true; }
+            if (!active.has(id) && !recentPart) {
+                try { await erase(id); } catch {}
+            }
+            continue;
+        }
         result.push(meta);
     }
-    return result.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_ITEMS);
+    for (const id of orphanParts) {
+        if (metadataIds.has(id) || active.has(id)) continue;
+        try {
+            const part = await existing(partName(id));
+            if (part && stale(await part.getFile())) await erase(id);
+        } catch {} // Do not remove an in-use file in another tab.
+    }
+    // Do not slice here: records beyond the soft capacity must stay visible
+    // so users can delete corrupted/overflow records instead of losing access.
+    return result.sort((a, b) => b.createdAt - a.createdAt);
 }
 async function start(meta) {
     if (!meta || !validId(meta.id) || !Number.isSafeInteger(meta.size) || meta.size < 0
@@ -102,7 +146,13 @@ async function resume(id, expected) {
         throw Error('找不到匹配的本机未完成文件');
     const file = await existing(partName(id));
     if (!file) throw Error('本机断点数据已丢失');
-    const access = await file.createSyncAccessHandle();
+    let access;
+    try { access = await file.createSyncAccessHandle(); }
+    catch (error) {
+        if (['NoModificationAllowedError', 'InvalidStateError'].includes(error?.name))
+            throw Error('本机断点正在另一标签页使用，请先关闭另一页面再重试');
+        throw error;
+    }
     try {
         if (access.getSize() < meta.offset) throw Error('本机文件长度不足，断点不可用');
         access.truncate(meta.offset);
@@ -174,5 +224,9 @@ self.onmessage = async event => {
     const { request, type, args = [] } = event.data || {};
     if (!Number.isSafeInteger(request) || !Object.hasOwn(tasks, type) || !Array.isArray(args)) return;
     try { self.postMessage({ request, ok: true, value: await tasks[type](...args) }); }
-    catch (e) { self.postMessage({ request, ok: false, error: String(e?.message || e).slice(0, 200) }); }
+    catch (e) {
+        const errorName = ['QuotaExceededError', 'NotAllowedError', 'NoModificationAllowedError']
+            .includes(e?.name) ? e.name : 'Error';
+        self.postMessage({ request, ok: false, errorName, error: String(e?.message || e).slice(0, 200) });
+    }
 };
