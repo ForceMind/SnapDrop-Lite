@@ -211,7 +211,15 @@ class RTCPeer extends TransferPeer {
             clearInterval(this._statsTimer); this._statsTimer = setInterval(() => this._samplePath(), 2000);
             this._samplePath(); this._securityCode();
         };
-        channel.onmessage = event => this._receive(event.data);
+        // Bind every frame (including frames queued behind an async sink write)
+        // to the exact DataChannel that delivered it. A late frame from an
+        // obsolete/closed channel must never enter a new transfer session.
+        const isCurrentWire = () => !this._closed && this._channel === channel
+            && channel.readyState === 'open'
+            && !['disconnected', 'failed', 'closed'].includes(this._state);
+        channel.onmessage = event => {
+            if (isCurrentWire()) this._receive(event.data, isCurrentWire);
+        };
         // Firefox can emit 'error' before 'close' for an interrupted RTCDataChannel.
         // Neither event alone proves protocol corruption. Preserve the bounded
         // approved checkpoint while ICE recovers; _protocolError stays terminal.

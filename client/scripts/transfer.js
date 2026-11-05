@@ -56,13 +56,18 @@ class TransferPeer {
         this._held = null; this._pendingResumeOffer = null; this._resumeReady = Promise.resolve();
     }
     sendJSON(message) { this._send(JSON.stringify(message)); }
-    _receive(data) {
+    _receive(data, stillCurrent = null) {
+        // The message chain may be blocked on an earlier asynchronous disk
+        // write. Recheck channel identity at dequeue time, not only on receipt.
+        if (stillCurrent && !stillCurrent()) return;
         if (this._held && typeof data !== 'string') return; // Drop stale channel frames.
         this._queuedBytes += typeof data === 'string' ? data.length : data.byteLength;
         this._peakQueuedBytes = Math.max(this._peakQueuedBytes || 0, this._queuedBytes);
         if (this._queuedBytes > 1024 * 1024) { this._protocolError('接收缓冲超限'); return; }
-        this._messageChain = this._messageChain.then(() => this._onMessage(data))
-            .catch(error => this._protocolError(error.message))
+        this._messageChain = this._messageChain.then(() => {
+            if (stillCurrent && !stillCurrent()) return;
+            return this._onMessage(data);
+        }).catch(error => this._protocolError(error.message))
             .finally(() => { this._queuedBytes -= typeof data === 'string' ? data.length : data.byteLength; });
     }
     async _onMessage(data) {
