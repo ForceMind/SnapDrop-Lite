@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "project": "Zeydrop",
+  "date_utc": "2026-11-05T06:14:48Z",
+  "git_commit": "4c1dc884349b6b9c4558dd2ffc66a075f6858153",
+  "github_actions_run": {
+    "id": 41978538734,
+    "number": 25,
+    "conclusion": "success",
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/41978538734"
+  },
+  "scope": "Single GitHub Actions Ubuntu host, same-host two-context browsers; STUN disabled. Does NOT verify public NAT, operators, real devices, Safari on hardware or production.",
+  "checks": {
+    "node_tests": 57,
+    "node_passed": 57,
+    "node_failed": 0,
+    "dependency_audit": "passed",
+    "build": "passed",
+    "nginx": "passed",
+    "chromium_1_gib": "passed",
+    "firefox_100_mib": "passed",
+    "webkit_ui_smoke": "passed"
+  },
+  "real_chromium_opfs": {
+    "multi_tab_exclusive_lock": "passed; simultaneous second-tab restore rejected, retry after release succeeded",
+    "corrupt_record_cleanup": "21 corrupt metadata items remained visible and erasable",
+    "capacity": "new item rejected with >20 records",
+    "typed_errors": [
+      "QuotaExceededError",
+      "NotAllowedError"
+    ],
+    "crash_resume": "passed"
+  },
+  "real_chromium_webRTC_opfs_cross_page": {
+    "file_bytes": 4194304,
+    "committed_prefix": 1048576,
+    "retransmitted_bytes": 3145728,
+    "full_file_sha256": "verified independently"
+  },
+  "open_release_gates": [
+    "Real broadband-to-mobile and cross-operator NAT tests",
+    "IPv4/IPv6/CGNAT success and failure evidence",
+    "iOS/macOS Safari and Android Chrome tests",
+    "real disk quota and eviction stress",
+    "real picker, OS download and mobile backgrounding",
+    "production deployment and rollback drills"
+  ],
+  "release_status": "draft; no merge into main; no deployment; user renames repository manually"
+}
