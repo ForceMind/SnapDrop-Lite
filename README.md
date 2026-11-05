@@ -50,6 +50,7 @@ npx playwright install --with-deps chromium firefox webkit
 LARGE_FILE_TEST=1 npm run test:browser
 BROWSER_TYPE=firefox npm run test:browser
 BROWSER_TYPE=webkit npm run test:smoke
+node tests/interoperability.cjs
 node tests/recovery-browser.cjs
 node tests/persistent-flow-browser.cjs
 ```

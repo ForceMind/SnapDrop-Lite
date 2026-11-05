@@ -2,11 +2,11 @@
 
 更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
-## 2026-11-05：Chromium ↔ Firefox 异构浏览器互传（待新 CI）
+## 2026-11-05：Chromium ↔ Firefox 异构浏览器互传（CI #31 通过）
 
 新增 `tests/interoperability.cjs`，在同一 CI 主机启动 Chromium、Firefox 两个不同浏览器引擎，用真实 WebRTC DataChannel 和 STUN 关闭的 host 路径，完成双向文件传输。每个方向必须核对相同 DTLS 安全码、在接收同意前不得有文件正文、真实下载后用 Node SHA-256 独立校验、检查 WebSocket 仅含信令（不得有文件名、正文或哈希）。与“两个 Chromium”或“两个 Firefox”的已通过测试不同，本项验证浏览器引擎互操作性。
 
-**当前尚待 CI 结果确认。** 本测试仍然不能证明不同设备/运营商之间的 NAT 穿透、真实 Safari/iOS 或生产部署，不合并 `main`、不部署、不加文件中继。
+**CI #31 已通过**：代码提交 `16d6f21b203b323070fc8e35ce2b6e62350fd6b0`，run `41992078868`。Chromium → Firefox 和 Firefox → Chromium 均传输 1,048,785 B，分别独立核验 SHA-256，信令 WS 无文件名、正文或哈希；60/60 Node、Chromium 1 GiB、Firefox 100 MiB、WebKit UI、真实 OPFS 和 4 MiB 跨刷新流程全部通过。原始验收范围见 [`docs/evidence/ci31-browser-interoperability.json`](evidence/ci31-browser-interoperability.json)。本测试仍然不能证明不同设备/运营商之间的 NAT 穿透、真实 Safari/iOS 或生产部署，不合并 `main`、不部署、不加文件中继。
 
 ## 2026-11-05：DataChannel 旧消息隔离（CI #28 全部通过）
 

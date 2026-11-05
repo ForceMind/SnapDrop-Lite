@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "project": "Zeydrop",
+  "date_utc": "2026-11-05T08:11:33Z",
+  "code_commit": "16d6f21b203b323070fc8e35ce2b6e62350fd6b0",
+  "github_actions_run": {
+    "id": 41992078868,
+    "number": 31,
+    "conclusion": "success",
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/41992078868"
+  },
+  "checks": {
+    "node_passed": 60,
+    "node_failed": 0,
+    "chromium_1_gib": "pass",
+    "firefox_100_mib": "pass",
+    "webkit_ui_smoke": "pass",
+    "chromium_cross_page_opfs_resume": "pass",
+    "chromium_firefox_interoperability": "pass"
+  },
+  "cross_engine_files": [
+    {
+      "from": "chromium-to-firefox",
+      "bytes": 1048785,
+      "sha256": "d95e06b4ba68ecd8ad4a1016f6621971ea839fba3d8d3e5d3a5e64c53a34a9e3"
+    },
+    {
+      "from": "firefox-to-chromium",
+      "bytes": 1048785,
+      "sha256": "6e8210ddf961dc9ccd4585736feb334267a732d2165c4e8d34b691fe7567f131"
+    }
+  ],
+  "security_assertions": [
+    "selected non-relay ICE path on both sides",
+    "matching DTLS safety code and explicit confirmation",
+    "no file bytes before receiver consent",
+    "independent SHA-256 on downloaded file",
+    "no file name, SHA-256 or file body in signaling WebSocket"
+  ],
+  "network_scope": "Both browser engines on same CI machine; STUN disabled. Does not prove real public NAT/CGNAT or physical device interoperability.",
+  "release_gates": [
+    "Real cross-ISP/cellular and IPv4/IPv6/CGNAT tests",
+    "Real iOS/macOS Safari, Android Chrome and Windows Edge hardware tests",
+    "Actual file picker and mobile background/power behaviors",
+    "Production TLS certificate deployment/rollback drills"
+  ],
+  "release_status": "Draft PR #2; main unchanged; user manual rename remains final step"
+}

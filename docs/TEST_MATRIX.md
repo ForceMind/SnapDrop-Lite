@@ -15,7 +15,7 @@
 | 真正 WSS 中断 / 新 peer / 原生 OPFS 8 MiB 恢复 / 独立 SHA-256 | Chromium + Firefox 双上下文 E2E | CI #16 均通过；同机 STUN 关闭，不代表公网 NAT 实测 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
 | Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 双 profile 浏览器 | CI #10 完整通过 |
-| Chromium ↔ Firefox 双引擎双向真实 DataChannel / 独立 SHA-256 / WS 零正文 | 两个不同 Playwright browser engine | 新增测试，待当前 CI 验证；仍为同机路径 |
+| Chromium ↔ Firefox 双引擎双向真实 DataChannel / 独立 SHA-256 / WS 零正文 | 两个不同 Playwright browser engine | CI #31 通过：每个方向 1,048,785 B、人工核对安全码并明确接受；同机 STUN 关闭，不是公网 NAT 验证 |
 | Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #10 全部通过（原生 OPFS） |
 | Firefox 完整 E2E | CI #10 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 配额失败后继续传输 / 会话恢复 |
 | WebKit 手机 UI | CI #10 smoke | 通过；不等于 iOS Safari 实测 |
