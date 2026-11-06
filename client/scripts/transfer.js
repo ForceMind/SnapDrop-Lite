@@ -129,6 +129,9 @@ class TransferPeer {
             if (typeof msg.id !== 'string' || !/^[a-f0-9-]{32,36}$/.test(msg.id)
                 || typeof msg.name !== 'string' || msg.name.length > 255 || !Number.isSafeInteger(msg.size) || msg.size < 0
                 || typeof msg.mime !== 'string' || msg.mime.length > 128) throw Error('无效文件信息');
+            if (this._outgoing?.meta.id === msg.id) {
+                this.sendJSON({ type: 'reject', id: msg.id, reason: '双方文件标识冲突，请重新选择文件' }); return;
+            }
             if (!this._verified || !this._path?.direct || this._incoming) { this.sendJSON({ type: 'reject', id: msg.id, reason: '接收方未确认安全码或正在接收其他文件' }); return; }
             this._discard = null;
             const state = { meta: { id: msg.id, name: safeName(msg.name), size: msg.size, mime: safeMime(msg.mime) }, offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
@@ -234,11 +237,19 @@ class TransferPeer {
     }
     _dropHeld(reason) {
         const hold = this._held; if (!hold) return;
+        hold.cancelled = reason || '旧传输已取消';
         this._held = null; clearTimeout(hold.timer); this._pendingResumeOffer = null;
         // Drop references to local File objects once recovery is no longer authorized.
         hold.pendingFiles = [];
         for (const state of [hold.outgoing, hold.incoming]) {
             if (!state) continue;
+            // A write begun on the old peer may fail only after its checkpoint
+            // was adopted. Route that failure to the current object owner;
+            // transfer ID alone could target an unrelated, replayed new offer.
+            if (state.resumeOwner && state.resumeOwner !== this) {
+                state.resumeOwner._cancelTransferredState(state, reason);
+                continue;
+            }
             clearTimeout(state.timer); state.error = reason;
             state.waiter?.reject(Error(reason));
             if (state.sink) {
@@ -251,15 +262,20 @@ class TransferPeer {
         }
         Events.fire('notify-user', reason);
     }
+    _cancelTransferredState(state, reason) {
+        if (this._incoming === state || this._outgoing === state) this.cancel(state.meta.id, reason);
+        else if (this._held && [this._held.incoming, this._held.outgoing].includes(state)) this.cancel(state.meta.id, reason);
+    }
     takeHeldTransfers() { return this._held; }
     adoptHeldTransfers(hold) {
-        if (!hold || this._held || this._incoming || this._outgoing) return false;
+        if (!hold || hold.cancelled || this._held || this._incoming || this._outgoing) return false;
         if (Date.now() >= hold.deadline) {
             hold.pendingFiles = [];
             hold.incoming?.sink?.abort().catch(() => {}); return false;
         }
         clearTimeout(hold.timer);
         this._held = hold;
+        for (const state of [hold.incoming, hold.outgoing]) if (state) state.resumeOwner = this;
         hold.timer = setTimeout(() => this._dropHeld('续传窗口已过期，请重新选择文件'), Math.max(0, hold.deadline - Date.now()));
         this.restoreTransfers(); return true;
     }
@@ -267,6 +283,7 @@ class TransferPeer {
         if (!this._verified || !this._remoteHello || !this._path?.direct || !this._isConnected()) return false;
         const hold = this._held;
         if (hold) {
+            if (hold.cancelled) { this._dropHeld(hold.cancelled); return false; }
             if (Date.now() >= hold.deadline) { this._dropHeld('续传窗口已过期，请重新选择文件'); return false; }
             clearTimeout(hold.timer); this._held = null;
             this._resumeReady = hold.ready;
@@ -335,7 +352,15 @@ class TransferPeer {
     async acceptIncoming(id, options = {}) {
         const state = this._incoming;
         if (!state || state.meta.id !== id || state.sink || state.accepting) return;
+        const authorized = () => this._incoming === state && this._verified
+            && this._path?.direct && this._remoteHello && this._isConnected();
+        if (!authorized()) { this.cancel(id, '请重新核对直连状态和安全码后接收'); return; }
         state.accepting = true;
+        // Keep a preparing sink local. A persistent writer may already contain
+        // N bytes while its prefix hash/transfer offset are still unverified.
+        // Publishing it early would let suspendTransfers retain it as offset 0.
+        let preparingSink = null;
+        const cancelStale = () => { if (this._incoming === state) this.cancel(id, '接收准备已失效，请重新确认'); };
         try {
             if (options.resumeLocalId) {
                 if (!window.ZeydropRecovery?.supported) throw Error('此浏览器无法读取本机断点');
@@ -345,16 +370,23 @@ class TransferPeer {
                 state.timer = setTimeout(() => this.cancel(id, '读取本机断点超时'), 5 * 60 * 1000);
                 const { sink, snapshot, offset, prefixSha256 } =
                     await window.ZeydropRecovery.restore(options.resumeLocalId, state.meta);
-                if (this._incoming !== state) { await sink.park(prefixSha256); return; }
-                state.sink = sink;
+                preparingSink = sink;
+                const parkOriginal = async () => {
+                    // Cancelling/reconnecting during preparation does not delete
+                    // the previously committed prefix or replace its stored hash.
+                    await preparingSink.park(prefixSha256); preparingSink = null;
+                    cancelStale();
+                };
+                if (!authorized()) { await parkOriginal(); return; }
                 const hash = window.ZeydropHash.create();
                 for await (const bytes of snapshot.slice(0, offset).stream()) {
-                    if (this._incoming !== state) return;
+                    if (!authorized()) { await parkOriginal(); return; }
                     hash.update(new Uint8Array(bytes));
                 }
+                if (!authorized()) { await parkOriginal(); return; }
                 if (hex(hash.clone().digest()) !== prefixSha256) throw Error('本机断点校验失败，请删除断点后重新接收');
-                if (this._incoming !== state) return;
                 state.hash = hash; state.offset = offset; state.acked = offset;
+                state.sink = preparingSink; preparingSink = null;
                 state.awaitingResume = true; state.accepting = false;
                 clearTimeout(state.timer);
                 state.timer = setTimeout(() => this.cancel(id, '续传协商超时'), 120000);
@@ -362,13 +394,16 @@ class TransferPeer {
                 this._progress(state, 'resuming');
                 return;
             }
-            const sink = await ReceiveSink.open(state.meta, options);
-            if (this._incoming !== state) { await sink.abort(); return; }
-            state.sink = sink; state.accepting = false; clearTimeout(state.timer);
+            preparingSink = await ReceiveSink.open(state.meta, options);
+            if (!authorized()) { await preparingSink.abort(); preparingSink = null; cancelStale(); return; }
+            state.sink = preparingSink; preparingSink = null; state.accepting = false; clearTimeout(state.timer);
             state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 12 * 60 * 60 * 1000);
             this.sendJSON({ type: 'accept', id });
             this._progress(state, 'receiving');
-        } catch (error) { if (this._incoming === state) this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message); }
+        } catch (error) {
+            if (preparingSink) { try { await preparingSink.abort(); } catch {} }
+            if (this._incoming === state) this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message);
+        }
     }
     rejectIncoming(id) { if (this._incoming?.meta.id === id) this.cancel(id, '已拒绝接收'); }
     sendFiles(files) {
@@ -422,8 +457,18 @@ class TransferPeer {
         if ((state.paused || state.remotePaused) && ['receiving', 'sending'].includes(phase)) phase = 'paused';
         const now = performance.now();
         if (state.uiPhase === phase && now - (state.lastUI || 0) < 200) return;
+        const running = ['sending','receiving'].includes(phase);
+        // Recent persisted progress, not a lifetime average diluted by long
+        // pauses or prefix rehashing. At most 20 points, sampled at UI cadence.
+        if (!running || state.uiPhase !== phase) state.rateSamples = [];
+        const samples = state.rateSamples ||= [];
+        if (running) {
+            samples.push({ at: now, bytes });
+            while (samples.length > 1 && (samples[0].at < now - 3000 || samples.length > 20)) samples.shift();
+        }
+        const first = samples[0], elapsed = first ? (now - first.at) / 1000 : 0;
+        const speed = running && elapsed > 0 ? Math.max(0, (bytes - first.bytes) / elapsed) : 0;
         state.uiPhase = phase; state.lastUI = now;
-        const speed = bytes / Math.max((performance.now() - state.start) / 1000, 0.1);
         Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, error: state.error || null, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
     }
     pause(id, paused) {

@@ -119,7 +119,8 @@ async function main() {
             results.push(await runPair(['chromium','webkit'],url,'trickle-end-marker'));
             results.push(await runPair(['chromium','webkit'],url,'trickle-end-marker',true));
         }
-        const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,results,
+        const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,
+            requestedTestEnvironment:['browser-default','linux-avahi-nss'].includes(process.env.RTC_PROBE_ENVIRONMENT)?process.env.RTC_PROBE_ENVIRONMENT:'browser-default',results,
             scope:'same-host native primitive control; STUN disabled; no file/SDP/IP or candidate strings in output; not WAN or real Safari evidence'};
         await fs.mkdir('test-results',{recursive:true});
         await fs.writeFile('test-results/webrtc-primitives.json',JSON.stringify(report,null,2)+'\n');

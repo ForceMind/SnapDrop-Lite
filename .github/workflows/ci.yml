@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,20 +26,14 @@ jobs:
       - run: npm test
       - run: bash -n build.sh deploy.sh scripts/rollback.sh
       - run: npm run build && node scripts/check-build.mjs
+      # The Azure package mirror exhausted CI #44's install budget. Use the
+      # official archive on this disposable hosted runner; APT keys/policy stay.
+      - run: sudo --preserve-env=CI,GITHUB_ACTIONS,RUNNER_OS,RUNNER_ENVIRONMENT "$(command -v node)" scripts/configure-ci-apt.cjs
       - run: sudo apt-get update && sudo apt-get install -y nginx
       - run: bash scripts/check-nginx.sh
       - run: node tests/https-proxy.cjs
-      - id: browsers
-        if: ${{ !cancelled() }}
-        run: npx playwright install --with-deps chromium firefox webkit
-      - run: node tests/interoperability.cjs
-      - run: node tests/recovery-browser.cjs
-      - run: node tests/persistent-flow-browser.cjs
-      - run: LARGE_FILE_TEST=1 npm run test:browser
-      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: BROWSER_TYPE=firefox npm run test:browser
-      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: BROWSER_TYPE=webkit npm run test:smoke
+      # Source/build artifact is intentionally available before browser setup.
+      # Its manifest is not a browser, WAN, Safari or deployment certification.
       - run: |
           node scripts/package-candidate.mjs
           cp test-results/candidate/zeydrop-candidate.tar.gz.sha256 /tmp/zeydrop-first.sha256
@@ -49,16 +43,50 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: zeydrop-unreleased-dev-candidate
+          name: zeydrop-unreleased-source-candidate
           path: test-results/candidate/
           retention-days: 7
+      - uses: actions/cache/restore@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
+      - id: browsers
+        timeout-minutes: 10
+        if: ${{ !cancelled() }}
+        run: npx playwright install --with-deps chromium firefox webkit
+      - uses: actions/cache/save@v6
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
+      # Preserve native browser-default evidence before preparing the Linux
+      # mDNS resolver used by WebKitGTK. Neither probe can authorize file data.
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: |
+          node tests/webrtc-primitives.cjs
+          cp test-results/webrtc-primitives.json test-results/webrtc-primitives-browser-default.json
+      - id: mdns
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: |
+          sudo apt-get install -y avahi-daemon libnss-mdns avahi-utils dbus libglib2.0-bin
+          sudo systemctl start dbus avahi-daemon
+          node scripts/check-ci-mdns.cjs
+      - run: node tests/interoperability.cjs
+      - run: node tests/recovery-browser.cjs
+      - run: node tests/persistent-flow-browser.cjs
+      - run: LARGE_FILE_TEST=1 npm run test:browser
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox npm run test:browser
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit npm run test:smoke
       # Experimental Linux WebKit DataChannel compatibility is a separate
-      # release gate. Even if it fails, the core-verified DEV package remains
-      # downloadable for isolated testing; the overall CI still reports red.
+      # release gate. The earlier source/build candidate is available for
+      # isolated testing; any product failure still makes the overall CI red.
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
+        run: RTC_PROBE_ENVIRONMENT=linux-avahi-nss BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/webrtc-primitives.cjs
+        run: RTC_PROBE_ENVIRONMENT=linux-avahi-nss node tests/webrtc-primitives.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -113,7 +113,7 @@
                     </div>
                     <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
                     <div class="diagnostics-action"><button id="exportDiagnostics" type="button">导出连接诊断</button><small>仅在本机下载连接状态，不含 IP、邀请或文件信息</small></div>
-                    <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>仅存在当前浏览器，24 小时后自动过期；可随时删除</small><div id="localStorageRecords" hidden></div></div>
+                    <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>仅存在当前浏览器，24 小时后过期，本站打开时清理；可随时删除</small><div id="localStorageRecords" hidden></div></div>
                 </div>
             </section>
         </main>
@@ -136,7 +136,7 @@
                     <div><strong id="offerFileName">文件名</strong><span id="offerFileSize">文件大小</span></div>
                 </div>
                 <div id="recoveryReceiveOptions" class="recovery-options" hidden>
-                    <label><input type="checkbox" id="durableLocalReceive"> 在本机保存断点（实验功能，占用浏览器存储；24 小时后自动清理）</label>
+                    <label><input type="checkbox" id="durableLocalReceive"> 在本机保存断点（实验功能，占用浏览器存储；24 小时后过期，本站打开时清理）</label>
                     <label id="localResumeOption" hidden><input type="checkbox" id="useLocalCheckpoint"> 发现匹配的未完成文件：尝试从已保存位置续传</label>
                     <small>恢复时双方重新配对、核对安全码，发送方需要重新选择原文件。</small>
                 </div>
@@ -174,7 +174,7 @@
                     <div id="textInput" class="textarea" role="textbox" placeholder="输入消息" autocomplete="off" autofocus contenteditable></div>
                     <div class="row-reverse">
                         <button class="button" type="submit" close>发送</button>
-                        <a class="button" close>取消</a>
+                        <button class="button" type="button" close>取消</button>
                     </div>
                 </x-paper>
             </x-background>
@@ -187,7 +187,7 @@
                 <h3>收到消息</h3>
                 <div class="font-subheading" id="text"></div>
                 <div class="row-reverse">
-                    <button class="button" id="copy" close autofocus>复制</button>
+                    <button class="button" id="copy" autofocus>复制</button>
                     <button class="button" close>关闭</button>
                 </div>
             </x-paper>

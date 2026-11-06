@@ -1,0 +1,9 @@
+{
+  "sourceCommit": "906a15c6112512749cb85ca1b3491f0f7f34ef04",
+  "archiveSHA256": "8f64468425d3295eb2d0fa84f3405ac75e608cb857484db1e1dffe1f8f73caeb",
+  "filesVerified": 142,
+  "rebuiltRevision": "ff3d2585229e0af1",
+  "node": "v24.22.1",
+  "passed": true,
+  "scope": "fresh extraction, file manifest integrity, dependency install, all105Node tests, reproducible rebuild; no browser/hardware or production deployment claim"
+}

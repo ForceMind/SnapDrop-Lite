@@ -2,6 +2,7 @@
 // Real two-browser-context DataChannel tests. No external NAT claims are made.
 const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto'), os = require('node:os');
 const { chromium, firefox, webkit } = require('playwright'); const { startDev } = require('../scripts/dev.cjs');
+const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
 async function main() {
     const server = await startDev(0); const results = { engine: process.env.BROWSER_TYPE || 'chromium', cases: [], network: 'two contexts on the same test host; STUN disabled', errors: [] };
     const engine = { chromium, firefox, webkit }[results.engine];
@@ -9,15 +10,17 @@ async function main() {
     const profileRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'zeydrop-e2e-'));
     results.profiles = persistent ? 'two persistent profiles (disk-backed OPFS)' : 'two ephemeral contexts';
     const launchOptions = { headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : {}) };
-    const browser = persistent ? null : await engine.launch(launchOptions);
+    let browser = null;
     const contexts = []; const pages = [];
     await fs.mkdir('test-results', { recursive: true });
     try {
+        if (!persistent) browser = await engine.launch(launchOptions);
         for (let i = 0; i < 2; i++) {
             const contextOptions = { acceptDownloads: true, viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce' };
             const context = persistent ? await engine.launchPersistentContext(path.join(profileRoot, String(i)), { ...launchOptions, ...contextOptions }) : await browser.newContext(contextOptions); contexts.push(context);
             const page = await context.newPage(); pages.push(page);
-            page.on('pageerror', error => results.errors.push(error.message));
+            page.on('pageerror', error => results.errors.push(['TypeError','RangeError','ReferenceError','SyntaxError'].includes(error.name) ? error.name : 'Error'));
+            await page.addInitScript(installRtcTrace);
             await page.route('**/config.js?*', route => route.fulfill({ contentType: 'text/javascript', body: 'window.ZEYDROP_CONFIG={enableStun:false,memoryLimit:67108864};' }));
             await page.addInitScript(() => {
                 window.showSaveFilePicker = undefined; window.__testTransfers = {}; window.__testNotices = [];
@@ -209,8 +212,11 @@ async function main() {
         results.cases.push('local diagnostic download records selected path without identities, invitation, tokens or file metadata');
         assert.deepEqual(results.errors, []); results.passed = true;
     } catch (error) {
-        results.failure = error.message;
-        results.debug = await Promise.all(pages.map(page => page.evaluate(async () => ({ signal: zeydrop.server._ready, notices: window.__testNotices, transfers: window.__testTransfers, storage: await navigator.storage.estimate(), peers: await Promise.all([...zeydrop.peers.peers.values()].map(async peer => ({state: peer._state, ice: peer._conn.iceConnectionState, connection: peer._conn.connectionState, signaling: peer._conn.signalingState, candidates: peer._candidateCounts, channel: peer._channel?.readyState, code: Boolean(peer._code), path:peer._path, reason:peer._reason, stats: [...(await peer._conn.getStats()).values()].filter(s => ['transport','candidate-pair','local-candidate','remote-candidate'].includes(s.type)) }))) })))) ;
+        results.failure = ['TimeoutError','AssertionError','TypeError','RangeError'].includes(error?.name) ? error.name : 'Error';
+        results.lastCompletedCase = results.cases.at(-1) || 'startup';
+        // Failure artifacts must not expose raw RTCStatsReport addresses, SDP,
+        // returned credentials or arbitrary native exception strings either.
+        results.debug = await Promise.all(pages.map(page => page.evaluate(rtcEndpointSnapshot,results.engine).catch(()=>({unavailable:true}))));
         throw error;
     } finally {
         await fs.writeFile('test-results/browser-' + results.engine + '.json', JSON.stringify(results, null, 2));
@@ -219,4 +225,4 @@ async function main() {
     }
     console.log(JSON.stringify(results, null, 2));
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => { console.error('Browser test failed:', ['TimeoutError','AssertionError','TypeError','RangeError'].includes(error?.name) ? error.name : 'Error'); process.exitCode = 1; });

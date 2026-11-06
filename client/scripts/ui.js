@@ -15,12 +15,19 @@ class Dialog {
         this.el.addEventListener('keydown', event => {
             if (event.key === 'Escape') { event.preventDefault(); this.dismiss(); }
             if (event.key !== 'Tab') return;
-            const items = [...this.el.querySelectorAll('button:not([disabled]), a[href], input, [tabindex="0"], [contenteditable]')].filter(el => !el.hidden);
-            if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
-            else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
+            const items = this.focusables();
+            if (!items.length) { event.preventDefault(); this.el.focus(); return; }
+            if (event.shiftKey && (document.activeElement === items[0] || !items.includes(document.activeElement))) { event.preventDefault(); items.at(-1)?.focus(); }
+            else if (!event.shiftKey && (document.activeElement === items.at(-1) || !items.includes(document.activeElement))) { event.preventDefault(); items[0]?.focus(); }
         });
     }
-    show() { this.previous = document.activeElement; this.el.setAttribute('show', '1'); this.el.setAttribute('aria-hidden', 'false'); this.el.querySelector('[autofocus], button, a[href], [contenteditable]')?.focus(); }
+    focusables() {
+        return [...this.el.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex], [contenteditable]:not([contenteditable="false"])')]
+            .filter(el => !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length
+                && !['hidden','collapse'].includes(getComputedStyle(el).visibility)
+                && (el.tabIndex >= 0 || (el.isContentEditable && !el.hasAttribute('tabindex'))));
+    }
+    show() { this.previous = document.activeElement; this.el.setAttribute('show', '1'); this.el.setAttribute('aria-hidden', 'false'); this.el.tabIndex = -1; const items = this.focusables(); (items.find(el => el.hasAttribute('autofocus')) || items[0] || this.el).focus(); }
     hide() { this.el.removeAttribute('show'); this.el.setAttribute('aria-hidden', 'true'); this.previous?.focus(); }
     dismiss() { this.hide(); }
 }
@@ -87,7 +94,7 @@ class ReceiveDialog extends Dialog {
         this.active = this.queue.shift(); this.url = URL.createObjectURL(this.active.blob);
         const link = $('download'); link.href = this.url; link.download = this.active.name;
         $('fileName').textContent = this.active.name; $('fileSize').textContent = fmt(this.active.size) + ' · SHA-256 ' + this.active.sha256
-            + (this.active.locallyStored ? ' · 本机暂存副本不会自动删除' : '');
+            + (this.active.locallyStored ? ' · 下载不会立即删除本机副本' : '');
         this.show();
     }
     hide() {
@@ -248,7 +255,18 @@ class Zeydrop {
         Events.on('text-recipient', event => { recipient = event.detail; send.show(); $('textInput').focus(); });
         $('sendTextDialog').querySelector('form').onsubmit = event => { event.preventDefault(); Events.fire('send-text', { to: recipient, text: $('textInput').innerText }); send.hide(); };
         Events.on('text-received', event => { $('text').textContent = event.detail.text; receive.show(); });
-        $('copy').onclick = () => navigator.clipboard.writeText($('text').textContent).catch(() => Events.fire('notify-user', '请手动选择并复制文本'));
+        $('copy').onclick = async () => {
+            try {
+                if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
+                await navigator.clipboard.writeText($('text').textContent);
+                receive.hide();
+                Events.fire('notify-user', '文本已复制');
+            } catch {
+                const selection = window.getSelection(), range = document.createRange();
+                range.selectNodeContents($('text')); selection?.removeAllRanges(); selection?.addRange(range);
+                Events.fire('notify-user', '请复制选中的文本，或长按文本手动复制');
+            }
+        };
     }
 }
 

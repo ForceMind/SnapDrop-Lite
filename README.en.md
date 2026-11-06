@@ -26,7 +26,7 @@ Files use 16 KiB chunks, a 256 KiB receiver-write ACK window, DataChannel backpr
 
 Same-page recovery is bounded to 120 seconds and requires the same locked identities/session, a newly verified direct path, fresh safety-code confirmation, and independent prefix hashing. Unaccepted offers need fresh receiver approval. A pending Blob download is not silently skipped. Queued sending File objects do not survive page refresh.
 
-Experimental persistent recovery is **opt-in on the receiver**. Raw partial bytes are stored locally in browser OPFS, with committed checkpoints, exclusive handles and a maximum 24-hour retention window. After refresh the devices pair again, the sender reselects the original file, and the receiver explicitly chooses the matching local partial. Both endpoints verify the stored prefix; the full file is checked again at completion. Quota, permission loss, browser eviction, crashes and clearing site data may prevent recovery. [Storage details and cleanup](docs/RECOVERY_STORAGE.md).
+Experimental persistent recovery is **opt-in on the receiver**. Raw partial bytes are stored locally in browser OPFS, with committed checkpoints and exclusive handles. Records expire after 24 hours; cleanup is attempted while the site is open, so closing all pages does not schedule background deletion. After refresh the devices pair again, the sender reselects the original file, and the receiver explicitly chooses the matching local partial. Both endpoints verify the stored prefix; the full file is checked again at completion. Quota, permission loss, browser eviction, crashes and clearing site data may prevent recovery. [Storage details and cleanup](docs/RECOVERY_STORAGE.md).
 
 ## Privacy and direct-only behavior
 
@@ -84,7 +84,7 @@ cd test-results/candidate
 sha256sum -c zeydrop-candidate.tar.gz.sha256
 ```
 
-The archive includes tracked allowlisted source, verified built assets, licenses and a per-file SHA-256 manifest. It rejects dirty tracked input, credential paths, symlinks, unexpected build files and bounded secret patterns. Pattern scanning cannot prove the absence of every credential. SHA-256 is not code signing or release approval. CI keeps the unreleased staging artifact for seven days, even when a later independent compatibility gate fails; check the exact run and all known limitations before use.
+The archive includes tracked allowlisted source, verified built assets, licenses and a per-file SHA-256 manifest. It rejects dirty tracked input, credential paths, symlinks, unexpected build files and bounded secret patterns. Pattern scanning cannot prove the absence of every credential. SHA-256 is not code signing or release approval. CI uploads `zeydrop-unreleased-source-candidate` before browser installation and keeps it for seven days, allowing isolated source/build testing when browser setup is unavailable. The artifact is not a browser-validation certificate; check the exact run and all known limitations before use.
 
 Real cross-network devices, mobile/Safari storage/PWA behavior, production-trusted TLS renewal and real host/systemd upgrade/rollback remain external acceptance gates. [Real-device procedure](docs/REAL_DEVICE_TESTING.md) and the offline `scripts/field-verify.cjs` tool help record evidence without uploads.
 

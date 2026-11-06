@@ -146,7 +146,8 @@ async function main() {
     if(pairs.some(pair=>pair.length!==2||pair.some(engine=>!['chromium','firefox','webkit'].includes(engine))))throw Error('Invalid browser matrix');
     const results=[];
     for(const pair of pairs)results.push(await runPair(pair));
-    const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,results,
+    const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,
+        requestedTestEnvironment:['browser-default','linux-avahi-nss'].includes(process.env.RTC_PROBE_ENVIRONMENT)?process.env.RTC_PROBE_ENVIRONMENT:'browser-default',results,
         scope:'Zeydrop browser compatibility matrix, same host, STUN off; not macOS/iOS Safari or WAN evidence'};
     await fs.mkdir('test-results',{recursive:true});
     await fs.writeFile('test-results/webkit-transfer-matrix.json',JSON.stringify(report,null,2)+'\n');

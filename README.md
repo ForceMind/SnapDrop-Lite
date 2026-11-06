@@ -6,7 +6,9 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。代码提交 `6b61d3c` 的 [CI #41](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42203581161) 中 **77/77 Node 测试**、临时 HTTPS/WSS Nginx、Chromium 1 GiB / Firefox 100 MiB 实际 DataChannel 和独立 SHA-256、Chromium↔Firefox、同页与跨刷新 OPFS 续传、WebKit **界面冒烟**及非正式开发归档均通过。**CI 整体仍为失败**，因为 Chromium↔Linux WebKit 在无 TURN、STUN 关闭的单机环境下无法选中 ICE 路径，文件传输未通过；它不代表 iOS Safari 真机失败或成功。见 [WebKit 问题](https://github.com/ForceMind/SnapDrop-Lite/issues/5) 和 [发布门槛](docs/RELEASE_GATES.md)。所有现有 CI 都是同主机验证，不代表跨运营商 NAT 成功率。仓库最后更名仍由用户手动完成；当前远程仍为 `ForceMind/SnapDrop-Lite`，PR 保持 Draft，未部署生产。`zeydrop.com` 未确认购买。
+当前为 **0.3.0-dev.1 未发布开发候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。2026-11-06重新审计后，本地134项Node测试与可重复构建通过，修复传输/ICE代次、OPFS检查点竞态、候选包和回滚安全；对应head的真实浏览器结果必须另查Actions，不能沿用历史绿灯。
+
+历史 [CI #42](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42204473272) 验证了Chromium 1 GiB / Firefox 100 MiB、独立SHA-256、Chromium↔Firefox、同页及跨刷新OPFS恢复、临时HTTPS/WSS和WebKit界面，但整体失败于Chromium↔Linux WebKit无法选中ICE路径。新六组合矩阵与原生/mDNS环境对照正在推进，见 [Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)。同机CI不能证明真实跨运营商NAT成功率、Safari/iOS兼容或正式部署，见 [项目状态](docs/PROJECT_STATUS.md) 与 [发布门槛](docs/RELEASE_GATES.md)。仓库最后更名由用户手动完成；远程仍为 `ForceMind/SnapDrop-Lite`，main和生产未改。`zeydrop.com`未确认购买。
 
 ## 使用流程
 
@@ -55,6 +57,8 @@ BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
 node tests/persistent-flow-browser.cjs
+BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
+node tests/webrtc-primitives.cjs
 ```
 
 `dist/` 由确定性构建生成，不再提交旧构建。固定路径的 Service Worker 预缓存完整同版本 shell；新版本等待旧标签关闭后激活，避免传输中强制刷新。配置、信令和邀请 URL 不进入动态缓存。
@@ -71,6 +75,10 @@ sudo DOMAIN=transfer.example.com \
 ```
 
 示例域名不是已配置站点。部署脚本不会购买域名、申请证书、改变防火墙或自动停止旧 Snapdrop 服务。现有安装迁移需先按部署文档准备并验证。
+
+## 开发候选包
+
+干净已提交源码安装依赖和构建后运行 `node scripts/package-candidate.mjs`；输出归档、SHA-256和逐文件manifest。CI在浏览器安装前上传 `zeydrop-unreleased-source-candidate`，即使后续浏览器环境不可用也可下载用于隔离测试；它仅证明源码/构建检查，必须另查整套CI结果，不是稳定版、签名或浏览器验收。打包拒绝脏源码、敏感路径、符号链接和不一致dist，并执行有限秘密模式扫描；不能保证识别全部秘密。请按 [部署与回滚](docs/DEPLOYMENT.md) 在独立测试主机使用。
 
 ## 工程导航
 

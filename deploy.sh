@@ -9,23 +9,46 @@ if [[ ${EUID} -ne 0 ]]; then echo 'Run as root on the deployment host.' >&2; exi
 [[ $DOMAIN =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ && $DOMAIN == *.* ]] || { echo 'Invalid DOMAIN' >&2; exit 1; }
 DOMAIN=${DOMAIN,,}
 for item in "$TLS_CERT" "$TLS_KEY"; do [[ $item =~ ^/[a-zA-Z0-9_./-]+$ && -r $item ]] || { echo 'Invalid or unreadable certificate path' >&2; exit 1; }; done
-for tool in node npm nginx systemctl openssl flock git tar; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
-node -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)'
+for tool in node npm nginx systemctl openssl flock git tar install find; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
+resolve_service_node() {
+    local binary
+    binary=$(readlink -f -- "$1") || return 1
+    [[ -f $binary && -x $binary && $binary =~ ^/[a-zA-Z0-9_./+@-]+$ ]] || { echo 'Invalid system Node executable' >&2; return 1; }
+    case $binary in /root/*|/home/*|/run/user/*|/tmp/*|/var/tmp/*)
+        echo 'Install Node in a system directory: ProtectHome/PrivateTmp hides this executable from zeydrop.' >&2; return 1;;
+    esac
+    printf '%s\n' "$binary"
+}
+normalize_release_permissions() {
+    local target=$1
+    [[ -d $target && ! -L $target ]] || return 1
+    if [[ -n $(find "$target" ! -type d ! -type f -print -quit) ]]; then
+        echo 'Non-regular runtime input rejected before ownership/permission changes.' >&2; return 1
+    fi
+    find "$target" -type d -exec chmod 0755 {} +
+    find "$target" -type f -perm /111 -exec chmod 0755 {} +
+    find "$target" -type f ! -perm /111 -exec chmod 0644 {} +
+}
+node_binary=$(resolve_service_node "$(command -v node)")
+"$node_binary" -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)'
 openssl x509 -checkend 86400 -noout -in "$TLS_CERT"
 openssl x509 -checkhost "$DOMAIN" -noout -in "$TLS_CERT"
 cert_pub=$(openssl x509 -in "$TLS_CERT" -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256)
 key_pub=$(openssl pkey -in "$TLS_KEY" -pubout -outform DER | openssl dgst -sha256)
 [[ $cert_pub == "$key_pub" ]] || { echo 'Certificate and key do not match' >&2; exit 1; }
 if systemctl is-active --quiet snapdrop; then echo 'Legacy snapdrop service is active. Follow docs/DEPLOYMENT.md migration; it has not been stopped.' >&2; exit 1; fi
+# Hold the same lock through npm ci, tests, build and publication: two
+# deployments in one checkout must not remove each other's dependency/dist tree.
+[[ ! -L /opt/zeydrop && ! -L /opt/zeydrop/releases ]] || { echo 'Symlinked installation directories are unsupported.' >&2; exit 1; }
+install -d -o root -g root -m 0755 /opt/zeydrop /opt/zeydrop/releases
+exec 9>/opt/zeydrop/.deploy.lock
+flock -n 9 || { echo 'Deployment is busy (install/build/rollback may still be running); retry after it exits.' >&2; exit 75; }
 npm ci --ignore-scripts
 npm --prefix server ci --omit=dev --ignore-scripts
 npm test
 npm run build
-# Serialize deployment and rollback state changes on this host.
-mkdir -p /opt/zeydrop
-exec 9>/opt/zeydrop/.deploy.lock
-flock -n 9 || { echo 'Another deployment or rollback is running.' >&2; exit 1; }
 revision=$(node -p "require('./dist/build.json').revision")
+[[ $revision =~ ^[a-f0-9]{16}$ ]] || { echo 'Invalid build revision' >&2; exit 1; }
 release="/opt/zeydrop/releases/$revision"
 [[ ! -e $release ]] || { echo 'Release already exists; use rollback.sh to select it.' >&2; exit 1; }
 # Snapshot managed configuration and active target before changing either.
@@ -59,10 +82,16 @@ rollback_failed_deploy() {
 }
 trap rollback_failed_deploy ERR
 id zeydrop >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin zeydrop
-mkdir -p "$release" /etc/zeydrop
-cp -r dist server "$release/"
+mkdir -p "$release/server" /etc/zeydrop
+# Do not copy local server/.env* or other checkout-only files into the service.
+for source in server/index.js server/package.json server/package-lock.json; do
+    [[ -f $source && ! -L $source ]] || { echo 'Invalid server source file' >&2; exit 1; }
+done
+cp -r dist "$release/"
+cp server/index.js server/package.json server/package-lock.json "$release/server/"
+cp -r server/node_modules "$release/server/"
+normalize_release_permissions "$release"
 chown -R root:root "$release"
-chmod -R go-w "$release"
 cat > /etc/zeydrop/signaling.env <<ENV
 NODE_ENV=production
 PORT=3001
@@ -71,7 +100,7 @@ ALLOWED_ORIGINS=https://$DOMAIN
 ENV
 chmod 640 /etc/zeydrop/signaling.env
 chown root:zeydrop /etc/zeydrop/signaling.env
-sed "s|@NODE@|$(command -v node)|g" deployment/zeydrop.service > /etc/systemd/system/zeydrop.service
+sed "s|@NODE@|$node_binary|g" deployment/zeydrop.service > /etc/systemd/system/zeydrop.service
 sed -e "s|@DOMAIN@|$DOMAIN|g" -e "s|@TLS_CERT@|$TLS_CERT|g" -e "s|@TLS_KEY@|$TLS_KEY|g" deployment/nginx.conf > /etc/nginx/conf.d/zeydrop.conf
 ln -s "$release" /opt/zeydrop/current.next.$$
 mv -Tf /opt/zeydrop/current.next.$$ /opt/zeydrop/current

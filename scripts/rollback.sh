@@ -5,7 +5,7 @@ set -Eeuo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 for tool in node nginx systemctl flock; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
 exec 9>/opt/zeydrop/.deploy.lock
-flock -n 9 || { echo 'Another deployment or rollback is running.' >&2; exit 1; }
+flock -n 9 || { echo 'Deployment is busy (install/build/rollback may still be running); retry after it exits.' >&2; exit 75; }
 previous=$(cat /opt/zeydrop/previous)
 current=$(readlink -f /opt/zeydrop/current)
 valid_release() {

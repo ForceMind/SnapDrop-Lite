@@ -56,7 +56,61 @@ test('isolated rollback cannot overlap another deployment lock',async t=>{
     const locker=spawn('flock',['-x','-F',path.join(f.root,'.deploy.lock'),process.execPath,'-e','process.stdout.write("locked");setInterval(()=>{},1000)'],{stdio:['ignore','pipe','pipe']});
     t.after(async()=>{if(locker.exitCode===null){locker.kill();await new Promise(resolve=>locker.once('exit',resolve));}});
     await new Promise((resolve,reject)=>{locker.stdout.once('data',resolve);locker.once('error',reject);});
-    const result=f.run();assert.equal(result.status,1);assert.match(result.stderr,/Another deployment or rollback/);
+    const result=f.run();assert.equal(result.status,75);assert.match(result.stderr,/Deployment is busy/);
     assert.equal(await fs.readlink(path.join(f.root,'current')),f.current);
     assert.equal((await fs.readFile(path.join(f.root,'previous'),'utf8')).trim(),f.previous);
+});
+async function deployFunction(name) {
+    const source = await fs.readFile('deploy.sh','utf8');
+    const match = source.match(new RegExp('^'+name+'\\(\\) \\{[\\s\\S]*?^\\}', 'm'));
+    assert.ok(match, 'Production deployment helper exists'); return match[0];
+}
+test('release permissions remain readable under umask 077 without group/other write or following symlinks',async t=>{
+    const temp=await fs.mkdtemp(path.join(os.tmpdir(),'zeydrop-permission-test-'));t.after(()=>fs.rm(temp,{recursive:true,force:true}));
+    const source=path.join(temp,'source'),release=path.join(temp,'release');await fs.mkdir(path.join(source,'server'),{recursive:true});
+    await fs.writeFile(path.join(source,'server/index.js'),'fixture',{mode:0o644});
+    await fs.writeFile(path.join(source,'server/tool'),'fixture',{mode:0o755});
+    const setup=spawnSync('bash',['-c','umask 077; mkdir "$2"; cp -r "$1/." "$2/"','fixture',source,release],{encoding:'utf8'});assert.equal(setup.status,0,setup.stderr);
+    assert.equal((await fs.stat(path.join(release,'server/index.js'))).mode&0o777,0o600);
+    const helper=await deployFunction('normalize_release_permissions');
+    const fixed=spawnSync('bash',['-c','set -e\n'+helper+'\nnormalize_release_permissions "$1"','fixture',release],{encoding:'utf8'});assert.equal(fixed.status,0,fixed.stderr);
+    assert.equal((await fs.stat(release)).mode&0o777,0o755);assert.equal((await fs.stat(path.join(release,'server'))).mode&0o777,0o755);
+    assert.equal((await fs.stat(path.join(release,'server/index.js'))).mode&0o777,0o644);assert.equal((await fs.stat(path.join(release,'server/tool'))).mode&0o777,0o755);
+    const outside=path.join(temp,'outside');await fs.writeFile(outside,'private',{mode:0o600});await fs.symlink(outside,path.join(release,'link'));
+    const rejected=spawnSync('bash',['-c',helper+'\nnormalize_release_permissions "$1"','fixture',release],{encoding:'utf8'});assert.equal(rejected.status,1);
+    assert.equal((await fs.stat(outside)).mode&0o777,0o600);
+});
+test('Node preflight resolves a system executable but rejects a protected temporary executable',async t=>{
+    const temp=await fs.mkdtemp(path.join(os.tmpdir(),'zeydrop-node-path-test-'));t.after(()=>fs.rm(temp,{recursive:true,force:true}));
+    const helper=await deployFunction('resolve_service_node');
+    const resolved=await fs.realpath(process.execPath);
+    const alias=path.join(temp,'node-system-alias');await fs.symlink(resolved,alias);
+    const accepted=spawnSync('bash',['-c',helper+'\nresolve_service_node "$1"','fixture',alias],{encoding:'utf8'});
+    assert.equal(accepted.status,0,accepted.stderr);assert.equal(accepted.stdout.trim(),resolved);
+    const protectedNode=path.join(temp,'node');await fs.writeFile(protectedNode,'#!/bin/sh\nexit 0\n',{mode:0o755});
+    const rejected=spawnSync('bash',['-c',helper+'\nresolve_service_node "$1"','fixture',protectedNode],{encoding:'utf8'});
+    assert.equal(rejected.status,1);assert.match(rejected.stderr,/ProtectHome\/PrivateTmp/);
+});
+test('deployment acquires the shared lock before any npm install or build mutation',async t=>{
+    const temp=await fs.mkdtemp(path.join(os.tmpdir(),'zeydrop-deploy-lock-test-'));t.after(()=>fs.rm(temp,{recursive:true,force:true}));
+    const root=path.join(temp,'installation'),bin=path.join(temp,'bin');await fs.mkdir(root);await fs.mkdir(bin);
+    const source=await fs.readFile('deploy.sh','utf8');
+    const guard="if [[ ${EUID} -ne 0 ]]; then echo 'Run as root on the deployment host.' >&2; exit 1; fi";
+    assert.ok(source.includes(guard));
+    await fs.writeFile(path.join(temp,'deploy.sh'),source.replace(guard,'# Isolated non-root test copy').replaceAll('/opt/zeydrop',root));
+    // Real openssl pkey/dgst drain the upstream pipe. A fixture that exits
+    // immediately can cause SIGPIPE in x509 under production `pipefail`.
+    await fs.writeFile(path.join(bin,'openssl'),'#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on("end",()=>process.stdout.write("fixture-public-key\\n"));\n',{mode:0o755});
+    await fs.writeFile(path.join(bin,'systemctl'),'#!/bin/sh\nexit 1\n',{mode:0o755});
+    await fs.writeFile(path.join(bin,'nginx'),'#!/bin/sh\nexit 0\n',{mode:0o755});
+    await fs.writeFile(path.join(bin,'install'),'#!/usr/bin/env node\nconst fs=require("node:fs");for(const arg of process.argv.slice(2))if(arg.startsWith("/"))fs.mkdirSync(arg,{recursive:true,mode:0o755});\n',{mode:0o755});
+    await fs.writeFile(path.join(bin,'npm'),'#!/usr/bin/env node\nrequire("node:fs").writeFileSync(process.env.MUTATION_MARKER,"npm mutated");process.exit(31);\n',{mode:0o755});
+    const cert=path.join(temp,'certificate.pem');await fs.writeFile(cert,'fixture');
+    const locker=spawn('flock',['-x','-F',path.join(root,'.deploy.lock'),process.execPath,'-e','process.stdout.write("locked");setInterval(()=>{},1000)'],{stdio:['ignore','pipe','pipe']});
+    t.after(async()=>{if(locker.exitCode===null){locker.kill();await new Promise(resolve=>locker.once('exit',resolve));}});
+    await new Promise((resolve,reject)=>{locker.stdout.once('data',resolve);locker.once('error',reject);});
+    const marker=path.join(temp,'mutation');
+    const result=spawnSync('bash',[path.join(temp,'deploy.sh')],{env:{...process.env,PATH:bin+path.delimiter+process.env.PATH,DOMAIN:'test.example',TLS_CERT:cert,TLS_KEY:cert,MUTATION_MARKER:marker},encoding:'utf8'});
+    assert.equal(result.status,75,result.stderr);assert.match(result.stderr,/Deployment is busy/);
+    await assert.rejects(fs.stat(marker),{code:'ENOENT'});
 });

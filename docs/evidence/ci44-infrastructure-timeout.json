@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "sourceCommit": "906a15c6112512749cb85ca1b3491f0f7f34ef04",
+  "testedMergeCommit": "5040263740d918c317ed6c13d7b951d147e4e15c",
+  "run": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42208443915",
+  "jobId": 127860841743,
+  "conclusion": "cancelled-during-job-timeout",
+  "passed": [
+    "dependency-install-and-production-audit",
+    "105-Node-tests",
+    "shell-syntax",
+    "reproducible-build",
+    "Nginx-configuration",
+    "temporary-HTTPS-WSS-proxy"
+  ],
+  "browserInstallation": {
+    "startedAt": "2026-11-06T11:13:59Z",
+    "cancelledAt": "2026-11-06T11:32:34Z",
+    "stage": "APT-system-dependencies",
+    "requestedArchivesMB": 114,
+    "requestedNewPackages": 181,
+    "lastObservedPackageIndex": 39,
+    "mirror": "azure.archive.ubuntu.com",
+    "interpretation": "slow package downloads exhausted the 18-minute job budget; browser executables/tests did not run"
+  },
+  "browsersExecuted": false,
+  "candidateArtifactProduced": false,
+  "evidenceArtifactId": 13498004575,
+  "limitation": "No new browser, WebKit, WAN, hardware, deployment or rollback success is claimed."
+}
