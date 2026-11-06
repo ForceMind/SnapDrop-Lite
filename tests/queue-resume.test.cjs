@@ -92,7 +92,7 @@ test('expired suspended queue is released and never reoffered',async()=>{
     const hold=a.takeHeldTransfers(), b=h.peer();
     hold.deadline=Date.now()-1;
     assert.equal(b.adoptHeldTransfers(hold),false);
-    assert.deepEqual(hold.pendingFiles,[]);
+    assert.equal(hold.pendingFiles.length,0);
     assert.equal(b._outgoing,null);
 });
 test('a pending fallback save does not auto-resume queued files across channels',async()=>{
