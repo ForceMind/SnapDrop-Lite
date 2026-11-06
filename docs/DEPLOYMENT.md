@@ -33,6 +33,12 @@
 
 发布后不立即删除旧 release，以便回滚。Service Worker 不在传输中强制激活；提示用户传输结束后关闭本站所有标签，再打开使新 shell 生效。回滚也要检查 PWA shell 版本。
 
+## 未发布构建归档（仅供隔离测试）
+
+全部 CI 自动化通过后，`scripts/package-candidate.mjs` 才会产出确定性的开发归档 `zeydrop-candidate.tar.gz`、SHA-256 校验文件和 `candidate-manifest.json`。GitHub Actions 作为 `zeydrop-unreleased-dev-candidate` 保存 7 天。归档包含源码、构建后的客户端、信令服务、部署脚本和许可证，不包含 node_modules、.env、正式证书或用户数据。
+
+使用者下载后先用 `sha256sum -c zeydrop-candidate.tar.gz.sha256` 检查本地归档完整性；SHA-256 并非独立身份签名或生产审核。仅允许在独立测试主机上用现有部署文档练习安装与回滚，不得将 CI 成功等同真实跨运营商、iOS Safari、证书续期或 production readiness。
+
 ## 发布前门槛
 
 - 全部自动化检查通过；审查对应 commit，不能使用旧提交的绿灯。

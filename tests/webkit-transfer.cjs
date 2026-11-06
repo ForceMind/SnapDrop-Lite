@@ -10,6 +10,29 @@ const { startDev } = require('../scripts/dev.cjs');
 
 async function main() {
     const server = await startDev(0);
+    // Inspect candidate *shapes*, never candidate strings, SDP or addresses.
+    const signalTrace = {incomingIce:0,forwardedIce:0,missingMid:0,missingIndex:0,
+        missingCandidate:0,types:{host:0,srflx:0,prflx:0,relay:0,other:0}};
+    const origMessage=server.signaling.message.bind(server.signaling);
+    server.signaling.message=(peer,raw)=>{
+        try{
+            const value=JSON.parse(raw);
+            if(value?.type==='signal' && value.ice){
+                const ice=value.ice;signalTrace.incomingIce++;
+                if(!Object.hasOwn(ice,'sdpMid'))signalTrace.missingMid++;
+                if(!Object.hasOwn(ice,'sdpMLineIndex'))signalTrace.missingIndex++;
+                if(typeof ice.candidate!=='string')signalTrace.missingCandidate++;
+                const type=String(ice.candidate||'').match(/ typ (\w+)/)?.[1];
+                signalTrace.types[Object.hasOwn(signalTrace.types,type) ? type : 'other']++;
+            }
+        }catch{}
+        return origMessage(peer,raw);
+    };
+    const origSend=server.signaling.send.bind(server.signaling);
+    server.signaling.send=(peer,msg)=>{
+        if(msg?.type==='signal' && msg.ice)signalTrace.forwardedIce++;
+        return origSend(peer,msg);
+    };
     const contexts = [], browsers = [], pages = [], errors = [];
     try {
         for (const engine of [chromium, webkit]) {
@@ -68,7 +91,13 @@ async function main() {
                             signaling:!!zeydrop.server._ready,
                             channelState:peer._channel?.readyState || 'unknown',
                             rtcConnection:conn.connectionState, iceState:conn.iceConnectionState,
-                            signalingState:conn.signalingState, appState:peer._state,
+                            iceGatheringState:conn.iceGatheringState,
+                            signalingState:conn.signalingState,
+                            localSdpPresent:!!conn.localDescription,
+                            remoteSdpPresent:!!conn.remoteDescription,
+                            candidateCounts:{...peer._candidateCounts},
+                            bufferedEarlyIce:peer._pendingIce?.length || 0,
+                            appState:peer._state,
                             verifiedPath:peer._path?.direct === true,
                             pathStatus:peer._path?.status || 'unknown',
                             codeAvailable:!!peer._code, remoteHello:!!peer._remoteHello,
@@ -83,7 +112,7 @@ async function main() {
                     }, index);
                 } catch (e) { return { engine:index ? 'webkit' : 'chromium', diagnosticErrorType:e?.name || 'unknown' }; }
             }));
-            console.error('Sanitized cross-engine ICE diagnostic:', JSON.stringify(diagnostics));
+            console.error('Sanitized cross-engine ICE diagnostic:', JSON.stringify({endpoints:diagnostics, signaling:signalTrace}));
             throw Error('WebKit/Chromium did not establish a verified non-relay direct path');
         }
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
