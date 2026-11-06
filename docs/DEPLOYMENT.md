@@ -13,7 +13,7 @@
 
 脚本校验域名 / 证书路径、证书期限和域名、证书与密钥匹配，安装固定锁文件依赖、运行测试、确定性构建。修改配置前备份受管文件、旧活动目录及服务状态；失败 trap 尝试恢复，备份目录在失败时保留供检查。此路径尚未在真实 systemd 主机演练。通过 systemd `zeydrop` 运行无特权账号，Nginx 反代 WSS，配置 Origin 只接受 `https://<DOMAIN>`。
 
-静态 `/health` 仅证明 Nginx 服务就绪；必须另外实际执行 WS hello、邀请两端配对、candidate pair、文件校验才能证明信令 / P2P 可用。不得将静态健康检查写成完整产品验收。
+静态 `/health` 仅证明 Nginx 服务就绪；必须另外实际执行 WS hello、邀请两端配对、candidate pair、文件校验才能证明信令 / P2P 可用。开发 CI 中增加 `node tests/https-proxy.cjs`：临时自签名 TLS 证书和非特权端口启动**真实 Nginx/WSS 双设备配对**，并验证上传拒绝和安全头；只作为部署模板的云端演练，不能替代正式证书续期、systemd 重启或真实公网测试。不得将静态健康检查写成完整产品验收。
 
 ## 从旧 Snapdrop 安装迁移
 

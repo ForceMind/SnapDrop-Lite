@@ -28,6 +28,7 @@ jobs:
       - run: npm run build && node scripts/check-build.mjs
       - run: sudo apt-get update && sudo apt-get install -y nginx
       - run: bash scripts/check-nginx.sh
+      - run: node tests/https-proxy.cjs
       - id: browsers
         if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium firefox webkit

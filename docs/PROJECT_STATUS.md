@@ -2,6 +2,10 @@
 
 更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
+## 2026-11-06：临时 HTTPS/WSS 反向代理实际集成测试（待当前 CI）
+
+新增 `tests/https-proxy.cjs`：在 GitHub Ubuntu 测试主机临时生成自签名 TLS 证书，实际启动基于生产 `deployment/nginx.conf` 模板的 Nginx 和独立信令服务，确认 HTTPS 首页与安全头、HTTP 重定向、拒绝文件上传、WebSocket Origin 白名单和双端 WSS 配对。所有端口仅在测试机 127.0.0.1 监听；测试结束杀掉临时进程并删除证书，不触及正式服务器。此测试**只验证代理/信令链路，不能证明真实公网 NAT 穿透或生产证书续期**。提交后以当前 CI 为准。
+
 ## 2026-11-05：离线双端公网测试证据校验工具（候选，待 CI）
 
 新增 `scripts/field-verify.cjs` 及 `tests/field-verify.test.cjs`。本地读取两个 Zeydrop 脱敏诊断 JSON，检查版本一致性、**最后一次**连接记录确实为 selected 非 relay 且用户已确认安全码（旧的历史成功不能掩盖后续断线），可选择流式读取双方的文件并使用 SHA-256 比对。输出报告白名单仅包含协议、候选类型、地址族、RTT、长度和一致性等必要字段，不导出本地系统路径、文件名、IP、文件哈希或原始诊断。工具不会联网或上传任何内容；文件不一致显式标记 `integrity-mismatch`，不能误判为只缺少证据。
