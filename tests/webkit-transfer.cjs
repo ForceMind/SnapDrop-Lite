@@ -32,10 +32,60 @@ async function main() {
         await chrome.locator('#createRoomBtn').click();
         await chrome.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
         await fox.goto(await chrome.locator('#inviteUrl').inputValue());
-        for (const page of pages) await page.waitForFunction(() => {
-            const peer = [...zeydrop.peers.peers.values()][0];
-            return peer?._path?.direct && peer?._remoteHello && peer?._code;
-        }, null, { timeout: 30000 });
+        try {
+            for (const page of pages) await page.waitForFunction(() => {
+                const peer = [...zeydrop.peers.peers.values()][0];
+                return peer?._path?.direct && peer?._remoteHello && peer?._code;
+            }, null, { timeout: 30000 });
+        } catch {
+            // Never serialize raw RTCStatsReport: it contains IPs, SDP and/or
+            // user-identifying candidate addresses. Limit to known safe fields.
+            const diagnostics = await Promise.all(pages.map(async (page, index) => {
+                try {
+                    return await page.evaluate(async index => {
+                        const peer = [...zeydrop.peers.peers.values()][0];
+                        if (!peer) return { engine: index ? 'webkit' : 'chromium', peerPresent: false };
+                        const conn = peer._conn;
+                        const stats = await conn.getStats();
+                        const records = [...stats.values()].filter(s =>
+                            ['transport', 'candidate-pair', 'local-candidate', 'remote-candidate'].includes(s.type));
+                        const safeRecords = records.slice(0, 30).map(s => ({
+                            type:s.type,
+                            state: ['new','checking','connected','completed','failed','disconnected','closed',
+                                'in-progress','succeeded'].includes(s.state) ? s.state : 'unknown',
+                            selected:s.selected === true, nominated:s.nominated === true,
+                            hasSelectedCandidatePairId:typeof s.selectedCandidatePairId === 'string',
+                            hasLocalCandidateId:typeof s.localCandidateId === 'string',
+                            hasRemoteCandidateId:typeof s.remoteCandidateId === 'string',
+                            candidateType:['host','srflx','prflx','relay'].includes(s.candidateType) ?
+                                s.candidateType : 'unknown',
+                            protocol:['udp','tcp'].includes(s.protocol) ? s.protocol : 'unknown'
+                        }));
+                        const ice = conn.sctp?.transport?.iceTransport;
+                        const selected = ice?.getSelectedCandidatePair?.();
+                        return {
+                            engine:index ? 'webkit' : 'chromium',
+                            signaling:!!zeydrop.server._ready,
+                            channelState:peer._channel?.readyState || 'unknown',
+                            rtcConnection:conn.connectionState, iceState:conn.iceConnectionState,
+                            signalingState:conn.signalingState, appState:peer._state,
+                            verifiedPath:peer._path?.direct === true,
+                            pathStatus:peer._path?.status || 'unknown',
+                            codeAvailable:!!peer._code, remoteHello:!!peer._remoteHello,
+                            stunError:peer._stunError === true,
+                            hasSelectedPairAPI:typeof ice?.getSelectedCandidatePair === 'function',
+                            selectedPairAPI: selected ? {
+                                localType:selected.local?.type || 'unknown',
+                                remoteType:selected.remote?.type || 'unknown'
+                            } : null,
+                            statsSummary:safeRecords
+                        };
+                    }, index);
+                } catch (e) { return { engine:index ? 'webkit' : 'chromium', diagnosticErrorType:e?.name || 'unknown' }; }
+            }));
+            console.error('Sanitized cross-engine ICE diagnostic:', JSON.stringify(diagnostics));
+            throw Error('WebKit/Chromium did not establish a verified non-relay direct path');
+        }
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
         assert.equal(codes[0], codes[1], 'cross-engine DTLS identity code must match');
         for (const page of pages) {
