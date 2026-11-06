@@ -93,8 +93,13 @@ class ZeydropServer {
                 if (existing) return this.error(peer, 'exists', '邀请已存在，请创建新邀请');
                 if (this.rooms.size >= 1000) return this.error(peer, 'capacity', '服务繁忙，请稍后重试');
                 // Rate limit creation independently from ICE/pong traffic.
-                if (peer.lastCreate && now - peer.lastCreate < 5000) return this.error(peer, 'rate', '请稍后再创建邀请');
-                peer.lastCreate = now;
+                // A reconnect is the same authorized session, not a new
+                // creation allowance. Keep the 5-second budget on the session
+                // instead of on the ephemeral WebSocket peer object.
+                if (peer.session.lastCreate !== undefined
+                    && now - peer.session.lastCreate < 5000)
+                    return this.error(peer, 'rate', '请稍后再创建邀请');
+                peer.session.lastCreate = now;
                 this.rooms.set(msg.roomId, { expires: now + this.roomTTL, sessionExpires: null, members: new Map() });
             } else if (!existing) return this.error(peer, 'missing', '邀请不存在或已过期，请让对方创建新邀请');
             const room = this.rooms.get(msg.roomId);
@@ -156,7 +161,10 @@ class ZeydropServer {
         room?.members.delete(peer.id);
         for (const session of room?.members.values() || []) this.send(session.peer, { type: 'peer-left', peerId: peer.id });
         peer.session.room = null;
-        if (room?.sessionExpires && !room.members.size) this.rooms.delete(id);
+        // An unpaired, empty invitation is no longer useful after its
+        // creator leaves. Reclaim it immediately rather than spending a room
+        // slot until the 15-minute invitation deadline.
+        if (room && !room.members.size) this.rooms.delete(id);
         this.send(peer, { type: 'peers', peers: [] });
     }
     detach(peer) {

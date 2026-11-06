@@ -120,3 +120,47 @@ test('malformed unauthenticated upgrade targets are rejected without crashing si
     }
     const healthy = await connect(); assert.ok(healthy.hello.peerId);
 });
+
+test('invitation creation throttle persists across reconnect of the same authorized session', async t => {
+    let now = 100000;
+    const { connect } = await setup(t, { now: () => now });
+    const a = await connect();
+    a.send({ type: 'create-room', roomId }); await a.wait(msg => msg.type === 'room-joined');
+    a.ws.close(); await new Promise(resolve => a.ws.once('close', resolve));
+    const resumed = await connect(a.hello.resumeToken);
+    assert.equal(resumed.hello.peerId, a.hello.peerId);
+    await resumed.wait(msg => msg.type === 'room-joined');
+    const beforeLeave = resumed.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length;
+    resumed.send({ type: 'leave-room' });
+    for (let i = 0; i < 100; i++) {
+        if (resumed.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length > beforeLeave) break;
+        await delay(5);
+    }
+    assert.ok(resumed.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length > beforeLeave);
+    const another = '1'.repeat(32);
+    resumed.send({ type: 'create-room', roomId: another });
+    const denied = await resumed.wait(msg => msg.type === 'room-error' && msg.code === 'rate');
+    assert.equal(denied.code, 'rate');
+    now += 5001;
+    resumed.send({ type: 'create-room', roomId: another });
+    const created = await resumed.wait(msg => msg.type === 'room-joined' && msg.roomId === another);
+    assert.equal(created.roomId, another);
+});
+
+test('an unpaired invitation disappears as soon as its creator leaves', async t => {
+    const { connect, server } = await setup(t);
+    const a = await connect(), b = await connect();
+    a.send({ type: 'create-room', roomId }); await a.wait(msg => msg.type === 'room-joined');
+    assert.equal(server.rooms.size, 1);
+    const beforeLeave = a.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length;
+    a.send({ type: 'leave-room' });
+    for (let i = 0; i < 100; i++) {
+        if (a.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length > beforeLeave) break;
+        await delay(5);
+    }
+    assert.ok(a.messages.filter(msg => msg.type === 'peers' && !msg.peers.length).length > beforeLeave);
+    assert.equal(server.rooms.size, 0, 'empty invitation should not consume a room slot');
+    b.send({ type: 'join-room', roomId });
+    const error = await b.wait(msg => msg.type === 'room-error');
+    assert.equal(error.code, 'missing', 'old invitation cannot resurrect after creator leaves');
+});
