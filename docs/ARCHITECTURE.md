@@ -32,7 +32,7 @@
 5. 双方独立增量计算 SHA-256；`finish {id,sha256}` 只能在声明长度完全一致时核验。
 6. 接收端 hash 匹配、sink.close 成功后 `complete {id,sha256}`，发送方也必须核对值。零字节文件同样执行哈希和完成协议。
 
-`pause/resume/cancel` 绑定 transfer ID。当前连接内暂停保留 offset。短时断线后，双方只保留已接受且未完成的当前文件及有界内存会话，不重放未授权的传输请求。
+`pause/resume/cancel` 绑定 transfer ID。当前连接内暂停保留 offset。同页短时断线时，双方可以保留已接受、未完成的当前文件和待发送 File 队列，最多 120 秒；未接受的旧 offer 必须用新 transfer ID 重新向接收方取得明确同意。在未完成新的非 relay 路径和安全码核对前不发送队列。跨页面刷新只支持用户主动启用的单个接收文件 OPFS 检查点，不保存发送方文件队列。若上一件 Blob 仍待手动保存，不跨连接复用 ready-next，剩余队列需用户重新选择。
 
 ### 同页断点恢复扩展（仍使用 RTCDataChannel 协议 v2）
 

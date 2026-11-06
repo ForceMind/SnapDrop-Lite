@@ -2,6 +2,16 @@
 
 更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
+## 2026-11-06：同页重连保留待发文件队列（候选，待新 CI）
+
+`TransferPeer` 在同一页面内短时断线、原设备/房间重新验证且重新核对 DTLS 安全码后，支持继续已接受文件的断点恢复，并可保留未发送的 `File` 队列（最长 120 秒）。未获接收同意的 `offer` 会作废旧 transfer ID，恢复后用新 `offer` 重新请求接收方批准；**恢复前绝不直接发送文件字节**。队列仅存在当前页面内存，不经信令服务器、不能跨刷新保存。用户退出、会话过期、身份不匹配后不继续发送。上一件完成的 Blob 仍等待用户保存/丢弃时，旧 `ready-next` 状态不能跨连接复用，剩余队列需要用户重新选择。
+
+新增 `tests/queue-resume.test.cjs`，覆盖已接受文件后队列恢复、旧邀请重新要求接收同意、未核对安全码/未确认路径前禁止发送、恢复窗口过期清理、待保存 Blob 不自动跳过。此处是状态机级验证，必须以新 CI 为准；不等于真实手机后台切网。
+
+## 2026-11-06：Chromium ↔ WebKit 实际文件传输（待新 CI）
+
+新增 `tests/webkit-transfer.cjs`：Linux Playwright WebKit 与 Chromium 两个不同浏览器引擎，在同主机关闭 STUN 的 WebRTC DataChannel 上双向传输 1 MiB 文件。要求双方实际 selected non-relay 路径、同一 DTLS 安全码、接收前 0 文件正文、接收者主动授权，接收文件下载后由 Node 独立 SHA-256 验证，确保 WebSocket 没有传输正文。这是针对 WebKit 传输能力的工程验证，**不能当作 macOS/iOS Safari 真机或公网 NAT 穿透测试**。以 CI 实际结果为准；失败需记录真实限制，不能弱化非 relay 身份安全标准来过测。
+
 ## 2026-11-06：临时 HTTPS/WSS 反向代理实际集成测试（待当前 CI）
 
 新增 `tests/https-proxy.cjs`：在 GitHub Ubuntu 测试主机临时生成自签名 TLS 证书，实际启动基于生产 `deployment/nginx.conf` 模板的 Nginx 和独立信令服务，确认 HTTPS 首页与安全头、HTTP 重定向、拒绝文件上传、WebSocket Origin 白名单和双端 WSS 配对。所有端口仅在测试机 127.0.0.1 监听；测试结束杀掉临时进程并删除证书，不触及正式服务器。此测试**只验证代理/信令链路，不能证明真实公网 NAT 穿透或生产证书续期**。提交后以当前 CI 为准。

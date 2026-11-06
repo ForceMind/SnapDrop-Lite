@@ -33,6 +33,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx playwright install --with-deps chromium firefox webkit
       - run: node tests/interoperability.cjs
+      - run: node tests/webkit-transfer.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/persistent-flow-browser.cjs
       - run: LARGE_FILE_TEST=1 npm run test:browser

@@ -185,7 +185,22 @@ class TransferPeer {
         if (this._held) return true;
         const outgoing = this._outgoing && ['sending', 'verifying', 'resuming'].includes(this._outgoing.phase) ? this._outgoing : null;
         const incoming = this._incoming?.sink && !this._incoming.finishing ? this._incoming : null;
-        if (!outgoing && !incoming) { this.abortAll(reason); return false; }
+        // Queued File objects are never uploaded to signaling. Retain them
+        // only in this page for a bounded 2-minute reconnection window.
+        // If a completed fallback download still waits for manual saving,
+        // the ready-next authorization cannot be safely replayed: discard
+        // the remaining queue rather than skipping receiver consent.
+        const offered = this._outgoing?.phase === 'offered' ? this._outgoing : null;
+        const pendingFiles = this._queueWaitId ? []
+            : [...(offered ? [offered.file] : []), ...this._filesQueue];
+        if (!outgoing && !incoming && !pendingFiles.length) { this.abortAll(reason); return false; }
+        if (offered) {
+            clearTimeout(offered.timer);
+            this._outgoing = null;
+            this._progress(offered, 'reconnecting');
+        }
+        if (this._queueWaitId && this._filesQueue.length)
+            Events.fire('notify-user', '上一文件仍待保存，重连后请重新选择剩余文件');
         if (this._outgoing && !outgoing) this.cancel(this._outgoing.meta.id, reason, false);
         if (this._incoming && !incoming) this.cancel(this._incoming.meta.id, reason, false);
         const deadline = Date.now() + 120000;
@@ -196,7 +211,8 @@ class TransferPeer {
             state.awaitingResume = true;
             this._progress(state, 'reconnecting');
         }
-        const hold = { outgoing, incoming, deadline: Math.min(...[outgoing, incoming].filter(Boolean).map(state => state.resumeDeadline)) };
+        const hold = { outgoing, incoming, pendingFiles,
+            deadline: Math.min(deadline, ...[outgoing, incoming].filter(Boolean).map(state => state.resumeDeadline)) };
         // An in-flight sink.write may finish after the transport disappears. Its
         // hash/offset is accounted for before the receiver advertises a prefix.
         this._held = hold;
@@ -210,6 +226,8 @@ class TransferPeer {
     _dropHeld(reason) {
         const hold = this._held; if (!hold) return;
         this._held = null; clearTimeout(hold.timer); this._pendingResumeOffer = null;
+        // Drop references to local File objects once recovery is no longer authorized.
+        hold.pendingFiles = [];
         for (const state of [hold.outgoing, hold.incoming]) {
             if (!state) continue;
             clearTimeout(state.timer); state.error = reason;
@@ -227,7 +245,10 @@ class TransferPeer {
     takeHeldTransfers() { return this._held; }
     adoptHeldTransfers(hold) {
         if (!hold || this._held || this._incoming || this._outgoing) return false;
-        if (Date.now() >= hold.deadline) { hold.incoming?.sink?.abort().catch(() => {}); return false; }
+        if (Date.now() >= hold.deadline) {
+            hold.pendingFiles = [];
+            hold.incoming?.sink?.abort().catch(() => {}); return false;
+        }
         clearTimeout(hold.timer);
         this._held = hold;
         hold.timer = setTimeout(() => this._dropHeld('续传窗口已过期，请重新选择文件'), Math.max(0, hold.deadline - Date.now()));
@@ -241,6 +262,8 @@ class TransferPeer {
             clearTimeout(hold.timer); this._held = null;
             this._resumeReady = hold.ready;
             this._incoming = hold.incoming; this._outgoing = hold.outgoing;
+            this._filesQueue = hold.pendingFiles || [];
+            hold.pendingFiles = [];
             for (const state of [this._incoming, this._outgoing]) {
                 if (!state) continue;
                 state.timer = setTimeout(() => this.cancel(state.meta.id, '续传协商超时'), Math.max(0, state.resumeDeadline - Date.now()));
@@ -248,6 +271,10 @@ class TransferPeer {
             if (this._outgoing) {
                 this._outgoing.phase = 'resuming';
                 this.sendJSON({ type: 'resume-offer', ...this._outgoing.meta });
+            } else if (this._filesQueue.length) {
+                // A previously offered but unaccepted file gets a fresh offer
+                // and must receive fresh explicit user consent after reconnection.
+                this._dequeueFile();
             }
         }
         if (this._pendingResumeOffer && this._incoming) {
@@ -336,7 +363,8 @@ class TransferPeer {
         this._filesQueue.push(...Array.from(files)); this._dequeueFile();
     }
     _dequeueFile() {
-        if (this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._isConnected()) return;
+        if (this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._isConnected()
+            || !this._verified || !this._path?.direct || !this._remoteHello) return;
         const file = this._filesQueue.shift();
         const state = { file, meta: { id: crypto.randomUUID(), name: safeName(file.name), size: file.size, mime: file.type.slice(0, 128) }, phase: 'offered', offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
         this._outgoing = state;
