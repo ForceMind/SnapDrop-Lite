@@ -78,6 +78,7 @@ sudo DOMAIN=transfer.example.com \
 - [协议、安全和架构](docs/ARCHITECTURE.md)
 - [测试矩阵](docs/TEST_MATRIX.md) / [实机方法与离线证据工具](docs/REAL_DEVICE_TESTING.md)
 - [实验性本机断点存储与隐私](docs/RECOVERY_STORAGE.md)
+- [正式发布门槛与外部验收](docs/RELEASE_GATES.md)
 - [STUN 配置与官方来源](docs/STUN_CONFIGURATION.md)
 - [许可证来源](docs/LICENSE_PROVENANCE.md)
 

@@ -164,3 +164,28 @@ test('an unpaired invitation disappears as soon as its creator leaves', async t 
     const error = await b.wait(msg => msg.type === 'room-error');
     assert.equal(error.code, 'missing', 'old invitation cannot resurrect after creator leaves');
 });
+
+test('valid WebKit-style nullable ICE metadata is relayed only within the authorized room',async t=>{
+    const {connect}=await setup(t);
+    const a=await connect(),b=await connect();
+    a.send({type:'create-room',roomId});await a.wait(msg=>msg.type==='room-joined');
+    b.send({type:'join-room',roomId});await b.wait(msg=>msg.type==='room-joined');
+    const candidate='candidate:1 1 udp 2122260223 192.0.2.1 53352 typ host generation 0';
+    const baseline=b.messages.filter(msg=>msg.type==='signal').length;
+    a.send({type:'signal',to:b.hello.peerId,
+        ice:{candidate,sdpMid:'0',sdpMLineIndex:0,usernameFragment:null}});
+    for(let i=0;i<80&&b.messages.filter(msg=>msg.type==='signal').length===baseline;i++)await delay(5);
+    const messages=b.messages.filter(msg=>msg.type==='signal');
+    assert.equal(messages.length,baseline+1);
+    assert.equal(messages.at(-1).ice.usernameFragment,null);
+    // Optional sdpMid/ufrag may be absent in some candidate JSON formats.
+    a.send({type:'signal',to:b.hello.peerId,ice:{candidate,sdpMLineIndex:0}});
+    for(let i=0;i<80&&b.messages.filter(msg=>msg.type==='signal').length===baseline+1;i++)await delay(5);
+    assert.equal(b.messages.filter(msg=>msg.type==='signal').length,baseline+2);
+    const invalid=[{candidate,sdpMid:'0',sdpMLineIndex:0,usernameFragment:{file:'BODY'}},
+        {candidate,sdpMid:'0',sdpMLineIndex:-1},
+        {candidate:'candidate:2 1 udp 1 192.0.2.1 12 typ relay',sdpMid:'0',sdpMLineIndex:0}];
+    for(const ice of invalid)a.send({type:'signal',to:b.hello.peerId,ice});
+    await delay(40);
+    assert.equal(b.messages.filter(msg=>msg.type==='signal').length,baseline+2);
+});

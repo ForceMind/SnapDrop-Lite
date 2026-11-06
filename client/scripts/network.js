@@ -31,6 +31,27 @@ function selectedPath(stats) {
         rtt: Number.isFinite(pair.currentRoundTripTime) ? Math.round(pair.currentRoundTripTime * 1000) : null
     };
 }
+// The standard RTCIceTransport API is an additional *selected-route* source.
+// Never infer a usable link from nominated candidate pairs or mere ICE gathering.
+function selectedPathFromIceTransport(conn) {
+    const ice=conn?.sctp?.transport?.iceTransport;
+    if(typeof ice?.getSelectedCandidatePair !== 'function')return null;
+    let pair;
+    try{pair=ice.getSelectedCandidatePair();}catch{return null;}
+    if(!pair?.local || !pair?.remote)return null;
+    const local=pair.local,remote=pair.remote,localType=local.type,remoteType=remote.type;
+    if([localType,remoteType].includes('relay'))return {direct:false,status:'relay'};
+    const types=['host','srflx','prflx'],protocol=local.protocol||remote.protocol||'unknown';
+    const ips=[local.address||local.ip,remote.address||remote.ip];
+    const family=ips.some(ip=>typeof ip==='string'&&ip.includes(':'))?'IPv6 / 双栈'
+        :ips.some(ip=>typeof ip==='string'&&/^\d+\.\d+\.\d+\.\d+$/.test(ip))?'IPv4':'地址族未公开';
+    return {
+        direct:types.includes(localType)&&types.includes(remoteType)
+            && ['udp','tcp'].includes(protocol)
+            && (!local.protocol || !remote.protocol || local.protocol===remote.protocol),
+        status:'selected',protocol,localType,remoteType,family,rtt:null
+    };
+}
 class ServerConnection {
     constructor() {
         this._desiredRoomId = null; this._peerId = null; this._resumeToken = null;
@@ -284,9 +305,16 @@ class RTCPeer extends TransferPeer {
         const current = () => conn === this._conn && epoch === this._pathEpoch
             && request === this._statsRequest && this._canInspectPath();
         try {
-            const stats = await conn.getStats();
+            // Some WebKit implementations omit standard transport stats even
+            // when the selected ICE transport API reports a real active pair.
+            // Prefer selectedCandidatePairId; fall back only to the explicit
+            // getSelectedCandidatePair() result (never nominated alone).
+            let stats;
+            try { stats = await conn.getStats(); } catch {}
             if (!current()) return;
-            const path = selectedPath(stats);
+            const fromStats = stats ? selectedPath(stats) : { direct:false, status:'unknown' };
+            const path = fromStats.status === 'unknown'
+                ? selectedPathFromIceTransport(conn) || fromStats : fromStats;
             if (path.status === 'relay') return this._protocolError('检测到中继路径，已停止连接');
             if (!path.direct) return this._pathUnavailable('直连路径暂时无法核验，当前文件已停止；恢复后请重新核对安全码');
             this._path = path; this._reason = null; this._state = 'connected';

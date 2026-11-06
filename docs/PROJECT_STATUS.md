@@ -1,10 +1,20 @@
 # Zeydrop 工程接管状态
 
-更新时间：2026-10-24。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
+更新时间：2026-11-06。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
+
+## 2026-11-06：Linux WebKit 双引擎测试的真实限制（CI #40 未通过）
+
+`c12e9fb` 的 [GitHub Actions #40](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42202564459) 已完成：**74/74 Node 测试**、临时生产 Nginx 模板 HTTPS/WSS、Chromium 1 GiB、Firefox 100 MiB、Chromium↔Firefox、跨刷新 OPFS、WebKit 手机 UI smoke 等核心自动化通过；但**Chromium ↔ Linux Playwright WebKit 的真实 DataChannel 传输测试未通过**。脱敏诊断显示两端都已拥有 SDP/安全码且完成本地 ICE gathering；服务端收到并转发 **2/2** 条 host ICE candidate，但两端仍停留在 `iceConnectionState: new`、没有选中任何路径，因此禁止发送文件。尚不能证明是测试环境 mDNS/UDP 互通限制还是 WebKit 内核兼容性问题；绝不能把此失败写成 Safari/iOS 已通过。
+
+后续采用双层验收：核心自动化全部通过后允许生成**非稳定、仅隔离测试**的开发归档；Linux WebKit 实际传输测试随后继续作为严格独立阻断项执行，如失败则整套 CI 仍标红并保持 PR Draft。不通过降低 selected-pair/relay 拦截规则获得假绿灯。真实 iOS/macOS Safari、Android 及异地网络仍是发布门槛。
+
+## 2026-11-06：标准 ICE transport selected-pair 兼容实现（候选，待 CI）
+
+在 getStats 缺失实际选中 pair 的浏览器上，新增 `RTCIceTransport.getSelectedCandidatePair()` 作为**仅在确实返回当前活动候选对时**的备用核验路径。仍严格检查 host/srflx/prflx 候选类型和 UDP/TCP 协议；遇到 relay 立即失败，候选不完整/类型未知不授权。不能用 nominated 标记或仅有本地候选当作成功。新增 IPv6 结果、relay、协议冲突、未知 pair 和 API 不可用的单测。此功能针对 WebKit/Safari 路径证据兼容，但**不等于修复 WebKit ICE 本身建连失败**；以 CI 新结果及实机测试为准。
 
 ## 2026-11-06：确定性未发布候选归档（候选，待 CI）
 
-新增 `scripts/package-candidate.mjs`，只有 GitHub CI 所有自动化通过之后，才把源码、构建后的客户端、服务器、部署脚本和许可证打包成确定性的 tar.gz，附 SHA-256 和 commit/build revision 清单，上传 7 天有效的 GitHub Actions 开发候选附件。归档排除 node_modules、.env、.git、测试产物；未签署正式 Release，不涉及生产部署。以新 CI 检查为准。
+新增 `scripts/package-candidate.mjs`，只有 GitHub CI 核心自动化（Node、TLS、Chromium、Firefox、OPFS、WebKit UI）通过之后，才把源码、构建后的客户端、服务器、部署脚本和许可证打包成确定性的 tar.gz，附 SHA-256 和 commit/build revision 清单，上传 7 天有效的 GitHub Actions 开发候选附件。归档排除 node_modules、.env、.git、测试产物；未签署正式 Release，不涉及生产部署。以新 CI 检查为准。
 
 ## 2026-11-06：同页重连保留待发文件队列（候选，待新 CI）
 

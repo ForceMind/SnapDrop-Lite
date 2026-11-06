@@ -21,7 +21,7 @@
 | Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #10 全部通过（原生 OPFS） |
 | Firefox 完整 E2E | CI #10 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 配额失败后继续传输 / 会话恢复 |
 | WebKit 手机 UI | CI #10 smoke | 通过；不等于 iOS Safari 实测 |
-| Chromium ↔ WebKit 双向真实 DataChannel 文件/下载/哈希 | Playwright Linux WebKit + Chromium，同机关闭 STUN | 待新 CI；不能等同 Safari/iOS 真机与真实公网 |
+| Chromium ↔ WebKit 双向真实 DataChannel 文件/下载/哈希 | Playwright Linux WebKit + Chromium，同机关闭 STUN | CI #40 **未通过**：两端 ICE gathering 完毕、2/2 candidate 被服务端转发，但状态维持 new，未选中 pair；不冒充 Safari/iOS 真机通过 |
 
 E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服务器 WS 字节计数与正文 sentinel 检查。原生文件流使用浏览器 OPFS writer；测试只代替 picker 选择，不证明真实用户 picker 授权体验。CI 网络同主机不能替代公网 NAT 场景。
 

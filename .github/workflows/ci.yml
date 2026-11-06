@@ -40,7 +40,6 @@ jobs:
         run: BROWSER_TYPE=firefox npm run test:browser
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=webkit npm run test:smoke
-      - run: node tests/webkit-transfer.cjs
       - run: node scripts/package-candidate.mjs && cd test-results/candidate && sha256sum -c zeydrop-candidate.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         if: success()
@@ -48,6 +47,10 @@ jobs:
           name: zeydrop-unreleased-dev-candidate
           path: test-results/candidate/
           retention-days: 7
+      # Experimental Linux WebKit DataChannel compatibility is a separate
+      # release gate. Even if it fails, the core-verified DEV package remains
+      # downloadable for isolated testing; the overall CI still reports red.
+      - run: node tests/webkit-transfer.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

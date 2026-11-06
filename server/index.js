@@ -128,9 +128,12 @@ class ZeydropServer {
         } else if (onlyKeys(msg, ['type', 'to', 'ice']) && onlyKeys(msg.ice, ['candidate', 'sdpMid', 'sdpMLineIndex', 'usernameFragment'])
             && typeof msg.ice.candidate === 'string' && msg.ice.candidate.startsWith('candidate:') && msg.ice.candidate.length <= 4096
             && / typ (host|srflx|prflx)( |$)/.test(msg.ice.candidate)
-            && (msg.ice.sdpMid === null || (typeof msg.ice.sdpMid === 'string' && msg.ice.sdpMid.length <= 128))
-            && (msg.ice.sdpMLineIndex === null || (Number.isInteger(msg.ice.sdpMLineIndex) && msg.ice.sdpMLineIndex >= 0 && msg.ice.sdpMLineIndex <= 16))
-            && (msg.ice.usernameFragment === undefined || (typeof msg.ice.usernameFragment === 'string' && msg.ice.usernameFragment.length <= 128))) {
+            // RTCIceCandidateInit optional fields can be null or absent, and
+            // WebKit may emit a null usernameFragment. Validate them without
+            // confusing a valid ICE candidate with arbitrary file metadata.
+            && (msg.ice.sdpMid == null || (typeof msg.ice.sdpMid === 'string' && msg.ice.sdpMid.length <= 128))
+            && (msg.ice.sdpMLineIndex == null || (Number.isInteger(msg.ice.sdpMLineIndex) && msg.ice.sdpMLineIndex >= 0 && msg.ice.sdpMLineIndex <= 16))
+            && (msg.ice.usernameFragment == null || (typeof msg.ice.usernameFragment === 'string' && msg.ice.usernameFragment.length <= 128))) {
             payload = { ice: msg.ice };
         }
         if (payload) this.send(recipient, { type: 'signal', sender: peer.id, ...payload });
