@@ -76,7 +76,7 @@ sudo DOMAIN=transfer.example.com \
 - [历史公网 P2P 方案](docs/PUBLIC_P2P_DEVELOPMENT_PLAN.md)（原方案保留，执行状态以当前状态为准）
 - [UI 设计](docs/UI_DESIGN_V1.md)
 - [协议、安全和架构](docs/ARCHITECTURE.md)
-- [测试矩阵](docs/TEST_MATRIX.md) / [实机方法](docs/REAL_DEVICE_TESTING.md)
+- [测试矩阵](docs/TEST_MATRIX.md) / [实机方法与离线证据工具](docs/REAL_DEVICE_TESTING.md)
 - [实验性本机断点存储与隐私](docs/RECOVERY_STORAGE.md)
 - [STUN 配置与官方来源](docs/STUN_CONFIGURATION.md)
 - [许可证来源](docs/LICENSE_PROVENANCE.md)
