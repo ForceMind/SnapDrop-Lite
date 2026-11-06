@@ -9,7 +9,7 @@ if [[ ${EUID} -ne 0 ]]; then echo 'Run as root on the deployment host.' >&2; exi
 [[ $DOMAIN =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ && $DOMAIN == *.* ]] || { echo 'Invalid DOMAIN' >&2; exit 1; }
 DOMAIN=${DOMAIN,,}
 for item in "$TLS_CERT" "$TLS_KEY"; do [[ $item =~ ^/[a-zA-Z0-9_./-]+$ && -r $item ]] || { echo 'Invalid or unreadable certificate path' >&2; exit 1; }; done
-for tool in node npm nginx systemctl openssl; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
+for tool in node npm nginx systemctl openssl flock git tar; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
 node -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)'
 openssl x509 -checkend 86400 -noout -in "$TLS_CERT"
 openssl x509 -checkhost "$DOMAIN" -noout -in "$TLS_CERT"
@@ -21,6 +21,10 @@ npm ci --ignore-scripts
 npm --prefix server ci --omit=dev --ignore-scripts
 npm test
 npm run build
+# Serialize deployment and rollback state changes on this host.
+mkdir -p /opt/zeydrop
+exec 9>/opt/zeydrop/.deploy.lock
+flock -n 9 || { echo 'Another deployment or rollback is running.' >&2; exit 1; }
 revision=$(node -p "require('./dist/build.json').revision")
 release="/opt/zeydrop/releases/$revision"
 [[ ! -e $release ]] || { echo 'Release already exists; use rollback.sh to select it.' >&2; exit 1; }
@@ -76,6 +80,7 @@ if [[ -n $previous ]]; then printf '%s\n' "$previous" > /opt/zeydrop/previous; f
 systemctl daemon-reload
 systemctl enable zeydrop
 systemctl restart zeydrop
+node scripts/check-signaling.cjs --origin "https://$DOMAIN" --server-root "$release/server"
 systemctl reload nginx
 systemctl is-active --quiet zeydrop
 trap - ERR

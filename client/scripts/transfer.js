@@ -5,6 +5,7 @@ const CHUNK_SIZE = 16 * 1024;
 const WINDOW_SIZE = 256 * 1024;
 const hex = bytes => Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
 const safeName = value => String(value).replace(/[\\/\x00-\x1f\x7f]/g, '_').slice(0, 255) || 'file';
+const safeMime = value => typeof value === 'string' && value.length <= 128 && /^[\w.+-]+\/[\w.+-]+$/.test(value) ? value : 'application/octet-stream';
 let reservedMemory = 0;
 function saveError(error) {
     if (error?.name === 'QuotaExceededError') return '保存空间不足，文件未完成。请释放磁盘或浏览器存储空间后重试。';
@@ -63,11 +64,14 @@ class TransferPeer {
         if (this._held && typeof data !== 'string') return; // Drop stale channel frames.
         this._queuedBytes += typeof data === 'string' ? data.length : data.byteLength;
         this._peakQueuedBytes = Math.max(this._peakQueuedBytes || 0, this._queuedBytes);
-        if (this._queuedBytes > 1024 * 1024) { this._protocolError('接收缓冲超限'); return; }
+        if (this._queuedBytes > 1024 * 1024) {
+            this._queuedBytes -= typeof data === 'string' ? data.length : data.byteLength;
+            this._protocolError('接收缓冲超限'); return;
+        }
         this._messageChain = this._messageChain.then(() => {
             if (stillCurrent && !stillCurrent()) return;
             return this._onMessage(data);
-        }).catch(error => this._protocolError(error.message))
+        }).catch(error => { if (!stillCurrent || stillCurrent()) this._protocolError(error.message); })
             .finally(() => { this._queuedBytes -= typeof data === 'string' ? data.length : data.byteLength; });
     }
     async _onMessage(data) {
@@ -127,7 +131,7 @@ class TransferPeer {
                 || typeof msg.mime !== 'string' || msg.mime.length > 128) throw Error('无效文件信息');
             if (!this._verified || !this._path?.direct || this._incoming) { this.sendJSON({ type: 'reject', id: msg.id, reason: '接收方未确认安全码或正在接收其他文件' }); return; }
             this._discard = null;
-            const state = { meta: { id: msg.id, name: safeName(msg.name), size: msg.size, mime: /^[\w.+-]+\/[\w.+-]+$/.test(msg.mime) ? msg.mime : 'application/octet-stream' }, offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
+            const state = { meta: { id: msg.id, name: safeName(msg.name), size: msg.size, mime: safeMime(msg.mime) }, offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
             this._incoming = state;
             state.timer = setTimeout(() => this.cancel(msg.id, '接收确认已超时'), 120000);
             Events.fire('file-offer', { sender: this._peerId, ...state.meta }); return;
@@ -147,7 +151,8 @@ class TransferPeer {
         if (msg.type === 'reject' && outgoing?.meta.id === msg.id) { this.cancel(msg.id, typeof msg.reason === 'string' ? msg.reason.slice(0, 150) : '对方拒绝接收', false); return; }
         if (msg.type === 'checkpoint' && incoming?.sink && msg.id === incoming.meta.id) {
             if (msg.offset !== incoming.offset) throw Error('文件偏移不一致');
-            if (incoming.sink.checkpoint) await incoming.sink.checkpoint(hex(incoming.hash.clone().digest()));
+            try { if (incoming.sink.checkpoint) await incoming.sink.checkpoint(hex(incoming.hash.clone().digest())); }
+            catch (error) { this.cancel(msg.id, saveError(error)); return; }
             if (this._incoming !== incoming) return;
             incoming.acked = incoming.offset;
             this.sendJSON({ type: 'ack', id: msg.id, offset: incoming.offset }); return;
@@ -206,6 +211,10 @@ class TransferPeer {
         const deadline = Date.now() + 120000;
         for (const state of [outgoing, incoming]) {
             if (!state) continue;
+            // A restored transfer can reuse the same state object on the same
+            // RTCPeer. Object identity alone cannot retire an old asynchronous
+            // File read, drain waiter or prefix hash from the previous attempt.
+            if (state === outgoing) { state.sendEpoch = (state.sendEpoch || 0) + 1; state.resumeBusy = false; }
             state.resumeDeadline = Math.min(state.resumeDeadline || deadline, deadline);
             clearTimeout(state.timer);
             state.awaitingResume = true;
@@ -298,20 +307,25 @@ class TransferPeer {
             || typeof msg.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(msg.sha256)
             || !this._verified || !this._path?.direct) throw Error('无效的续传确认');
         if (state.resumeBusy) throw Error('重复续传确认');
+        const epoch = state.sendEpoch || 0;
+        const current = () => this._outgoing === state && (state.sendEpoch || 0) === epoch
+            && this._verified && this._path?.direct;
         state.resumeBusy = true; state.phase = 'resuming';
         clearTimeout(state.timer);
-        state.timer = setTimeout(() => this.cancel(msg.id, '本机前缀比对超时'), 5 * 60 * 1000);
+        state.timer = setTimeout(() => { if (current()) this.cancel(msg.id, '本机前缀比对超时'); }, 5 * 60 * 1000);
         const hash = window.ZeydropHash.create();
-        for (let pos = 0; pos < msg.offset; pos += WINDOW_SIZE) {
-            const bytes = await state.file.slice(pos, Math.min(pos + WINDOW_SIZE, msg.offset)).arrayBuffer();
-            if (this._outgoing !== state || !this._verified || !this._path?.direct) return;
-            hash.update(new Uint8Array(bytes));
-        }
+        try {
+            for (let pos = 0; pos < msg.offset; pos += WINDOW_SIZE) {
+                const bytes = await state.file.slice(pos, Math.min(pos + WINDOW_SIZE, msg.offset)).arrayBuffer();
+                if (!current()) return;
+                hash.update(new Uint8Array(bytes));
+            }
+        } catch (error) { if (!current()) return; throw error; }
         if (hex(hash.clone().digest()) !== msg.sha256) {
             this.cancel(msg.id, '文件前缀与接收方记录不一致，已取消续传');
             return;
         }
-        if (this._outgoing !== state || !this._verified || !this._path?.direct) return;
+        if (!current()) return;
         state.hash = hash; state.offset = msg.offset; state.acked = msg.offset;
         state.phase = 'sending'; state.resumeBusy = false;
         clearTimeout(state.timer);
@@ -354,7 +368,7 @@ class TransferPeer {
             state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 12 * 60 * 60 * 1000);
             this.sendJSON({ type: 'accept', id });
             this._progress(state, 'receiving');
-        } catch (error) { this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message); }
+        } catch (error) { if (this._incoming === state) this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message); }
     }
     rejectIncoming(id) { if (this._incoming?.meta.id === id) this.cancel(id, '已拒绝接收'); }
     sendFiles(files) {
@@ -366,36 +380,42 @@ class TransferPeer {
         if (this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._isConnected()
             || !this._verified || !this._path?.direct || !this._remoteHello) return;
         const file = this._filesQueue.shift();
-        const state = { file, meta: { id: crypto.randomUUID(), name: safeName(file.name), size: file.size, mime: file.type.slice(0, 128) }, phase: 'offered', offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
+        const state = { file, meta: { id: crypto.randomUUID(), name: safeName(file.name), size: file.size, mime: safeMime(file.type) }, phase: 'offered', offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
         this._outgoing = state;
         state.timer = setTimeout(() => this.cancel(state.meta.id, '对方未确认，邀请接收已取消'), 120000);
         this.sendJSON({ type: 'offer', ...state.meta }); this._progress(state, 'offered');
     }
     async _pump(state) {
-        while (state.offset < state.meta.size) {
-            if (this._outgoing !== state) return;
-            if (state.paused || state.remotePaused) {
-                await new Promise(resolve => setTimeout(resolve, 100)); continue;
+        const epoch = state.sendEpoch || 0;
+        const current = () => this._outgoing === state && (state.sendEpoch || 0) === epoch
+            && this._verified && this._path?.direct;
+        try {
+            while (state.offset < state.meta.size) {
+                if (!current()) return;
+                if (state.paused || state.remotePaused) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); continue;
+                }
+                const limit = Math.min(state.offset + WINDOW_SIZE, state.meta.size);
+                while (state.offset < limit) {
+                    if (!current()) return;
+                    await this._waitForDrain();
+                    if (!current()) return;
+                    const bytes = await state.file.slice(state.offset, Math.min(state.offset + CHUNK_SIZE, limit)).arrayBuffer();
+                    if (!current()) return;
+                    state.hash.update(new Uint8Array(bytes)); this._send(bytes); state.offset += bytes.byteLength;
+                }
+                state.expectedAck = state.offset;
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => { state.waiter = null; reject(Error('接收写入确认超时')); }, 30000);
+                    state.waiter = { resolve: () => { clearTimeout(timeout); resolve(); }, reject: error => { clearTimeout(timeout); reject(error); } };
+                    this.sendJSON({ type: 'checkpoint', id: state.meta.id, offset: state.offset });
+                });
             }
-            const limit = Math.min(state.offset + WINDOW_SIZE, state.meta.size);
-            while (state.offset < limit) {
-                if (this._outgoing !== state) return;
-                await this._waitForDrain();
-                const bytes = await state.file.slice(state.offset, Math.min(state.offset + CHUNK_SIZE, limit)).arrayBuffer();
-                if (this._outgoing !== state) return;
-                state.hash.update(new Uint8Array(bytes)); this._send(bytes); state.offset += bytes.byteLength;
-            }
-            state.expectedAck = state.offset;
-            await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => { state.waiter = null; reject(Error('接收写入确认超时')); }, 30000);
-                state.waiter = { resolve: () => { clearTimeout(timeout); resolve(); }, reject: error => { clearTimeout(timeout); reject(error); } };
-                this.sendJSON({ type: 'checkpoint', id: state.meta.id, offset: state.offset });
-            });
-        }
-        if (this._outgoing !== state) return;
-        state.sha256 = hex(state.hash.digest()); state.phase = 'verifying';
-        state.timer = setTimeout(() => this.cancel(state.meta.id, '对方校验或保存超时'), 60000);
-        this.sendJSON({ type: 'finish', id: state.meta.id, sha256: state.sha256 }); this._progress(state, 'verifying');
+            if (!current()) return;
+            state.sha256 = hex(state.hash.digest()); state.phase = 'verifying';
+            state.timer = setTimeout(() => this.cancel(state.meta.id, '对方校验或保存超时'), 60000);
+            this.sendJSON({ type: 'finish', id: state.meta.id, sha256: state.sha256 }); this._progress(state, 'verifying');
+        } catch (error) { if (current()) throw error; }
     }
     _progress(state, phase) {
         const bytes = state.acked ?? state.offset;
@@ -424,7 +444,7 @@ class TransferPeer {
         const state = outgoing || incoming;
         if (!state) return;
         clearTimeout(state.timer); state.error = reason;
-        if (outgoing) { this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
+        if (outgoing) { state.sendEpoch = (state.sendEpoch || 0) + 1; this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
         if (incoming) {
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
             this._incoming = null;

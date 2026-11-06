@@ -30,9 +30,10 @@ async function readMeta(id) {
     const file = await handle.getFile();
     if (file.size > 4096) throw Error('本机断点元数据损坏');
     const data = JSON.parse(await file.text());
-    if (data.id !== id || data.version !== 1 || !Number.isSafeInteger(data.size) || data.size < 0
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+        || data.id !== id || data.version !== 1 || !Number.isSafeInteger(data.size) || data.size < 0
         || !Number.isSafeInteger(data.offset) || data.offset < 0 || data.offset > data.size
-        || typeof data.name !== 'string' || data.name.length > 255
+        || typeof data.name !== 'string' || data.name.length < 1 || data.name.length > 255
         || typeof data.mime !== 'string' || data.mime.length > 128
         || !validHash(data.prefixSha256) || !Number.isSafeInteger(data.createdAt)
         || !['partial', 'complete'].includes(data.phase)
@@ -84,8 +85,9 @@ async function listing() {
             let partFile = null;
             try { partFile = part && await part.getFile(); } catch {}
             if (!active.has(id) && stale(headerFile) && (!part || (partFile && stale(partFile)))) {
-                try { await erase(id); } catch {} // A different tab may have a lock.
-            } else result.push({
+                try { await erase(id); continue; } catch {} // A different tab may have a lock.
+            }
+            result.push({
                 version: 1, id, name: '损坏的本机断点元数据（可删除）',
                 size: 0, offset: 0, phase: 'invalid', createdAt: headerFile.lastModified
             });
@@ -93,14 +95,18 @@ async function listing() {
         }
         if (!meta) continue;
         const part = await existing(partName(id));
-        if (now - meta.createdAt >= TTL_MS || meta.createdAt > now + 60000 || !part) {
+        const expired = now - meta.createdAt >= TTL_MS;
+        if (expired || meta.createdAt > now + 60000 || !part) {
             // Deletion may be blocked by another tab. Never erase a file
             // with a recent write time even if the header timestamp is old.
             let recentPart = false;
             try { recentPart = !!part && !stale(await part.getFile()); } catch { recentPart = true; }
             if (!active.has(id) && !recentPart) {
-                try { await erase(id); } catch {}
+                try { await erase(id); continue; } catch {}
             }
+            // A locked/recent file cannot be silently deleted, but must remain
+            // visible for explicit cleanup. Never offer it as a resumable partial.
+            result.push({ ...meta, phase: expired ? 'expired' : 'invalid' });
             continue;
         }
         result.push(meta);
@@ -139,11 +145,10 @@ async function start(meta) {
 }
 async function resume(id, expected) {
     if (active.has(id)) throw Error('本机断点正在其他传输中使用');
-    const meta = await readMeta(id);
-    if (!meta || meta.phase !== 'partial' || !meta.offset
-        || Date.now() - meta.createdAt >= TTL_MS
-        || !expected || expected.name !== meta.name || expected.size !== meta.size || expected.mime !== meta.mime)
-        throw Error('找不到匹配的本机未完成文件');
+    const matches = meta => meta && meta.phase === 'partial' && meta.offset
+        && Date.now() - meta.createdAt < TTL_MS && meta.createdAt <= Date.now() + 60000
+        && expected && expected.name === meta.name && expected.size === meta.size && expected.mime === meta.mime;
+    if (!matches(await readMeta(id))) throw Error('找不到匹配的本机未完成文件');
     const file = await existing(partName(id));
     if (!file) throw Error('本机断点数据已丢失');
     let access;
@@ -154,6 +159,10 @@ async function resume(id, expected) {
         throw error;
     }
     try {
+        // Another tab may publish a newer checkpoint or finish while we await
+        // this lock. Never truncate using metadata read before acquiring it.
+        const meta = await readMeta(id);
+        if (!matches(meta)) throw Error('找不到匹配的本机未完成文件');
         if (access.getSize() < meta.offset) throw Error('本机文件长度不足，断点不可用');
         access.truncate(meta.offset);
         access.flush();
@@ -213,20 +222,27 @@ async function finish(id, sha256) {
     const item = active.get(id);
     if (!item || item.offset !== item.meta.size || !validHash(sha256)) throw Error('本机文件尚未完成校验');
     await checkpoint(id, sha256, true);
-    item.access.close(); active.delete(id);
     const complete = { ...item.meta, phase: 'complete', completeSha256: sha256 };
+    // Keep the data lock through publication; a delete/resume from another
+    // tab must not remove or truncate the data between these two commits.
     await writeMeta(complete);
+    item.access.close(); active.delete(id);
     return { meta: complete, file: await item.file.getFile() };
 }
 async function list() { return listing(); }
 const tasks = { probe, start, resume, append, checkpoint, park, finish, completed, erase, list };
-self.onmessage = async event => {
+let taskChain = Promise.resolve();
+self.onmessage = event => {
     const { request, type, args = [] } = event.data || {};
     if (!Number.isSafeInteger(request) || !Object.hasOwn(tasks, type) || !Array.isArray(args)) return;
-    try { self.postMessage({ request, ok: true, value: await tasks[type](...args) }); }
-    catch (e) {
-        const errorName = ['QuotaExceededError', 'NotAllowedError', 'NoModificationAllowedError']
-            .includes(e?.name) ? e.name : 'Error';
-        self.postMessage({ request, ok: false, errorName, error: String(e?.message || e).slice(0, 200) });
-    }
+    // Async message listeners run concurrently unless explicitly sequenced.
+    // In particular erase must wait for an already-started metadata commit.
+    taskChain = taskChain.then(async () => {
+        try { self.postMessage({ request, ok: true, value: await tasks[type](...args) }); }
+        catch (e) {
+            const errorName = ['QuotaExceededError', 'NotAllowedError', 'NoModificationAllowedError']
+                .includes(e?.name) ? e.name : 'Error';
+            self.postMessage({ request, ok: false, errorName, error: String(e?.message || e).slice(0, 200) });
+        }
+    });
 };

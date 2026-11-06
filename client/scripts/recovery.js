@@ -9,8 +9,10 @@ class ZeydropRecoveryStore {
     async request(type, ...args) {
         if (!this.supported) throw Error('此浏览器不支持本机断点保存');
         if (!this.worker) {
-            this.worker = new Worker('/scripts/recovery-worker.js');
-            this.worker.onmessage = event => {
+            const worker = new Worker('/scripts/recovery-worker.js');
+            this.worker = worker;
+            worker.onmessage = event => {
+                if (this.worker !== worker) return;
                 const data = event.data, job = this.pending.get(data?.request);
                 if (!job) return;
                 this.pending.delete(data.request);
@@ -22,10 +24,13 @@ class ZeydropRecoveryStore {
                     job.reject(error);
                 }
             };
-            this.worker.onerror = () => {
+            const failed = () => {
+                if (this.worker !== worker) return;
                 for (const job of this.pending.values()) job.reject(Error('本机存储进程已中断'));
-                this.pending.clear(); this.worker?.terminate(); this.worker = null;
+                this.pending.clear(); worker.terminate(); this.worker = null;
             };
+            worker.onerror = failed;
+            worker.onmessageerror = failed;
         }
         const request = ++this.sequence;
         return new Promise((resolve, reject) => {

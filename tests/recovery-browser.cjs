@@ -85,6 +85,26 @@ async function main() {
             return { phase: meta.phase, hash: sum, count: (await store.list()).length };
         }, id);
         assert.deepEqual(complete, { phase: 'complete', hash: fullSha, count: 0 });
+        // A user can delete from the manager while an asynchronous checkpoint
+        // is being committed. Exercise real queued worker requests, not just
+        // the state-machine fixture: no orphan metadata may be resurrected.
+        for (let i = 0; i < 5; i++) {
+            const race = await page.evaluate(async () => {
+                const store = window.ZeydropRecovery, id = crypto.randomUUID();
+                const meta = { id, name: 'checkpoint-delete-race.bin', size: 32768, mime: 'application/octet-stream' };
+                const sink = await store.open(meta), bytes = new Uint8Array(16384).fill(6);
+                await sink.write(bytes);
+                const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
+                    .map(byte => byte.toString(16).padStart(2, '0')).join('');
+                await Promise.all([sink.checkpoint(sha, true), store.erase(id)]);
+                const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('zeydrop-recovery-v1');
+                let remaining = 0;
+                for await (const [name] of dir.entries()) if (name === id + '.json' || name === id + '.part') remaining++;
+                return remaining;
+            });
+            assert.equal(race, 0, 'checkpoint+delete must leave neither part nor metadata behind');
+        }
+        console.log('PASS real Chromium OPFS: five concurrent checkpoint/delete requests leave no orphan data');
         // True cross-tab contention: never steal a partial held by another
         // OPFS worker. The first tab must remain able to release it normally.
         const lockId = crypto.randomUUID();
@@ -145,22 +165,19 @@ async function main() {
         // Propagate actionable quota/permission errors through the worker bridge.
         const typed = await page.evaluate(async () => {
             const store = window.ZeydropRecovery, realWorker = store.worker;
+            const realPostMessage = realWorker.postMessage.bind(realWorker);
             const names = [];
             try {
                 for (const errorName of ['QuotaExceededError', 'NotAllowedError']) {
-                    const fake = {
-                        onmessage: realWorker.onmessage,
-                        postMessage({ request }) {
-                            queueMicrotask(() => fake.onmessage({
+                    realWorker.postMessage = ({ request }) => {
+                            queueMicrotask(() => realWorker.onmessage({
                                 data: { request, ok: false, errorName, error: 'simulated storage failure' }
                             }));
-                        }
                     };
-                    store.worker = fake;
                     try { await store.request('probe'); names.push('no error'); }
                     catch (error) { names.push(error.name); }
                 }
-            } finally { store.worker = realWorker; }
+            } finally { realWorker.postMessage = realPostMessage; }
             return names;
         });
         assert.deepEqual(typed, ['QuotaExceededError', 'NotAllowedError']);

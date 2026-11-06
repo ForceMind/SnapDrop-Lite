@@ -5,10 +5,12 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { chromium, webkit } = require('playwright');
+const { chromium, firefox, webkit } = require('playwright');
+const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
 const { startDev } = require('../scripts/dev.cjs');
 
-async function main() {
+async function runPair(names) {
+    const report={engines:names,passed:false,fileTransferExecuted:false,network:'same host; STUN disabled',results:[]};
     const server = await startDev(0);
     // Inspect candidate *shapes*, never candidate strings, SDP or addresses.
     const signalTrace = {incomingIce:0,forwardedIce:0,missingMid:0,missingIndex:0,
@@ -35,14 +37,17 @@ async function main() {
     };
     const contexts = [], browsers = [], pages = [], errors = [];
     try {
-        for (const engine of [chromium, webkit]) {
+        for (const name of names) {
+            const engine={chromium,firefox,webkit}[name];
             const browser = await engine.launch({ headless: true });
             browsers.push(browser);
+            (report.browserVersions ||= []).push(browser.version());
             const context = await browser.newContext({ acceptDownloads: true });
             contexts.push(context);
             const page = await context.newPage();
             pages.push(page);
-            page.on('pageerror', error => errors.push(error.message));
+            page.on('pageerror', () => errors.push('pageerror'));
+            await page.addInitScript(installRtcTrace);
             await page.route('**/config.js?*', route => route.fulfill({
                 contentType: 'text/javascript',
                 body: 'window.ZEYDROP_CONFIG={enableStun:false,memoryLimit:67108864};'
@@ -61,59 +66,10 @@ async function main() {
                 return peer?._path?.direct && peer?._remoteHello && peer?._code;
             }, null, { timeout: 30000 });
         } catch {
-            // Never serialize raw RTCStatsReport: it contains IPs, SDP and/or
-            // user-identifying candidate addresses. Limit to known safe fields.
-            const diagnostics = await Promise.all(pages.map(async (page, index) => {
-                try {
-                    return await page.evaluate(async index => {
-                        const peer = [...zeydrop.peers.peers.values()][0];
-                        if (!peer) return { engine: index ? 'webkit' : 'chromium', peerPresent: false };
-                        const conn = peer._conn;
-                        const stats = await conn.getStats();
-                        const records = [...stats.values()].filter(s =>
-                            ['transport', 'candidate-pair', 'local-candidate', 'remote-candidate'].includes(s.type));
-                        const safeRecords = records.slice(0, 30).map(s => ({
-                            type:s.type,
-                            state: ['new','checking','connected','completed','failed','disconnected','closed',
-                                'in-progress','succeeded'].includes(s.state) ? s.state : 'unknown',
-                            selected:s.selected === true, nominated:s.nominated === true,
-                            hasSelectedCandidatePairId:typeof s.selectedCandidatePairId === 'string',
-                            hasLocalCandidateId:typeof s.localCandidateId === 'string',
-                            hasRemoteCandidateId:typeof s.remoteCandidateId === 'string',
-                            candidateType:['host','srflx','prflx','relay'].includes(s.candidateType) ?
-                                s.candidateType : 'unknown',
-                            protocol:['udp','tcp'].includes(s.protocol) ? s.protocol : 'unknown'
-                        }));
-                        const ice = conn.sctp?.transport?.iceTransport;
-                        const selected = ice?.getSelectedCandidatePair?.();
-                        return {
-                            engine:index ? 'webkit' : 'chromium',
-                            signaling:!!zeydrop.server._ready,
-                            channelState:peer._channel?.readyState || 'unknown',
-                            rtcConnection:conn.connectionState, iceState:conn.iceConnectionState,
-                            iceGatheringState:conn.iceGatheringState,
-                            signalingState:conn.signalingState,
-                            localSdpPresent:!!conn.localDescription,
-                            remoteSdpPresent:!!conn.remoteDescription,
-                            candidateCounts:{...peer._candidateCounts},
-                            bufferedEarlyIce:peer._pendingIce?.length || 0,
-                            appState:peer._state,
-                            verifiedPath:peer._path?.direct === true,
-                            pathStatus:peer._path?.status || 'unknown',
-                            codeAvailable:!!peer._code, remoteHello:!!peer._remoteHello,
-                            stunError:peer._stunError === true,
-                            hasSelectedPairAPI:typeof ice?.getSelectedCandidatePair === 'function',
-                            selectedPairAPI: selected ? {
-                                localType:selected.local?.type || 'unknown',
-                                remoteType:selected.remote?.type || 'unknown'
-                            } : null,
-                            statsSummary:safeRecords
-                        };
-                    }, index);
-                } catch (e) { return { engine:index ? 'webkit' : 'chromium', diagnosticErrorType:e?.name || 'unknown' }; }
-            }));
-            console.error('Sanitized cross-engine ICE diagnostic:', JSON.stringify({endpoints:diagnostics, signaling:signalTrace}));
-            throw Error('WebKit/Chromium did not establish a verified non-relay direct path');
+            report.endpoints=await Promise.all(pages.map((page,index)=>page.evaluate(rtcEndpointSnapshot,names[index])));
+            report.signaling=signalTrace;
+            report.failureKind='selected-route-unavailable';
+            throw Error('No verified non-relay direct path');
         }
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
         assert.equal(codes[0], codes[1], 'cross-engine DTLS identity code must match');
@@ -163,15 +119,38 @@ async function main() {
                 'file name, body and SHA-256 must not leak into signaling');
             return { from, bytes: bytes.length, sha256: expected };
         }
-        const results = [];
-        results.push(await transfer(chrome, fox, 'chromium-to-webkit'));
-        results.push(await transfer(fox, chrome, 'webkit-to-chromium'));
+        const results = report.results;
+        report.fileTransferExecuted=true;
+        results.push(await transfer(chrome, fox, names[0]+'-to-'+names[1]));
+        results.push(await transfer(fox, chrome, names[1]+'-to-'+names[0]));
         assert.deepEqual(errors, []);
-        console.log('PASS real Chromium <-> WebKit RTCDataChannel, both directions, explicit consent, independent file SHA-256, no WS file body:', JSON.stringify(results));
+        report.results=results;
+        report.passed=true;report.fileTransferExecuted=true;
+        report.endpoints=await Promise.all(pages.map((page,index)=>page.evaluate(rtcEndpointSnapshot,names[index])));
+        return report;
+    } catch(error) {
+        report.failureKind ||= 'assertion-or-runtime-failure';
+        report.errorType=['TimeoutError','AssertionError','TypeError'].includes(error?.name)?error.name:'Error';
+        report.signaling=signalTrace;
+        return report;
     } finally {
+        await fs.mkdir('test-results',{recursive:true});
+        await fs.writeFile('test-results/transport-'+names.join('-')+'.json',JSON.stringify(report,null,2)+'\n');
         await Promise.all(contexts.map(ctx => ctx.close().catch(() => {})));
         await Promise.all(browsers.map(browser => browser.close().catch(() => {})));
         await server.close();
     }
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+async function main() {
+    const pairs=(process.env.BROWSER_PAIRS || 'chromium-webkit,firefox-webkit,webkit-webkit').split(',').map(pair=>pair.split('-'));
+    if(pairs.some(pair=>pair.length!==2||pair.some(engine=>!['chromium','firefox','webkit'].includes(engine))))throw Error('Invalid browser matrix');
+    const results=[];
+    for(const pair of pairs)results.push(await runPair(pair));
+    const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,results,
+        scope:'Zeydrop browser compatibility matrix, same host, STUN off; not macOS/iOS Safari or WAN evidence'};
+    await fs.mkdir('test-results',{recursive:true});
+    await fs.writeFile('test-results/webkit-transfer-matrix.json',JSON.stringify(report,null,2)+'\n');
+    console.log('Sanitized strict browser file matrix:',JSON.stringify(report));
+    if(results.some(result=>!result.passed))process.exitCode=1;
+}
+main().catch(error => { console.error('Browser compatibility infrastructure error:',error?.name||'Error');process.exitCode = 1; });

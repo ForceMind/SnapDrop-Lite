@@ -1,0 +1,15 @@
+# Release-path security review · 2026-11-06
+
+Scope: unreleased candidate packaging and deployment/rollback control flow on the development branch. This review does not certify the entire application, real host configuration, WAN reachability or Safari hardware. No user's computer or server was accessed.
+
+| Finding | Evidence | Remediation | Remaining boundary |
+|---|---|---|---|
+| Candidate copied arbitrary working-directory content and only excluded the exact `.env` basename | Isolated fixture places `.env.production` and untracked local notes under server; old recursive directory copy would include them | Snapshot only clean HEAD-tracked allowlisted source; reject dirty tracked files, forbidden credential paths and symlinks; validate expected dist resources | Tracked files still need review; a clean Git tree is not a trust decision |
+| Candidate could claim HEAD while packaging changed source or stale build output | Dirty fixture and mismatched build identity regression | Re-run check-build before archive; reject source changes during snapshot; per-file origin/size/mode/hash manifest | Build tools and source are assumed trusted; SHA-256 is not an independent signature |
+| No bounded secret-content scan in candidate path | Tracked test token fixture is rejected without emitting value | Bounded rules for private keys, GitHub tokens, AWS access-key identifiers and OpenAI project keys | Does not detect all token types, encoded/split credentials or all personal data; manual review required |
+| Rollback updated pointers before service readiness and lacked failure recovery | Isolated service restart/hello failure and shared-lock contention fixtures | Validate canonical release paths, serialize deploy/rollback with flock, check authorized WS hello, update reverse marker only after readiness; restore original target after failure | Actual systemd/TLS/disk failure and recovery remain external release gates |
+| Process active state alone did not prove functioning signaling | Actual loopback WebSocket integration; wrong Origin cannot pass readiness | Bounded hello probe before deployment/rollback reports success; returned identity/token never logged | Does not prove WSS proxy, selected ICE pair, consent or file transfer |
+
+Local focused validation: 10 tests passed across `tests/package-candidate.test.cjs` and `tests/deployment.test.cjs`. Packaging fixtures use isolated temporary Git repositories. Rollback fixtures adapt filesystem paths and omit the root guard in a temporary copy; production transition/trap logic runs with mocked service commands. The readiness helper uses the actual signaling service on loopback. No real `/opt`, `/etc`, systemd service, domain, certificate or production process was modified.
+
+No source credential leak was observed or claimed in the actual repository. The packaging findings are proven boundary failures in constructed fixtures, not evidence that a historical distributed archive contained a real user's secret. The final integrated commit still requires full CI and an actual clean-source archive check.

@@ -1060,6 +1060,9 @@ x-peer { display: flex !important; flex-direction: column; align-items: stretch 
 x-peer .icon { width: 28px; height: 28px; }
 x-peer .status { margin-top: 10px; font-weight: 650; }
 .path-detail { font-size: 12px; line-height: 1.6; opacity: .7; overflow-wrap:anywhere; }
+.connection-help { font-size:12px; line-height:1.7; opacity:.75; overflow-wrap:anywhere; }
+.peer-diagnostics { margin-top:12px; border-top:1px solid var(--line, #d9e5dc); padding-top:8px; }
+.peer-diagnostics summary { min-height:36px; display:list-item; cursor:pointer; font-size:12px; line-height:36px; }
 .peer-verification { display: grid; gap: 8px; padding: 14px 0; }
 .security-code { font: 650 23px ui-monospace, monospace; letter-spacing: .1em; }
 .peer-verification small { opacity:.7; font-size:12px; }

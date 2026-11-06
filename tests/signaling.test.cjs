@@ -6,6 +6,16 @@ const { ZeydropServer, RESUME_TTL } = require('../server');
 const origin = 'http://localhost:8080';
 const roomId = 'fedcba98765432100123456789abcdef';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+test('standard ICE end markers stay within the authorized room and strict signal allowlist',async t=>{
+    const {connect}=await setup(t);const a=await connect(),b=await connect(),outside=await connect();
+    a.send({type:'create-room',roomId});await a.wait(msg=>msg.type==='room-joined');
+    b.send({type:'join-room',roomId});await b.wait(msg=>msg.type==='room-joined');
+    a.send({type:'signal',to:b.hello.peerId,ice:{candidate:'',sdpMid:'0',sdpMLineIndex:0,usernameFragment:'generation'}});
+    const end=await b.wait(msg=>msg.type==='signal'&&msg.ice?.candidate==='');assert.equal(end.ice.usernameFragment,'generation');
+    outside.send({type:'signal',to:b.hello.peerId,ice:{candidate:''}});
+    a.send({type:'signal',to:b.hello.peerId,ice:{candidate:'',file:'forbidden'}});
+    await delay(20);assert.equal(b.messages.filter(msg=>msg.type==='signal').length,1);
+});
 async function setup(t, options = {}) {
     const server = new ZeydropServer({ port: 0, origins: origin, ...options });
     await new Promise(resolve => server._wss.on('listening', resolve));

@@ -9,7 +9,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Do not let a failed regression keep CI alive for a 12-hour file timer.
 const unrefTimeout = (fn, ms) => { const timer = setTimeout(fn, ms); timer.unref?.(); return timer; };
 
-async function rig({ corruptPrefix = false } = {}) {
+async function rig({ corruptPrefix = false, mime = 'application/octet-stream' } = {}) {
     const { sha256 } = await import('@noble/hashes/sha2.js');
     const events = [], diskHash = createHash('sha256');
     const wire = { open: true, threshold: 5 * 16384, delivered: 0, transmitted: 0, resumed: 0, corruptPrefix };
@@ -67,7 +67,7 @@ async function rig({ corruptPrefix = false } = {}) {
         throw Error('resume test timed out: ' + JSON.stringify(events.slice(-4)));
     };
     const content = randomBytes(2 * 1024 * 1024 + 37);
-    a.sendFiles([new File([content], 'checkpoint.bin', { type: 'application/octet-stream' })]);
+    a.sendFiles([new File([content], 'checkpoint.bin', { type: mime })]);
     await until(() => !!b._incoming);
     const id = b._incoming.meta.id;
     await b.acceptIncoming(id);
@@ -114,6 +114,13 @@ test('mismatched checkpoint SHA aborts the sink and never reports file completio
     assert.ok(!h.events.some(e => e.type === 'file-received'));
     assert.equal(h.a._outgoing, null);
     assert.ok(h.events.some(e => e.type === 'transfer-state' && e.detail.phase === 'cancelled'));
+});
+test('files with no browser MIME type resume with identical canonical metadata',async()=>{
+    const h=await rig({mime:''});
+    await h.until(()=>h.events.some(e=>e.type==='file-received'));await h.until(()=>!h.a._outgoing);
+    assert.equal(h.finished(),1);assert.equal(h.aborted(),0);
+    assert.equal(h.diskHash.digest('hex'),createHash('sha256').update(h.content).digest('hex'));
+    assert.equal(h.events.find(e=>e.type==='file-received').detail.mime,'application/octet-stream');
 });
 
 test('a forged resume offer cannot create a receiver file or bypass user consent', async () => {

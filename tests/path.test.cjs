@@ -4,6 +4,10 @@ function load() { const context = { CustomEvent: class { constructor(type, init)
 function stats(type, transport = true) { return new Map([['t', { type: 'transport', ...(transport ? { selectedCandidatePairId: 'p' } : {}) }], ['p', { id: 'p', type: 'candidate-pair', state: 'succeeded', nominated: true, localCandidateId: 'l', remoteCandidateId: 'r', currentRoundTripTime: .017 }], ['l', { candidateType: type, protocol: 'udp', address: '2001:db8::1' }], ['r', { candidateType: 'host', protocol: 'udp' }]]); }
 test('only selected non-relay paths count as direct; nomination alone cannot prove selection', () => { const c = load(); assert.equal(c.path(stats('srflx')).direct, true); assert.equal(c.path(stats('srflx')).rtt, 17); assert.equal(c.path(stats('relay')).status, 'relay'); assert.equal(c.path(stats('host', false)).direct, false); assert.equal(c.path(new Map()).direct, false); });
 test('TURN configuration is rejected; STUN can be explicitly disabled', () => { const c = load(); c.window.ZEYDROP_CONFIG.iceServers = [{ urls: 'turn:example.com:3478' }]; assert.throws(() => c.ice(), /TURN/); c.window.ZEYDROP_CONFIG.enableStun = false; assert.equal(c.ice().length, 0); });
+test('selected stats with contradictory transport protocols never authorize a direct path',()=>{
+    const c=load(),report=stats('host');report.get('r').protocol='tcp';
+    assert.equal(c.path(report).direct,false);
+});
 
 test('closing a transport clears previously verified direct status', () => {
     const c = load(); const peer = Object.create(c.RTC.prototype); let closed = 0;

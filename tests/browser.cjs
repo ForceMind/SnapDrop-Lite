@@ -55,7 +55,7 @@ async function main() {
         for (const page of pages) { assert.equal(await page.locator('#inviteQR').isHidden(),true); assert.match(await page.locator('#inviteTitle').innerText(),/已配对/); }
         results.cases.push('sealed pair continues actual file transfers after the invitation deadline');
         const traffic = []; for (const peer of server.signaling.connections.values()) peer.socket.on('message', (bytes, binary) => traffic.push({ binary, text: bytes.toString(), bytes: bytes.length }));
-        const file = { name: 'PRIVATE_FILE_SENTINEL.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_FILE_BODY_SENTINEL\n'.repeat(12000)) };
+        const file = { name: '闪投 & <视频> PRIVATE_FILE_SENTINEL.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_FILE_BODY_SENTINEL\n'.repeat(12000)) };
         const send = () => a.locator('x-peer input[type=file]').setInputFiles(file);
         await send(); await b.locator('#fileOfferDialog[show]').waitFor();
         assert.equal(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
@@ -109,7 +109,7 @@ async function main() {
         // Real two-profile in-page cross-connection resume: close the receiver WSS
         // while the OPFS sink is actively writing, then require fresh manual code
         // confirmation before the sender can hash the checkpoint and send the tail.
-        const resumeName = 'resume-browser.bin', resumeFile = Buffer.alloc(8 * 1024 * 1024, 0x6d);
+        const resumeName = '恢复文件 & 空 格', resumeFile = Buffer.alloc(8 * 1024 * 1024, 0x6d);
         await a.evaluate(() => {
             window.__resumeBinaryBytes = 0;
             const send = RTCPeer.prototype._send;
@@ -139,7 +139,7 @@ async function main() {
                 } };
             };
         });
-        await a.locator('x-peer input[type=file]').setInputFiles({ name: resumeName, mimeType: 'application/octet-stream', buffer: resumeFile });
+        await a.locator('x-peer input[type=file]').setInputFiles({ name: resumeName, mimeType: '', buffer: resumeFile });
         await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
         await b.waitForFunction(() => window.__resumeProbe.disconnects === 1, null, { timeout: 30000 });
         for (const page of pages) {

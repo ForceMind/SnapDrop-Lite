@@ -55,7 +55,8 @@ jobs:
       # Experimental Linux WebKit DataChannel compatibility is a separate
       # release gate. Even if it fails, the core-verified DEV package remains
       # downloadable for isolated testing; the overall CI still reports red.
-      - run: node tests/webkit-transfer.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/webrtc-primitives.cjs
       - uses: actions/upload-artifact@v4

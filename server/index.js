@@ -126,8 +126,8 @@ class ZeydropServer {
             && msg.sdp.sdp.startsWith('v=0') && msg.sdp.sdp.length <= 60000) {
             payload = { sdp: { type: msg.sdp.type, sdp: msg.sdp.sdp } };
         } else if (onlyKeys(msg, ['type', 'to', 'ice']) && onlyKeys(msg.ice, ['candidate', 'sdpMid', 'sdpMLineIndex', 'usernameFragment'])
-            && typeof msg.ice.candidate === 'string' && msg.ice.candidate.startsWith('candidate:') && msg.ice.candidate.length <= 4096
-            && / typ (host|srflx|prflx)( |$)/.test(msg.ice.candidate)
+            && typeof msg.ice.candidate === 'string' && msg.ice.candidate.length <= 4096
+            && (msg.ice.candidate === '' || (msg.ice.candidate.startsWith('candidate:') && / typ (host|srflx|prflx)( |$)/.test(msg.ice.candidate)))
             // RTCIceCandidateInit optional fields can be null or absent, and
             // WebKit may emit a null usernameFragment. Validate them without
             // confusing a valid ICE candidate with arbitrary file metadata.

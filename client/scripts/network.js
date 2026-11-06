@@ -13,6 +13,8 @@ function getIceServers() {
         return { urls };
     });
 }
+const iceUfrags = sdp => [...String(sdp || '').matchAll(/^a=ice-ufrag:([^\s]+)/gm)].map(match => match[1]);
+const iceFragment = ice => ice?.usernameFragment || (String(ice?.candidate || '').match(/(?:^| )ufrag ([^ ]+)/) || [])[1] || null;
 function selectedPath(stats) {
     let pair;
     for (const stat of stats.values()) if (stat.type === 'transport' && stat.selectedCandidatePairId) pair = stats.get(stat.selectedCandidatePairId);
@@ -25,7 +27,8 @@ function selectedPath(stats) {
     const protocol = local.protocol || remote.protocol || 'unknown';
     // Never guess a selected route from a merely nominated candidate pair.
     return {
-        direct: known.includes(local.candidateType) && known.includes(remote.candidateType) && ['udp', 'tcp'].includes(protocol),
+        direct: known.includes(local.candidateType) && known.includes(remote.candidateType) && ['udp', 'tcp'].includes(protocol)
+            && (!local.protocol || !remote.protocol || local.protocol === remote.protocol),
         status: 'selected', protocol, localType: local.candidateType, remoteType: remote.candidateType,
         family: [local.address || local.ip, remote.address || remote.ip].some(address => address?.includes(':')) ? 'IPv6 / 双栈' : [local.address || local.ip, remote.address || remote.ip].some(address => /^\d+\.\d+\.\d+\.\d+$/.test(address || '')) ? 'IPv4' : '地址族未公开',
         rtt: Number.isFinite(pair.currentRoundTripTime) ? Math.round(pair.currentRoundTripTime * 1000) : null
@@ -140,6 +143,15 @@ class RTCPeer extends TransferPeer {
         this._conn = new RTCPeerConnection({ iceServers: getIceServers(), iceTransportPolicy: 'all' });
         this._conn.onicecandidate = event => {
             if (!event.candidate) return;
+            if (this._closed || this._state === 'failed') return;
+            const fragment = iceFragment(event.candidate), current = iceUfrags(this._conn.localDescription?.sdp);
+            if (fragment && current.length && !current.includes(fragment)) return;
+            if (event.candidate.candidate === '') {
+                // Forward the browser's generation-qualified end indication,
+                // not a synthesized global marker from a null legacy event.
+                this._server.send({ type: 'signal', to: peerId, ice: event.candidate.toJSON() });
+                return;
+            }
             const type = event.candidate.type || (event.candidate.candidate.match(/ typ (\w+)/) || [])[1];
             if (type === 'relay') return this._protocolError('检测到中继候选，已停止连接');
             if (type in this._candidateCounts) this._candidateCounts[type]++;
@@ -196,15 +208,35 @@ class RTCPeer extends TransferPeer {
                     if (this._closed || this._state === 'failed') return;
                     this._server.send({ type: 'signal', to: this._peerId, sdp: { type: answer.type, sdp: answer.sdp } });
                 }
-                for (const ice of this._pendingIce.splice(0)) await this._conn.addIceCandidate(ice);
+                await this._flushRemoteIce();
                 this._negotiating = false;
                 await this._securityCode();
                 await this._samplePath();
             } else if (msg.ice) {
-                if (this._conn.remoteDescription) await this._conn.addIceCandidate(msg.ice);
-                else if (this._pendingIce.length < 64) this._pendingIce.push(msg.ice);
+                await this._acceptRemoteIce(msg.ice);
             }
         }).catch(error => { if (!this._closed) this._fail('连接协商失败：' + error.message); });
+    }
+    _matchesRemoteIce(ice) {
+        if (!this._conn.remoteDescription) return false;
+        const fragment = iceFragment(ice), current = iceUfrags(this._conn.remoteDescription.sdp);
+        return !fragment || !current.length || current.includes(fragment);
+    }
+    async _acceptRemoteIce(ice) {
+        this._pendingIce = this._pendingIce.filter(item => item.expires > Date.now());
+        if (this._matchesRemoteIce(ice)) await this._conn.addIceCandidate(ice);
+        // A new-generation candidate can precede its SDP. Hold it briefly;
+        // never apply a proven different generation to the current description.
+        else if (this._pendingIce.length < 64) this._pendingIce.push({ ice, expires: Date.now() + 10000 });
+    }
+    async _flushRemoteIce() {
+        const pending = this._pendingIce.splice(0);
+        for (const item of pending) {
+            if (this._closed) return;
+            if (item.expires <= Date.now()) continue;
+            if (this._matchesRemoteIce(item.ice)) await this._conn.addIceCandidate(item.ice);
+            else this._pendingIce.push(item);
+        }
     }
     async _securityCode() {
         const conn = this._conn, epoch = this._identityEpoch;
@@ -387,6 +419,7 @@ class RTCPeer extends TransferPeer {
         clearInterval(this._statsTimer); clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer); Events.off('online', this._online);
         if (this._channel) { this._channel.onopen = null; this._channel.onmessage = null; this._channel.onclose = null; this._channel.onerror = null; this._channel.close(); }
         this._conn.close(); this._connectionEvent();
+        this._pendingIce = [];
         return preserve ? this.takeHeldTransfers?.() : null;
     }
 }
