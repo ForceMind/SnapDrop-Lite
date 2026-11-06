@@ -8,8 +8,9 @@
 - [x] Chromium 与 Firefox 双向 DataChannel、接收授权/文件 SHA-256、失败拒绝、同页短时续传与实验性 OPFS 跨刷新续传。
 - [x] Node 自动化测试、构建/依赖审计、TLS 自签名临时 Nginx 反向代理集成、WebKit **UI smoke**（不是实际 Safari 文件互传）。
 - [x] 脱敏连接诊断与本地流式 SHA-256 证据核验工具。
-- [ ] **Chromium ↔ Linux WebKit 文件互传**：CI #40 中 SDP/安全码存在，但 ICE 维持 `new`、选中路径为空，文件未传输。后续须复现/明确支持范围；不能写“iOS Safari 已支持”。
-- [ ] 完整验证临时开发包生成、SHA-256 和独立主机安装演练（以当前提交 CI/附件为证）。
+- [ ] **Chromium ↔ Linux WebKit 文件互传**：CI #40/#41 中 SDP/安全码存在，2/2 host ICE candidates 被服务端转发，但 ICE 维持 `new`、选中路径为空，文件未传输；即便补充标准 selected-pair API / 可空 ICE 字段处理也尚未恢复。后续须复现/明确支持范围；不能写“iOS Safari 已支持”。
+- [x] CI #41 成功生成、校验 SHA-256 的未发布开发包；下一提交还将重复打包核验一致性。**未执行独立源码秘密扫描/签名**，也不构成正式发布或实际部署。
+- [ ] 在一台独立测试服务器上实际安装、执行 TLS 证书与 systemd 重启/回滚演练。
 
 ## 必须由真实环境完成的验收（目前均未取得证据）
 

@@ -50,7 +50,7 @@ try {
     await writeFile(path.join(output,'candidate-manifest.json'),JSON.stringify({
         schema:1,product:'Zeydrop',status:'unreleased-developer-test-candidate',
         commit,revision:build.revision,version:build.version,archive:filename,
-        sha256,bytes:archive.length,containsNodeModules:false,containsSecrets:false,
+        sha256,bytes:archive.length,containsNodeModules:false,excluded:['node_modules','.env','.git','test-results'],secretScan:'not-performed',
         notice:'CI package is NOT a stable release or proof of real ISP NAT reachability. Deploy only in a separate test environment.'
     },null,2)+'\n');
     console.log('PASS reproducible development candidate',commit.slice(0,12),build.revision,sha256);

@@ -2,6 +2,14 @@
 
 更新时间：2026-11-06。版本 `0.3.0-dev.1`，开发分支 `feat/direct-first-workspace-20261019`，PR #2 保持 Draft。下面区分本轮实际验证、历史 CI 和尚未完成的发布验收；不是稳定发行声明。
 
+## 2026-11-06：云端阶段验收与未发布开发包（CI #41）
+
+代码提交 `6b61d3c4536f919efe80e23c2e248bb7ba2756b1` 的 [CI #41](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42203581161) 已完成：**77/77 Node 单测通过**；临时真 Nginx HTTPS/WSS + Origin 限制/上传拒绝、Chromium 1 GiB 与 Firefox 100 MiB 的流式直传、Chromium↔Firefox、OPFS 跨刷新和 WebKit **UI smoke** 均通过。GitHub Actions 生成未发布开发包 `zeydrop-unreleased-dev-candidate`，包含源代码、构建产物与 SHA-256 校验，不包含 .env / node_modules；没有执行独立源码秘密扫描、代码签名、硬件 WAN/生产验证，**不是稳定 Release**。
+
+整套 CI #41 仍标记 **failure**：独立实验性 Chromium↔Linux WebKit DataChannel 测试仍停在 ICE `new`，未选中任何可证实的非 relay pair；已验证服务端 2/2 host ICE 候选正常接收与转发，不能归因于文件保存。标准 `getSelectedCandidatePair()` 与可空 ICE 元数据兼容代码经过 Node 测试，**没有让无选中路径的情况被误判为成功**。见 [WebKit 追踪 Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)。
+
+剩余需要实机/用户服务器的外部验收见 [发布门槛](RELEASE_GATES.md)。本次已完成可在 GitHub CI 环境开展的主要工程测试，但**不能宣称所有计划或正式发布已完成**。PR #2 保持 Draft，main、正式部署和最后的人工仓库更名未动。
+
 ## 2026-11-06：Linux WebKit 双引擎测试的真实限制（CI #40 未通过）
 
 `c12e9fb` 的 [GitHub Actions #40](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42202564459) 已完成：**74/74 Node 测试**、临时生产 Nginx 模板 HTTPS/WSS、Chromium 1 GiB、Firefox 100 MiB、Chromium↔Firefox、跨刷新 OPFS、WebKit 手机 UI smoke 等核心自动化通过；但**Chromium ↔ Linux Playwright WebKit 的真实 DataChannel 传输测试未通过**。脱敏诊断显示两端都已拥有 SDP/安全码且完成本地 ICE gathering；服务端收到并转发 **2/2** 条 host ICE candidate，但两端仍停留在 `iceConnectionState: new`、没有选中任何路径，因此禁止发送文件。尚不能证明是测试环境 mDNS/UDP 互通限制还是 WebKit 内核兼容性问题；绝不能把此失败写成 Safari/iOS 已通过。

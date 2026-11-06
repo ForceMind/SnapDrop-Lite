@@ -35,7 +35,7 @@
 
 ## 未发布构建归档（仅供隔离测试）
 
-核心 CI 自动化通过后（独立的 Linux WebKit DataChannel 兼容测试仍可能失败，并使总体 CI 标红），`scripts/package-candidate.mjs` 才会产出确定性的开发归档 `zeydrop-candidate.tar.gz`、SHA-256 校验文件和 `candidate-manifest.json`。GitHub Actions 作为 `zeydrop-unreleased-dev-candidate` 保存 7 天。归档包含源码、构建后的客户端、信令服务、部署脚本和许可证，不包含 node_modules、.env、正式证书或用户数据。
+核心 CI 自动化通过后（独立的 Linux WebKit DataChannel 兼容测试仍可能失败，并使总体 CI 标红），`scripts/package-candidate.mjs` 才会产出确定性的开发归档 `zeydrop-candidate.tar.gz`、SHA-256 校验文件和 `candidate-manifest.json`。GitHub Actions 作为 `zeydrop-unreleased-dev-candidate` 保存 7 天。归档包含源码、构建后的客户端、信令服务、部署脚本和许可证；打包器排除 node_modules、.env、.git 和测试产物。**没有进行独立的源码秘密扫描**，因此不能无条件保证所有追踪文件不含内嵌密钥，部署前仍需审查。
 
 使用者下载后先用 `sha256sum -c zeydrop-candidate.tar.gz.sha256` 检查本地归档完整性；SHA-256 并非独立身份签名或生产审核。仅允许在独立测试主机上用现有部署文档练习安装与回滚，不得将 CI 成功等同真实跨运营商、iOS Safari、证书续期或 production readiness。
 

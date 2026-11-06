@@ -4,7 +4,7 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。实现提交 `202de19` 的 [CI #28](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/41990699426) 已通过 **60/60 Node 测试**、Chromium 1 GiB / Firefox 100 MiB 的实际 DataChannel 流式传输与独立 SHA-256、两种浏览器的 8 MiB 同页短时续传，以及 Chromium 4 MiB 文件跨刷新 OPFS 断点恢复（1 MiB 已保存 / 3 MiB 补传）、双标签锁检查与 WebKit UI smoke。**这些均在同一 CI 主机进行，关闭 STUN，不能代表公网 NAT 穿透、真实移动设备或 Safari/iOS 文件传输测试。** 最新功能和测试证据见 [项目状态](docs/PROJECT_STATUS.md)、[测试矩阵](docs/TEST_MATRIX.md)。仓库正式更名留待最后由用户手动完成；当前远程仍为 `ForceMind/SnapDrop-Lite`；分支、PR 和历史全部保留。`zeydrop.com` 未确认购买，不作为已拥有的部署域名。
+当前为 **0.3.0-dev.1 开发版**，不是稳定发行版。代码提交 `6b61d3c` 的 [CI #41](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42203581161) 中 **77/77 Node 测试**、临时 HTTPS/WSS Nginx、Chromium 1 GiB / Firefox 100 MiB 实际 DataChannel 和独立 SHA-256、Chromium↔Firefox、同页与跨刷新 OPFS 续传、WebKit **界面冒烟**及非正式开发归档均通过。**CI 整体仍为失败**，因为 Chromium↔Linux WebKit 在无 TURN、STUN 关闭的单机环境下无法选中 ICE 路径，文件传输未通过；它不代表 iOS Safari 真机失败或成功。见 [WebKit 问题](https://github.com/ForceMind/SnapDrop-Lite/issues/5) 和 [发布门槛](docs/RELEASE_GATES.md)。所有现有 CI 都是同主机验证，不代表跨运营商 NAT 成功率。仓库最后更名仍由用户手动完成；当前远程仍为 `ForceMind/SnapDrop-Lite`，PR 保持 Draft，未部署生产。`zeydrop.com` 未确认购买。
 
 ## 使用流程
 
