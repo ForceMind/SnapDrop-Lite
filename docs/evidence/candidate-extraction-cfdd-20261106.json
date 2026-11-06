@@ -1,0 +1,9 @@
+{
+  "sourceCommit": "cfdda0c4ad333e32eaaf84cab82fdee9b6d33056",
+  "archiveSHA256": "e07638ba97b232f01add955b6a6adbf3d5e5ccec231d4ec042c88235def679f9",
+  "filesVerified": 154,
+  "rebuiltRevision": "7a735397dd67d8d1",
+  "node": "v24.22.1",
+  "passed": true,
+  "scope": "fresh extraction without Git; all file hashes and modes; actual dependency installation; 134 Node tests and reproducible rebuild; no browser/hardware/production claim"
+}

@@ -17,3 +17,5 @@
 ## 自动化范围及待验收
 
 `node tests/recovery-browser.cjs` 在 Chromium 使用真实 OPFS/Worker 验证先提交数据再提交元信息、意外刷新只恢复已确认前缀、后续文件输出、删除和独立哈希；另外验证同源双标签锁、21 条损坏元数据删除、额度上限与 QuotaExceededError/NotAllowedError 类型透传。CI #25 完整通过（2026-11-05 06:14 UTC，提交 `4c1dc88`），具体证据见 `docs/evidence/ci25-opfs-hardening.json`。原有 Chromium/Firefox DataChannel、文件 SHA-256 与同页恢复继续运行。**已完成同机 Chromium 两端 UI+WebRTC+OPFS 跨刷新测试与双标签锁检查；尚未完成移动真机、多浏览器实际存储兼容性、真实磁盘耗尽/OS 存储驱逐、多标签复杂竞态以及真实跨运营商 NAT 测试**，不能宣传稳定可靠的跨页续传或正式发布。
+
+本轮CI45（代码cfdda0c）再次通过上述原生Worker/OPFS与跨刷新流，并增加真实并发checkpoint/erase循环；前缀准备、旧peer所有权和ID冲突另有Node失败回归。原始证据与限制见 TEST_REPORT_20261106；这不提升Safari/iOS硬件支持声明。

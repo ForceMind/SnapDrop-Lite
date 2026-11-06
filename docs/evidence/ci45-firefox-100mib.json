@@ -1,0 +1,73 @@
+{
+  "engine": "firefox",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "sealed pair continues actual file transfers after the invitation deadline",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "storage quota failure reports cancellation without closing the direct channel",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "real WebSocket peer rebuild resumes 8 MiB native OPFS sink after fresh matching safety codes and SHA-256 prefix check",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P",
+    "real delayed discovery: earlier SDP/ICE buffered until authorized peer appears",
+    "local diagnostic download records selected path without identities, invitation, tokens or file metadata"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "profiles": "two ephemeral contexts",
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 0
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "family": "地址族未公开",
+      "rtt": 0
+    }
+  ],
+  "storageBefore": {
+    "quota": 10737418240,
+    "usage": 842465
+  },
+  "stream0": {
+    "ms": 193,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 12457,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "resume": {
+    "name": "恢复文件 & 空 格",
+    "size": 8388608,
+    "writtenAtBreak": 131072,
+    "dataChannelBytes": 8486912,
+    "sha256": "6b59425c5bf6585e132f7e6b520623ea2ac76484f1a4bde550313c5a05c08140"
+  },
+  "peakReceiveQueues": [
+    156,
+    147538
+  ],
+  "signaling": {
+    "messages": 10,
+    "bytes": 1327,
+    "fileBodyObserved": false
+  },
+  "delayedEarlySignals": [
+    0,
+    4
+  ],
+  "passed": true
+}

@@ -4,7 +4,7 @@ This development branch provides private two-device invitations, manual DTLS-cod
 
 The transfer engine includes bounded chunking/backpressure, persisted-write ACKs, complete SHA-256 verification, multi-file queuing, pause/cancel and explicit failure states. Same-page recovery and opt-in OPFS checkpoints support the documented browser capabilities and reauthorization requirements; they do not guarantee survival of storage eviction or recovery on all mobile devices.
 
-The candidate includes responsive light/dark UI, invitations/QR, local recovery management and privacy-filtered connection diagnostics, build inputs and deployment templates. Browser test outcomes must be read for the exact commit; Linux Playwright WebKit ICE compatibility and real Safari/mobile/WAN validation remain separate gates.
+The candidate includes responsive light/dark UI, invitations/QR, local recovery management and privacy-filtered connection diagnostics, build inputs and deployment templates. Browser test outcomes must be read for the exact commit; The Linux Playwright WebKit six-pair gate passed in CI45 after verified mDNS environment preparation; real Safari/mobile/WAN validation remains external.
 
 Core correctness and interaction changes in this review:
 
@@ -22,3 +22,5 @@ Release-path changes in this review:
 - Failed rollback restarts/readiness checks attempt restoration of the original target and preserve the previous-release marker. Isolated failure-injection tests cover that transaction.
 
 The `zeydrop-unreleased-source-candidate` artifact is generated after Node/build/temporary-TLS checks and before browser installation/E2E. Its availability is not browser acceptance; inspect the corresponding workflow results separately. This is not a stable Release, production deployment or public NAT-success-rate claim. Users should verify the archive SHA-256 and manifest before testing on an isolated host. Actual ISP combinations, Windows/macOS/Android/iOS browsers, real file-picker/disk permissions, TLS renewal, systemd restart and deployment/rollback still require the published external acceptance matrix. Repository rename remains the owner's final manual action.
+
+Cloud acceptance for code `cfdda0c`: CI45 passed 134 Node tests, all six strict browser pairings with downloaded-file hashes, Chromium 1 GiB / Firefox 100 MiB, OPFS recovery, UI and TLS/WSS. The default-native WebKit failure cleared after verified Linux Avahi/NSS preparation, without changing product mDNS/path/consent gates. See TEST_REPORT_20261106 for exact source/archive identity and the remaining external gates.

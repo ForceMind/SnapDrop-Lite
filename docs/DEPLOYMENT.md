@@ -61,3 +61,5 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 ```
 
 该命令仅检查允许的回环地址上能完成授权 hello；不证明 Nginx/TLS、两设备 ICE、文件内容一致或公网 NAT 已验收。
+
+2026-11-06可测试代码为cfdda0c，CI45全通过，源码/构建附件13499876562及精确SHA-256见 TEST_REPORT_20261106。Linux Playwright WebKit的Avahi/NSS准备仅作用临时CI Runner，不是Zeydrop服务端依赖、NAT服务或文件中继，勿把CI环境脚本用于用户主机。真实部署回滚仍未演练。

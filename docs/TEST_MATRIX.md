@@ -4,9 +4,9 @@
 
 启动时本地77项；第一批提交 `906a15c` 为105项；第二批整合后本地134项全部通过。新增覆盖发送/ICE代次隔离、OPFS锁内一致性和Worker队列、配额失败、空MIME、候选包/回滚事务、速率采样、脱敏mDNS预检及CI源配置边界。第二批新增断点准备6项、恢复所有权4项、双向ID冲突3项、部署3项、APT6项，均为可复现隔离测试。后文旧CI编号均是历史证据；新增真实浏览器场景以对应head Actions为准。
 
-CI #44（42208443915）通过105项、构建/审计及TLS/WSS，但APT下载114MB/181包仅到第39项即耗尽18分钟预算并取消，浏览器全部未运行。见 evidence/ci44-infrastructure-timeout.json。CI源码候选包改在浏览器安装前上传，明确不包含浏览器通过结论；安装有独立10分钟上限，整套30分钟。后续将保留浏览器默认原生控制，再配置Linux Avahi/NSS并预检，比较六组合严格文件矩阵与原生探针。mDNS预检和原生探针不是文件传输成功证据。
+CI #44（42208443915）通过105项、构建/审计及TLS/WSS，但APT下载114MB/181包仅到第39项即耗尽18分钟预算并取消，浏览器全部未运行。见 evidence/ci44-infrastructure-timeout.json。CI源码候选包改在浏览器安装前上传，明确不包含浏览器通过结论；安装有独立10分钟上限，整套30分钟。CI45已保留浏览器默认原生控制，再配置Linux Avahi/NSS并预检，对比六组合严格文件矩阵与原生探针。CI45全部通过：预检后严格六组合双向文件/独立SHA-256、Chrome1GiB/Firefox100MiB、存储恢复和UI。mDNS预检和原生探针本身不是文件传输成功证据。
 
-UI新增可见/禁用控件焦点循环、剪贴板缺失时手动复制、消息编辑键盘循环；浏览器新增中文特殊文件名/空MIME恢复。以上新浏览器断言待CI，不能仅凭Node绿灯标为通过。
+UI新增可见/禁用控件焦点循环、剪贴板缺失时手动复制、消息编辑键盘循环；浏览器新增中文特殊文件名/空MIME恢复。以上新浏览器断言在CI45通过，详见 TEST_REPORT_20261106 与 ci45-*.json。
 
 ## 自动化
 
@@ -15,13 +15,13 @@ UI新增可见/禁用控件焦点循环、剪贴板缺失时手动复制、消�
 | 两人邀请、隔离及第三人拒绝 | 实际 WS 集成 | 通过 |
 | 过期、短时重连、恢复令牌失效 | 实际 WS + 可控时钟 | 通过 |
 | Origin / 路径 / 限速、拒绝文件及二进制 | 实际 WS 集成 | 通过 |
-| 双端诊断与文件离线证据校验 | Node 流式 SHA-256 + 白名单诊断工具 | 本地真实CLI子进程/白名单测试通过；本轮head待CI。校验最后连接、版本一致性、拒绝 relay/过期连接、文件不一致与字段脱敏；不等于实网测试 |
+| 双端诊断与文件离线证据校验 | Node 流式 SHA-256 + 白名单诊断工具 | 本地真实CLI子进程/白名单测试通过；代码cfdda0c的CI45已通过Node回归。校验最后连接、版本一致性、拒绝 relay/过期连接、文件不一致与字段脱敏；不等于实网测试 |
 | selected pair、拒绝 relay / TURN | stats fixture 单测 | 通过，不等于实网路径 |
 | DataChannel 旧通道回调与异步排队消息隔离 | Node VM 真实 transfer/network 源码 | CI #28 通过，3 项新增测试：异步队列、通道替换/关闭、路径代次变化和队列计数归零 |
 | 接收前零字节、0 / 3 / 2 MiB 文件 | 协议双端模拟 + sink | 通过 |
 | SHA-256 损坏、超限、内存上限、未核对身份 | 协议模拟 | 通过 |
 | 已接受文件的同页短时恢复、写入中的偏移、前缀篡改拒绝、伪造恢复请求 | 新增状态机与模拟原生 writer 测试 | CI #15 通过，不等于公网/实机 |
-| 同页短时重连保留未发送文件队列 | transfer.js 状态机 Node 测试 | 历史CI已验证同页队列范围；本轮改动待新CI。覆盖队列原地恢复、重新授权、旧通道禁发、超时释放及 Blob 保存屏障 |
+| 同页短时重连保留未发送文件队列 | transfer.js 状态机 Node 测试 | 历史CI已验证同页队列范围；本轮改动已在CI45通过Node回归。覆盖队列原地恢复、重新授权、旧通道禁发、超时释放及 Blob 保存屏障 |
 | 真正 WSS 中断 / 新 peer / 原生 OPFS 8 MiB 恢复 / 独立 SHA-256 | Chromium + Firefox 双上下文 E2E | CI #16 均通过；同机 STUN 关闭，不代表公网 NAT 实测 |
 | 构建两次一致、资源引用、PWA 图标 | 实际构建 | 通过 |
 | Chromium 页面 / 邀请 / SDP / selected UDP 路径 | 双 profile 浏览器 | CI #10 完整通过 |
@@ -29,7 +29,7 @@ UI新增可见/禁用控件焦点循环、剪贴板缺失时手动复制、消�
 | Chromium 实际 DataChannel、100 MiB / 1 GiB 原生写入 | 双 profile E2E | CI #10 全部通过（原生 OPFS） |
 | Firefox 完整 E2E | CI #10 实际执行 | 通过：含 100 MiB / SHA-256 / WS 无正文 / 配额失败后继续传输 / 会话恢复 |
 | WebKit 手机 UI | CI #10 smoke | 通过；不等于 iOS Safari 实测 |
-| Chromium ↔ WebKit 双向真实 DataChannel 文件/下载/哈希 | Playwright Linux WebKit + Chromium，同机关闭 STUN | CI #40/#41 **未通过**：两端 ICE gathering 完毕、2/2 host candidates 服务端转发，但 ICE 仍为 new，无选中 pair；Issue #5 未关闭。不能代替 Safari/iOS 真机 |
+| Chromium ↔ WebKit 双向真实 DataChannel 文件/下载/哈希 | Playwright Linux WebKit + Chromium，同机关闭 STUN | CI45在Avahi/NSS验证环境已通过六组合（每方向约1MiB/独立SHA-256）；以下是历史失败：CI #40/#41 **未通过**：两端 ICE gathering 完毕、2/2 host candidates 服务端转发，但 ICE 仍为 new，无选中 pair；Issue #5保留真实Safari验收，旧Linux阻断在CI45解除。不能代替Safari/iOS真机 |
 
 E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服务器 WS 字节计数与正文 sentinel 检查。原生文件流使用浏览器 OPFS writer；测试只代替 picker 选择，不证明真实用户 picker 授权体验。CI 网络同主机不能替代公网 NAT 场景。
 
