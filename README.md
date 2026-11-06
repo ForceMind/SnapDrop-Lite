@@ -6,9 +6,9 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 未发布开发候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。2026-11-06重新审计后，本地134项Node测试与可重复构建通过，修复传输/ICE代次、OPFS检查点竞态、候选包和回滚安全；代码cfdda0c的[CI #45全通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42212721830)：Chromium1GiB、Firefox100MiB、OPFS恢复、新UI和六组合双向文件独立SHA-256，见[本轮验收报告](docs/TEST_REPORT_20261106.md)。
+当前为 **0.3.0-dev.1 未发布隔离测试候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。代码 `848d16c` 的 [CI #47全通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42216448334)：139项Node、Chromium1GiB/Firefox100MiB、OPFS恢复、新UI、六组合双向文件独立SHA-256及真实HTTPS/WSS。构建仅发布批准的公共输入，额外本地.env/笔记不进入dist，Nginx隐藏路径保护有实际回归。见[验收报告](docs/TEST_REPORT_20261106.md)与[可验证候选/当前状态](docs/PROJECT_STATUS.md)。
 
-历史 [CI #42](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42204473272) 验证了Chromium 1 GiB / Firefox 100 MiB、独立SHA-256、Chromium↔Firefox、同页及跨刷新OPFS恢复、临时HTTPS/WSS和WebKit界面，但整体失败于Chromium↔Linux WebKit无法选中ICE路径。CI45补齐并预检Linux Avahi/NSS后，保持默认mDNS与全部安全门槛，六组合均通过；此前默认环境失败的对照已保留，见 [Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)。同机CI不能证明真实跨运营商NAT成功率、Safari/iOS兼容或正式部署，见 [项目状态](docs/PROJECT_STATUS.md) 与 [发布门槛](docs/RELEASE_GATES.md)。仓库最后更名由用户手动完成；远程仍为 `ForceMind/SnapDrop-Lite`，main和生产未改。`zeydrop.com`未确认购买。
+此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。
 
 ## 使用流程
 

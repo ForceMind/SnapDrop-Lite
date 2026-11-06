@@ -62,7 +62,7 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 
 该命令仅检查允许的回环地址上能完成授权 hello；不证明 Nginx/TLS、两设备 ICE、文件内容一致或公网 NAT 已验收。
 
-2026-11-06可测试代码为cfdda0c，CI45全通过，源码/构建附件13499876562及精确SHA-256见 TEST_REPORT_20261106。Linux Playwright WebKit的Avahi/NSS准备仅作用临时CI Runner，不是Zeydrop服务端依赖、NAT服务或文件中继，勿把CI环境脚本用于用户主机。真实部署回滚仍未演练。
+2026-11-06推荐可测试代码为848d16c，CI47全通过，源码/构建附件13500684979及精确SHA-256见 TEST_REPORT_20261106。Linux Playwright WebKit的Avahi/NSS准备仅作用临时CI Runner，不是Zeydrop服务端依赖、NAT服务或文件中继，勿把CI环境脚本用于用户主机。真实部署回滚仍未演练。
 
 
 静态发布进一步采用显式公共输入清单，不递归复制client目录，未批准的本地.env/笔记不发布且不改变revision；批准路径的文件/父目录符号链接或特殊文件拒绝构建。Nginx隐藏路径再作独立防护，保留.well-known，真实临时HTTPS回归覆盖文件存在时也拒绝访问。直接Git检出与无.git源码候选都使用该边界；添加公开资源必须更新scripts/public-assets.mjs。
