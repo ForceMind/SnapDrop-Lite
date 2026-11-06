@@ -63,6 +63,18 @@ async function main() {
     let nginx;
     const clients=[];
     try {
+        // Use a separate static tree, including deliberately readable fixture
+        // secrets. A real file must still be inaccessible through the template.
+        await fs.chmod(temp,0o755);
+        const publicRoot=path.join(temp,'public');
+        await fs.cp(path.join(root,'dist'),publicRoot,{recursive:true});
+        const privateFixture='PRIVATE_STATIC_BOUNDARY_FIXTURE';
+        for(const name of ['.env.production','images/.env.private','.git/config']) {
+            const target=path.join(publicRoot,name);await fs.mkdir(path.dirname(target),{recursive:true});
+            await fs.writeFile(target,privateFixture);
+        }
+        const challenge=path.join(publicRoot,'.well-known/acme-challenge/test-token');
+        await fs.mkdir(path.dirname(challenge),{recursive:true});await fs.writeFile(challenge,'fixture-acme-token');
         await new Promise((resolve,reject)=>{
             if(backend._wss.address()) return resolve();
             backend._wss.once('listening',resolve);backend._wss.once('error',reject);
@@ -76,7 +88,7 @@ async function main() {
         const substitutions=[
             ['listen 80;', 'listen 127.0.0.1:'+httpPort+';'],
             ['listen 443 ssl;', 'listen 127.0.0.1:'+httpsPort+' ssl;'],
-            ['root /opt/zeydrop/current/dist;', 'root '+path.join(root,'dist')+';'],
+            ['root /opt/zeydrop/current/dist;', 'root '+publicRoot+';'],
             ['proxy_pass http://127.0.0.1:3001;', 'proxy_pass http://127.0.0.1:'+signalingPort+';'],
             ['/var/log/nginx/zeydrop.access.log',path.join(temp,'access.log')],
             ['/var/log/nginx/zeydrop.error.log',path.join(temp,'error.log')],
@@ -111,6 +123,13 @@ async function main() {
         const html=await request('https:',httpsPort,'/');
         assert.equal(html.status,200);
         assert.ok(html.body.includes('Zeydrop'));
+        for(const target of ['/.env.production','/images/.env.private','/.git/config','/%2eenv.production','/.env.production?x=1']) {
+            const privateResponse=await request('https:',httpsPort,target);
+            assert.equal(privateResponse.status,404,'Private static fixture must be blocked: '+target);
+            assert.ok(!privateResponse.body.includes(privateFixture));
+        }
+        const allowedChallenge=await request('https:',httpsPort,'/.well-known/acme-challenge/test-token');
+        assert.equal(allowedChallenge.status,200);assert.equal(allowedChallenge.body,'fixture-acme-token');
         const blocked=await request('https:',httpsPort,'/','POST',Buffer.from('upload-body'));
         assert.ok([403,405].includes(blocked.status),'Uploading must be denied');
         const forbidden=await request('https:',httpsPort,'/server/upload','POST',Buffer.from('file-payload'));
@@ -141,10 +160,14 @@ async function main() {
         const serverBytes=[...backend.connections.values()].map(peer=>peer.bytes);
         assert.equal(serverBytes.length,2);
         assert.ok(serverBytes.every(n=>n<2048),'Signaling only; no file payload');
-        console.log(JSON.stringify({passed:true,scope:'ephemeral self-signed TLS proxy',
+        const report={passed:true,scope:'ephemeral self-signed TLS proxy',
             checks:['real Nginx HTTPS static and security headers','HTTP redirect',
+                'private dotfiles rejected even when present','well-known challenge path remains available',
                 'upload rejection','Origin ACL on WebSocket upgrade',
-                'two-client WSS pairing','no file proxy'],httpsPort:undefined}));
+                'two-client WSS pairing','no file proxy']};
+        await fs.mkdir(path.join(root,'test-results'),{recursive:true});
+        await fs.writeFile(path.join(root,'test-results/https-proxy.json'),JSON.stringify(report,null,2)+'\n');
+        console.log(JSON.stringify(report));
     } finally {
         for (const ws of clients) ws.terminate();
         if (nginx && nginx.exitCode===null) {
