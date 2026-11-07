@@ -27,10 +27,12 @@ Cloud acceptance for code `cfdda0c`: CI45 passed 134 Node tests, all six strict 
 
 Static publication hardening follows the cloud baseline: only20 approved client inputs are snapshotted, hashed and published; local unapproved .env/notes never enter dist or affect the revision. File/ancestor symlinks and special files fail before removing the prior build. Nginx independently blocks dotpaths and preserves.well-known; real temporary HTTPS regressions cover readable fixture secrets. Five additional build regressions bring Node coverage to139. Code848d16c passed full CI47, including the new HTTPS boundary and all six strict browser pairings; it remains an unreleased isolation-test candidate.
 
-### Send task engineering follow-up (pending new CI)
+### Send task engineering follow-up (verified in CI52)
 
 Manual retry now retains a failed File reference briefly, generates a fresh transfer ID and requests fresh receiver consent. Failures pause and retain the remaining queue. Opt-in cross-refresh send checklists store bounded metadata/full SHA-256 only, require explicit original re-selection/new pairing/manual send, and remove entries only after fully verified completion. No file handles, contents or identities are persisted by the checklist. The existing receiver OPFS prefix checks remain separate.
 
 A confirmed server capacity race is fixed at hello allocation; a full session table no longer blocks bounded transports for legitimate offline identity resumption. Isolated signaling load/RSS/CPU/cleanup evidence is added, separate from public networking or long-run certification. No release gate or main merge is implied.
 
 Follow-up browser fixes: local checklist consent and file inputs reset across Firefox form restoration/BFCache; Web Locks callbacks return a result envelope and rethrow the original storage error outside the callback. Final browser error checks remain strict. DataChannel v2 hello now has optional per-wire nonce ACKs and at most10 retries; modern peers require two-way protocol readiness before manual verification or payloads, while plain legacy v2 remains compatible. Obsolete wire/epoch/nonce callbacks cannot authorize a replacement channel. Protocol readiness failures are diagnosed separately from ICE/NAT. Browser CDP resource sampling is test-only, bounded, and explicitly not total RSS/CPU or WAN performance.
+
+Cloud acceptance update: code a1dfef9 / revision 6a2caec304bbd413 passed full CI52 with196 tests, all three checklist engines, all six bidirectional pairings and the large-file checks. Final report: TEST_REPORT_20261107. External gates remain open; no main merge, production deployment or formal Release.

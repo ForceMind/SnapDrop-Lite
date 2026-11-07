@@ -54,8 +54,10 @@ node scripts/server-load.cjs --connections 64 --signals 20 --duration-ms 1000 --
 
 `tests/server-load.test.cjs` 运行实际 fork 服务与 CLI，验证信令计数、资源清理、四类限额、参数上限、远程地址拒绝和隐私字段边界。后续 CI 应对精确提交重新执行短 profile；真实设备/NAT、长期 soak、慢读者极端背压和生产部署仍分别验收。
 
-## 浏览器资源口径补充（待新CI）
+## 浏览器资源口径补充（CI52实测）
 
 `tests/browser-resources.cjs`仅用于自动化：每个0/100MiB/1GiB文件，从自动选文件/接收确认之前到最终verified complete之间，对两个Chromium页面以默认1秒采样，最多360点。Runtime.getHeapUsage输出JS heap used/total、embedder heap和backing storage；后者含ArrayBuffer backing及外部字符串。Performance只保存TaskDuration、ScriptDuration、LayoutDuration、RecalcStyleDuration累计秒数及差额，计数reset或只有单点时delta为空。
 
 这些数值不是浏览器总RSS、Worker/GPU/所有进程内存、全进程CPU或硬内存上限，峰值只代表采样观察到的峰值。停止采样后再执行独立磁盘rehash；采样仍包含测试UI/IPC开销。Firefox/WebKit明确unsupported且不补零。命令超时/会话断开只记录固定错误码，绝不覆盖文件完整性或非relay路径断言；finally会停止并释放CDP会话。真实采样结果必须看对应head的CI，不以mock回归称真实性能成功。
+
+CI52真实采样已归档evidence/ci52-browser-chromium.json：1GiB两端各79点、issues为空，观察峰与TaskDuration口径见TEST_REPORT_20261107。不是浏览器总RSS/所有进程CPU或硬内存上限。

@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "engine": "webkit",
+  "tests": [
+    "render",
+    "WS session",
+    "invite + QR",
+    "leave",
+    "mobile overflow and capability-gated opt-in send checklist",
+    "visible consent dialog and reject",
+    "hidden-capability keyboard focus cycles",
+    "keyboard connection details and escaped fixture name",
+    "file selection blocked before identity confirmation (UI fixture)",
+    "clipboard unavailable manual copy and contenteditable keyboard cycle",
+    "local diagnostic export"
+  ],
+  "limitation": "UI smoke only; fixture direct-path state is not a real connection; no Safari WebRTC or iOS device claim"
+}

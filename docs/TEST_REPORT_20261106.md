@@ -1,5 +1,7 @@
 # 工程验收报告 · 2026-11-06
 
+> 历史阶段报告；当前运行代码与CI52最终验收见 [TEST_REPORT_20261107](TEST_REPORT_20261107.md)。下文“待CI”等属于对应旧阶段，不代表当前状态。
+
 ## 验证版本与结论
 
 **代码848d16c1bd1e419ab30c543f8afa0eb0c0c2ff1e / revision dd492385685e4a1f，CI47全通过。** 仓库仍为ForceMind/SnapDrop-Lite，分支feat/direct-first-workspace-20261019、PR2保持Draft；main/用户电脑/真实服务器未修改，更名由用户最后手动完成。版本0.3.0-dev.1仅供隔离部署测试，不是正式RC或稳定Release。
