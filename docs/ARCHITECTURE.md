@@ -136,3 +136,11 @@ Worker延迟到首个操作才创建，每操作默认30秒截止；失败、取
 CI60的原生OPFS故障组合验证写入后Worker异常、原metadata保留、重载前文件锁释放和新授权恢复的完整SHA；原始JSON见evidence/ci60-stream-hash-recovery-chromium.json。此为同机可控Worker故障，不等于硬件磁盘故障或Safari/移动测试。
 
 显式删除属于已授权的存储操作，失败通知独立于面板render代次：先发固定“数据可能仍保留、请检查重试”提示，再以generation/hidden限制刷新。迟到成功不更新新列表；不泄漏file ID/原生细节、不恢复旧hash/URL。该追加P2和13项暂存UI回归在88ebde0/revision50be36dcf5f9d638的CI62（342项）通过。
+
+### 并发初始化与缓存页面返回（2026-11-07，本轮原生 CI 待验）
+
+新接收记录的 start 在取得独占 `.part` 数据句柄后、truncate/write 之前重查同 ID 的元数据存在性；早期存在检查只负责快速拒绝，不能作为经过异步等待后的所有权依据。其他标签先发布的 partial、complete 或损坏 header 都使本次 start 拒绝；仅关闭本次取得的句柄，不擦除已有记录。查找/原生 close 失败必须拒绝，不声称物理解锁成功。
+
+新记录的初始 metadata 发布失败后，不得在释放数据锁后调用 erase：另一标签可能已经重新初始化同 ID。实现保留发布主错误，尝试关闭本次 access，并留下尚未接受正文的空初始化桩，而非竞争删除后继记录。无 header 的零字节孤立 `.part` 不作为可恢复记录显示，超过24小时且未被占用后由惰性 listing 尝试清理；损坏 header 显示为不可恢复记录，可手动删除，或在 header/正文均过期且可删除时清理。原生 close 失败仍有物理锁边界；保留桩不是事务回滚或断电持久化保证。实际 Worker 源码 9 项并发/失败回归通过，原生双 Worker 三态测试待本轮 CI 验证。
+
+本机暂存清理 sweep 的句柄可幂等 start/stop：页面创建时立即 list 并每小时清理，pagehide 清空周期句柄；仅 persisted pageshow 立即 list 并重启一个周期，重复 pageshow 不叠加，普通 pageshow 不重复初始化。list 的拒绝消费，无可用 Recovery 时不设置计时器。缓存页面返回不自动显示管理面板，不重建旧 hash/下载 URL、不恢复文件绑定或配对授权。4 项实际 controller 生命周期回归通过，真实浏览器 BFCache 和移动冻结仍按实机门槛验证。
