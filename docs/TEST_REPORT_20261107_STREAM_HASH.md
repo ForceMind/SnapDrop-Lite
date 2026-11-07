@@ -1,8 +1,22 @@
 # Zeydrop 状态式哈希与数据保留验收
 
-记录：2026-11-07 UTC。未发布开发候选，非正式RC。当前运行代码3e7fd6c1b03133d1e93484a8535d5e9ad804ddbe，revision25c4bc95c5f8c577，开发分支feat/direct-first-workspace-20261019，Draft PR #2。main、生产和用户电脑未操作，仓库更名留给用户。
+记录：2026-11-07 UTC。未发布开发候选，非正式RC。当前运行代码88ebde0cfee36e7a06071a85661996b620d87c30，revision50be36dcf5f9d638，开发分支feat/direct-first-workspace-20261019，Draft PR #2。main、生产和用户电脑未操作，仓库更名留给用户。
 
-## 最新完整验收（CI60）
+## 最新完整验收与候选（CI62）
+
+[CI62](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657)全套通过，job128396754485；已读最终日志：342通过/0失败/0跳过。两侧audit、重复构建/Nginx/临时HTTPS/WSS、三引擎状态式/全文件/清单Worker、Chromium1GiB/Firefox100MiB、原生OPFS/跨刷新/Worker故障恢复、六组合双向SHA、离线PWA及UI均通过，原始JSON为evidence/ci62-*。原始证据ZIP2001391字节，SHA-256为a839f9fa6f5803c6ca785e58fd0412b568ce8674baf526e3a76eb60f115ced8e。
+
+最终追加P2：用户在删除请求结束前隐藏/重开面板，erase迟到失败曾被代次检查吞掉。最小修复先发固定失败提示，再限制旧界面刷新；隐藏失败/重开失败/迟到成功3项使暂存UI达到13项、全套342项。失败不暴露file ID/原生细节，成功旧操作不改新行或恢复旧hash/URL。
+
+原生OPFS故障结果重现：1MiB已提交、额外16KiB已写入后单次真实SHA Worker异常；原metadata逐字节不变、未erase/未错误ACK/未完成；同一存储Worker在重载前立即重新取得锁，另一4KiB活动记录继续完成。新页面/邀请/核码/重选原件/明确断点选择后只传3145728字节，4194304字节下载的独立SHA为da3feddbbe6ad43f9a22c98dc6c035515efd66c69fd40a1bc5d69c2704e7c47f。两端live哈希全部Worker、mainCalls=0、active=0；19条3827字节信令没有正文/文件信息，HTTP上传及外部请求均0。这是受控Worker故障，不是实际磁盘故障证明。
+
+本次Chromium1GiB时段148427ms，Firefox100MiB13395ms；与CI60不同，不能当作受控前后性能对比或公网/弱设备SLA。三个原生Worker均从50be36dcf5f9d638的真实缓存离线启动，仍仅浏览器网络仿真。
+
+[精确CI62源码候选](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657/artifacts/13573442924)保留7天：ZIP785207字节，SHA-256为84322b5c6b4fcdef88be7c7bda6df7cb8ef4fce4c0876eab5f9c64d2491575ac；tar768528字节，SHA-256为ed0c7be03eacf98b39baa6011b0858e162b460c0a7a5eff4e0efb163e0b3cbec。319个普通文件（290源码/29构建）完整安全成员、模式/大小/SHA及Git来源均核对。实际tar与独立重装两侧依赖、342项、无Git重建及29项dist逐字节复验的归档完全相同；manifest仅CI临时合并来源81ff7001996d487b2b691ef100f920982e5ded2d不同，已核对88ebde0合入原main2b4f75c，main分支未移动。见evidence/delete-feedback-runtime-extraction.json、delete-feedback-ci62-candidate.json和ci62-workflow.json。
+
+后续纯文档包使用自己的manifest/SHA；PR记录最终下载、精确头和工作流，不把本节旧包校验值套用于另一包。真实WAN/设备/Safari/存储故障/PWA升级及独立主机部署门槛继续开放。以下保留本轮基线与定位历史。
+
+## 核心基线完整验收（CI60，历史）
 
 [CI60](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277)全套通过，job128392106510；最终真实日志为339通过/0失败/0跳过。两侧audit、重复构建、Nginx/临时HTTPS/WSS、三引擎原生Worker/清单、Chromium1GiB/Firefox100MiB、OPFS/跨刷新、严格六组合双向独立SHA、离线PWA和UI检查全部通过。已下载并核对实际原始JSON，存入evidence/ci60-*；工作流摘要见ci60-workflow.json。证据ZIP1958753字节，SHA-256为a2e94f58db1227ae985703abb2d89f8a2771b044d3791ef841f40aa4b2ec7282。
 
@@ -21,7 +35,7 @@
 
 Chromium1GiB本次时段87391ms、Firefox100MiB7384ms，均含独立内容验证流程；没有受控前后对比，不据此宣传提速。两端所有live句柄使用Worker且结束0租约，完整六组合均实际双向传文件并独立SHA。当前PWA的三个Worker都从25c4bc95c5f8c577缓存实际离线启动；仍仅浏览器网络仿真。
 
-## 最新精确运行候选
+## CI60核心运行候选（历史）
 
 [CI60 artifact13572489502](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277/artifacts/13572489502)，保留7天。ZIP751705字节，SHA-256为c7a9bf6cef294a8c67ef6dfdcad7aebd9e5465b30a27724999e3b16871ad7cfc；tar735941字节，SHA-256为6b8bc10ab68ceb2e42f42b5984c0bc793f13daf1a81b876e67e04cf93e108164。
 
@@ -80,6 +94,6 @@ CI59只认证e2a2088；其后的清理和原生OPFS故障组合另由3e7fd6c/CI6
 
 后续本地339/339 Node、构建25c4bc95c5f8c577、重复构建/本地引用与脚本语法/diff检查通过。本地原生浏览器组合用例因socket EPERM无法运行；现由3e7fd6c/CI60独立完整通过并完成新候选复验，CI59只认证此前e2a2088。
 
-## 追加显式删除失败反馈（待对应提交CI）
+## 追加显式删除失败反馈（CI62已验）
 
-最终只读复核复现P2：删除请求未完成时隐藏/重开管理面板，随后erase拒绝；旧代码noticeCount=0，记录仍存在，新行虽未被修改但用户没有失败反馈。追加最小修复将固定通知放在generation/hidden检查之前，界面刷新仍只属于当前代次；不暴露文件ID/任意原生错误。新增隐藏失败、重开失败和迟到成功控制3项，相关UI13项/整体342项本地通过，构建50be36dcf5f9d638可重复。此前CI60/61及25c4bc95c5f8c577候选不认证该新改动，须以新提交的完整CI和独立候选复验为准。
+最终只读复核复现P2：删除请求未完成时隐藏/重开管理面板，随后erase拒绝；旧代码noticeCount=0，记录仍存在，新行虽未被修改但用户没有失败反馈。追加最小修复将固定通知放在generation/hidden检查之前，界面刷新仍只属于当前代次；不暴露文件ID/任意原生错误。新增隐藏失败、重开失败和迟到成功控制3项，相关UI13项/整体342项本地通过，构建50be36dcf5f9d638可重复。此前CI60/61不认证该追加改动；现由88ebde0/CI62独立完整通过，并完成319文件/342项/无Git候选复验，见顶部。

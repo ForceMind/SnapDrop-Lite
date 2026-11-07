@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T12:07:20.310468+00:00",
+  "runId": 42370267657,
+  "runNumber": 62,
+  "jobId": 128396754485,
+  "headCommit": "88ebde0cfee36e7a06071a85661996b620d87c30",
+  "revision": "50be36dcf5f9d638",
+  "conclusion": "success",
+  "allJobStepsCompleted": 47,
+  "finalLogsRead": true,
+  "nodeTests": {
+    "passed": 342,
+    "failed": 0,
+    "skipped": 0
+  },
+  "rawEvidenceZip": {
+    "artifactId": 13573174576,
+    "bytes": 2001391,
+    "sha256": "a839f9fa6f5803c6ca785e58fd0412b568ce8674baf526e3a76eb60f115ced8e"
+  },
+  "sourceArtifactId": 13573442924,
+  "checks": [
+    "explicit deletion failure remains visible after hide/reopen; stale success does not mutate fresh rows",
+    "native OPFS after-append SHA Worker fault, lock before reload and fresh consent tail resume",
+    "three native stateful/whole-file/checklist Worker engines",
+    "Chromium 1 GiB, Firefox 100 MiB and six bidirectional file pairs",
+    "HTTPS/WSS, actual offline PWA cache/Workers, UI, audit/reproducible build"
+  ],
+  "scope": "same Linux CI host, STUN disabled; controlled Worker failure; not WAN/Safari/mobile/hardware storage or production certification"
+}

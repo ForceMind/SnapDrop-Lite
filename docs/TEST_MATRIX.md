@@ -1,12 +1,8 @@
 # 测试矩阵与证据范围
 
-## 追加删除反馈回归
+## 当前完整云端验收
 
-显式删除失败与界面代次分离：隐藏/重开后的失败仍固定提示本机数据可能保留，不操作新行、不恢复旧hash/URL；过期成功保持静默。新增3项，当前本地342/342、revision50be36dcf5f9d638及重复构建通过。需对应新提交CI；下述CI60不验证此追加补丁。
-
-## 当前完整云端基线
-
-3e7fd6c / revision25c4bc95c5f8c577的[CI60](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277)全套通过，339/339 Node、0失败/跳过；已读实际最终日志、下载JSON并独立复验候选。原始证据evidence/ci60-*，报告TEST_REPORT_20261107_STREAM_HASH。main/生产未改，真实外部门槛继续开放。
+88ebde0 / revision50be36dcf5f9d638的[CI62](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657)全套通过，342/342 Node、0失败/跳过；已读实际最终日志、下载JSON并独立复验候选。原始证据evidence/ci62-*，报告TEST_REPORT_20261107_STREAM_HASH。main/生产未改，真实外部门槛继续开放。
 
 | 本轮范围 | 实际方法及结果 |
 |---|---|
@@ -14,9 +10,9 @@
 | 异步传输 | 旧wire/接管owner、写入后update失败、snapshot/final取消、无错误ACK/完成、双向故障隔离及4句柄并行前缀恢复通过 |
 | 原生OPFS故障恢复 | 真实SHA Worker在1MiB检查点后额外16KiB落盘时崩溃；原metadata保留、重载前取得锁、另一活动记录完成、新授权后3MiB尾部/4MiB完整SHA通过 |
 | 文件/浏览器 | Chromium1GiB、Firefox100MiB、0B/多文件/原生保存、8MiB同页恢复；全部live句柄为Worker、结束0租约；严格六组合双向SHA通过，STUN关闭/同机 |
-| 生命周期 | 自然会话过期、8项取消清理异常、10项暂存UI/代次/各自取消/20URL上限及60秒宽限通过；注入错误不是实际磁盘故障 |
+| 生命周期 | 自然会话过期、8项取消清理异常、13项暂存UI/代次/各自取消/20URL上限及60秒宽限通过；显式删除迟到失败仍准确提示，旧成功不改变新列表；注入错误不是实际磁盘故障 |
 | PWA/UI/部署 | 三个精确revision Worker实际离线缓存启动、深浅/键盘/对比度、临时HTTPS/WSS/Nginx、audit/构建通过 |
-| 候选 | 304文件安全解压/manifest/权限/大小/SHA，独立重装339测试/无Git重建，29构建字节一致；实际CI归档相同 |
+| 候选 | 319文件安全解压/manifest/权限/大小/SHA，独立重装342测试/无Git重建，29构建字节一致；实际CI归档相同 |
 
 真实WAN/NAT/IPv6/移动/Safari/存储驱逐/PWA升级和独立主机部署仍未验证，不从上述结果推断公网成功率、硬件表现或生产SLA。
 

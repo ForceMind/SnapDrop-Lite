@@ -134,3 +134,5 @@ Worker延迟到首个操作才创建，每操作默认30秒截止；失败、取
 完成暂存管理面板为每次显示/刷新维护独立代次，为每条校验使用自己的AbortController；隐藏、刷新、删除和pagehide使旧代次失效并取消相应校验；隐藏/刷新撤销未点击Blob URL，已点击URL保留最多60秒以便浏览器启动下载，删除/pagehide撤销全部并清理计时器。URL注册表最多20项，满时提示等待重试，不通过提前撤销正在启动的下载腾位。异步completed/hash返回后再检查代次，不能向已移除的行或新面板发布保存链接；只取消自身任务，不调用全局cancelAll影响发送清单。校验失败保留记录，撤销URL也不删除OPFS数据。未点击URL不依赖用户最终点击才释放，已点击的有界延迟撤销保留。
 
 CI60的原生OPFS故障组合验证写入后Worker异常、原metadata保留、重载前文件锁释放和新授权恢复的完整SHA；原始JSON见evidence/ci60-stream-hash-recovery-chromium.json。此为同机可控Worker故障，不等于硬件磁盘故障或Safari/移动测试。
+
+显式删除属于已授权的存储操作，失败通知独立于面板render代次：先发固定“数据可能仍保留、请检查重试”提示，再以generation/hidden限制刷新。迟到成功不更新新列表；不泄漏file ID/原生细节、不恢复旧hash/URL。该追加P2和13项暂存UI回归在88ebde0/revision50be36dcf5f9d638的CI62（342项）通过。

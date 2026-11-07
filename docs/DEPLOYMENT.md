@@ -78,3 +78,5 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 
 
 本轮后续清理修复也必须随精确候选验收：取消后底层abort/删除失败应提示检查本机数据，不能仅凭传输卡片取消推断文件已删除；暂存管理的旧校验与URL有界清理，列表隐藏/刷新释放未点击URL，已点击保留有界下载启动宽限，删除或页面退出时释放。这些清理修复及原生OPFS故障后重新授权恢复已在3e7fd6c/CI60通过，不依赖e2a2088/CI59的旧结果。精确包/校验见PROJECT_STATUS；实际主机部署仍须用户自行验收。
+
+88ebde0/revision50be36dcf5f9d638的CI62进一步验证342项及完整浏览器套件；显式删除失败即使面板已关闭/重开仍提示数据可能保留。请使用PROJECT_STATUS/PR所指精确新候选，不沿用旧包校验值。
