@@ -131,6 +131,15 @@ async function start(meta) {
     const dir = await folder();
     const file = await dir.getFileHandle(partName(meta.id), { create: true });
     const access = await file.createSyncAccessHandle();
+    // Another tab may have published this ID while the file/lock was awaited.
+    // Refuse under the exclusive data lock before truncating anything: an
+    // existing (even corrupt) header belongs to the record that won that race.
+    try {
+        if (await existing(metaName(meta.id))) throw Error('本机已有同名断点');
+    } catch (error) {
+        access.close(); // A native close failure must reject, not claim release.
+        throw error;
+    }
     const item = { file, access, offset: 0, committed: 0, meta: {
         version: 1, id: meta.id, name: meta.name, size: meta.size, mime: meta.mime,
         offset: 0, prefixSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -140,7 +149,15 @@ async function start(meta) {
         access.truncate(0);
         await writeMeta(item.meta);
         active.set(meta.id, item);
-    } catch (e) { access.close(); await erase(meta.id); throw e; }
+    } catch (error) {
+        // After closing the data lock, another tab can initialize this ID.
+        // A later erase(id) could delete that newly committed file. Keep this
+        // empty/invalid initialization stub for explicit or expired cleanup;
+        // no file body has been accepted yet. Preserve the publication error
+        // even if native close also fails; physical release is not guaranteed.
+        try { access.close(); } catch {}
+        throw error;
+    }
     return { id: meta.id, offset: 0 };
 }
 async function resume(id, expected) {

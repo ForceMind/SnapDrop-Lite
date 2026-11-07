@@ -93,6 +93,8 @@ jobs:
           node scripts/check-ci-mdns.cjs
       - run: node tests/interoperability.cjs
       - run: node tests/recovery-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/recovery-start-race-browser.cjs
       - run: node tests/persistent-flow-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/file-hash-browser.cjs
@@ -108,6 +110,8 @@ jobs:
         run: BROWSER_TYPE=webkit node tests/stream-hash-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/stream-hash-recovery-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-crash-recovery.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/send-queue-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}

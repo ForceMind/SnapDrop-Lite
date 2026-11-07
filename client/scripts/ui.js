@@ -473,10 +473,21 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
     $('localStorageSection').hidden = false;
     // Expired entries are cleaned on the next site visit and periodically
     // while this page is open; there is no background task when it is closed.
-    void localRecovery.list().catch(() => {});
-    const recoverySweep = setInterval(() => {
-        void localRecovery.list().catch(() => {});
-    }, 60 * 60 * 1000);
+    let recoverySweep = null;
+    const sweepRecovery = () => { void localRecovery.list().catch(() => {}); };
+    const startRecoverySweep = () => {
+        if (recoverySweep !== null) return;
+        sweepRecovery();
+        recoverySweep = setInterval(sweepRecovery, 60 * 60 * 1000);
+    };
+    const stopRecoverySweep = () => {
+        if (recoverySweep === null) return;
+        clearInterval(recoverySweep); recoverySweep = null;
+    };
+    startRecoverySweep();
+    // BFCache restores this same controller rather than evaluating it again.
+    // Resume expiry cleanup without reopening the panel or old file consent.
+    window.addEventListener('pageshow', event => { if (event.persisted) startRecoverySweep(); });
     const records = $('localStorageRecords');
     const MAX_LOCAL_DOWNLOADS = 20;
     const downloadCapacityMessage = '待保存链接已达 20 个。请先保存文件，等待最多 60 秒释放后重试；关闭面板可释放尚未点击的链接';
@@ -500,7 +511,7 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
         return renderGeneration;
     };
     window.addEventListener('pagehide', () => {
-        clearInterval(recoverySweep); records.hidden = true; retireRender(true);
+        stopRecoverySweep(); records.hidden = true; retireRender(true);
     });
     $('localStorageManage').onclick = async () => {
         records.hidden = !records.hidden;
