@@ -107,6 +107,8 @@ jobs:
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=webkit node tests/stream-hash-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/stream-hash-recovery-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/send-queue-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=firefox node tests/send-queue-browser.cjs

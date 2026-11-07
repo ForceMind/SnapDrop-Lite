@@ -477,14 +477,41 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
     const recoverySweep = setInterval(() => {
         void localRecovery.list().catch(() => {});
     }, 60 * 60 * 1000);
-    window.addEventListener('pagehide', () => clearInterval(recoverySweep), { once: true });
     const records = $('localStorageRecords');
+    const MAX_LOCAL_DOWNLOADS = 20;
+    const downloadCapacityMessage = '待保存链接已达 20 个。请先保存文件，等待最多 60 秒释放后重试；关闭面板可释放尚未点击的链接';
+    let renderGeneration = 0;
+    const verificationJobs = new Set(), downloadUrls = new Map();
+    const releaseDownload = url => {
+        if (!downloadUrls.has(url)) return;
+        clearTimeout(downloadUrls.get(url)); downloadUrls.delete(url);
+        URL.revokeObjectURL(url);
+    };
+    const retireRender = (releaseAllDownloads = false) => {
+        renderGeneration++;
+        // Cancel only this panel's jobs; checklist hashing shares the bridge.
+        for (const controller of verificationJobs) controller.abort();
+        verificationJobs.clear();
+        // A clicked link may still be starting its browser download. Keep its
+        // bounded 60-second grace through ordinary panel changes. Explicit
+        // deletion/page exit release everything; unclicked links never linger.
+        for (const [url, timer] of downloadUrls) if (releaseAllDownloads || timer === null) releaseDownload(url);
+        records.replaceChildren();
+        return renderGeneration;
+    };
+    window.addEventListener('pagehide', () => {
+        clearInterval(recoverySweep); records.hidden = true; retireRender(true);
+    });
     $('localStorageManage').onclick = async () => {
         records.hidden = !records.hidden;
-        if (records.hidden) return;
+        if (records.hidden) { retireRender(); return; }
         const refresh = async () => {
-            records.replaceChildren();
-            const items = await localRecovery.list();
+            const generation = retireRender();
+            const current = () => generation === renderGeneration && !records.hidden;
+            let items;
+            try { items = await localRecovery.list(); }
+            catch (error) { if (current()) throw error; return; }
+            if (!current()) return;
             if (!items.length) { const empty = document.createElement('p'); empty.textContent = '当前没有暂存文件'; records.append(empty); return; }
             for (const item of items) {
                 const row = document.createElement('div'); row.className = 'recovery-record';
@@ -495,27 +522,47 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
                 if (item.phase === 'complete') {
                     const load = document.createElement('button'); load.type = 'button'; load.textContent = '验证并准备保存';
                     load.onclick = async () => {
+                        if (!current() || load.disabled) return;
+                        if (downloadUrls.size >= MAX_LOCAL_DOWNLOADS) { Events.fire('notify-user', downloadCapacityMessage); return; }
                         load.disabled = true;
+                        const controller = new AbortController(); verificationJobs.add(controller);
                         try {
                             const { blob, meta } = await localRecovery.completed(item.id);
-                            const result = await window.ZeydropFileHash.hash(blob);
+                            if (!current() || controller.signal.aborted) return;
+                            const result = await window.ZeydropFileHash.hash(blob, { signal: controller.signal });
+                            if (!current() || controller.signal.aborted) return;
                             if (!Number.isSafeInteger(result?.bytes) || result.bytes !== blob.size || result.bytes !== meta.size
                                 || typeof result.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(result.sha256)
                                 || result.sha256 !== meta.completeSha256) throw Error('本机文件校验失败，请删除损坏记录');
+                            if (downloadUrls.size >= MAX_LOCAL_DOWNLOADS)
+                                throw Error(downloadCapacityMessage);
                             const link = document.createElement('a');
-                            link.textContent = '点击保存'; link.href = URL.createObjectURL(blob);
+                            const url = URL.createObjectURL(blob); downloadUrls.set(url, null);
+                            link.textContent = '点击保存'; link.href = url;
                             link.download = meta.name; link.className = 'button';
-                            link.addEventListener('click', () => setTimeout(() => URL.revokeObjectURL(link.href), 60000), { once: true });
+                            link.addEventListener('click', () => {
+                                if (downloadUrls.has(url)) downloadUrls.set(url, setTimeout(() => releaseDownload(url), 60000));
+                            }, { once: true });
                             row.append(link); load.remove();
-                        } catch (e) { load.disabled = false; Events.fire('notify-user', e.message); }
+                        } catch (e) {
+                            if (current() && !controller.signal.aborted) { load.disabled = false; Events.fire('notify-user', e.message); }
+                        } finally { verificationJobs.delete(controller); }
                     };
                     row.append(load);
                 }
                 const del = document.createElement('button'); del.type = 'button'; del.textContent = '删除本机数据';
                 del.onclick = async () => {
+                    if (!current() || del.disabled) return;
                     del.disabled = true;
-                    try { await localRecovery.erase(item.id); await refresh(); }
-                    catch (e) { del.disabled = false; Events.fire('notify-user', e.message); }
+                    // Invalidate before waiting for erase: an already-running
+                    // hash must not recreate a link for a deleted/detached row.
+                    const deletionGeneration = retireRender(true);
+                    const pending = document.createElement('p'); pending.textContent = '正在删除本机数据…'; records.append(pending);
+                    let error;
+                    try { await localRecovery.erase(item.id); } catch (e) { error = e; }
+                    if (deletionGeneration !== renderGeneration || records.hidden) return;
+                    if (error) Events.fire('notify-user', error.message);
+                    try { await refresh(); } catch (e) { Events.fire('notify-user', e.message); }
                 };
                 row.append(del); records.append(row);
             }

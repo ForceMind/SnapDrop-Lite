@@ -48,7 +48,7 @@ class ReceiveSink {
         return { blob, release: () => this.release() };
     }
     release() { reservedMemory -= this.reserved || 0; this.reserved = 0; this.chunks = []; }
-    async abort() { this.release(); if (this.writer) await this.writer.abort().catch(() => {}); }
+    async abort() { this.release(); if (this.writer) await this.writer.abort(); }
 }
 
 class TransferPeer {
@@ -81,6 +81,18 @@ class TransferPeer {
         const owner = state.resumeOwner || this;
         if (owner._incoming === state || owner._held?.incoming === state)
             owner.cancel(state.meta.id, '本机校验引擎失败，已停止传输；此前本机检查点仍保留', true, true);
+    }
+    async _abortSink(sink) {
+        if (typeof sink?.abort !== 'function') return;
+        try { await Promise.resolve().then(() => sink.abort()); }
+        catch {
+            // Stopping the transfer does not prove that native cleanup or
+            // local deletion succeeded. Consume failures without touching a
+            // replacement transfer, and leave an actionable local warning.
+            Events.fire('notify-user', typeof sink.park === 'function'
+                ? '传输已停止，但删除本机暂存失败；请在本机暂存管理中检查并手动删除'
+                : '传输已停止，但清理保存位置失败；请检查接收文件并手动清理');
+        }
     }
     async _parkState(state, sink) {
         let digest;
@@ -378,7 +390,7 @@ class TransferPeer {
             if (state.sink) {
                 const sink = state.sink, durable = typeof sink.park === 'function';
                 const disposal = cleanup.ready.then(() => durable
-                    ? this._parkState(state, sink) : sink.abort());
+                    ? this._parkState(state, sink) : this._abortSink(sink));
                 // A failed durable checkpoint publication does not invalidate
                 // the previously committed prefix. Ordinary sinks still abort.
                 disposal.catch(() => { if (durable) this._notifyCheckpointFailure(); })
@@ -630,7 +642,7 @@ class TransferPeer {
                 return;
             }
             preparingSink = await ReceiveSink.open(state.meta, options);
-            if (!authorized()) { await preparingSink.abort(); preparingSink = null; cancelStale(); return; }
+            if (!authorized()) { await this._abortSink(preparingSink); preparingSink = null; cancelStale(); return; }
             state.sink = preparingSink; preparingSink = null; state.accepting = false; clearTimeout(state.timer);
             state.timer = setTimeout(() => this.cancel(id, '接收传输超时'), 12 * 60 * 60 * 1000);
             this.sendJSON({ type: 'accept', id });
@@ -641,7 +653,7 @@ class TransferPeer {
                 // Preserve the exact original checkpoint even if parking fails.
                 try { await parkOriginal(error.name === 'AbortError' ? '已取消保存' : error.message); }
                 catch { this._notifyCheckpointFailure(); }
-            } else if (preparingSink) { try { await preparingSink.abort(); } catch {} }
+            } else if (preparingSink) { await this._abortSink(preparingSink); }
             if (this._incoming === state) this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message);
         } finally {
             if (prefixJob) {
@@ -802,7 +814,7 @@ class TransferPeer {
                 cleanup.ready.then(() => this._parkState(state, sink))
                     .catch(() => this._notifyCheckpointFailure())
                     .finally(() => { this._disposeHash(state.hash); if (state.heldCleanup === cleanup) state.heldCleanup = null; });
-            } else { this._disposeHash(state.hash); state.sink?.abort(); }
+            } else { this._disposeHash(state.hash); void this._abortSink(state.sink); }
         }
         if (notify && this._isConnected()) this.sendJSON({ type: 'cancel', id });
         this._progress(state, 'cancelled');

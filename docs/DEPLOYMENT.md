@@ -75,3 +75,6 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 当前批准公共输入为25项，新增stream-hash桥接及其本地打包Worker。不要单独替换某一脚本或复用旧dist：index、三个Worker（recovery/file-hash/stream-hash）、同版本查询参数和Service Worker预缓存应来自同一次已验证构建。Worker只做浏览器本机计算/存储，不新增服务器端点、文件上传、代理或依赖服务。
 
 升级/回滚实测除静态健康及信令hello外，还应确认本轮CI对应的实时传输/前缀哈希、已完成本机暂存复验和Worker离线缓存。旧CI57绿灯不覆盖这次运行代码；请以PROJECT_STATUS的精确候选及完整CI为准。会话结束只解除旧配对，已启用的本机检查点独立管理；明确删除文件仍按存储策略执行。
+
+
+本轮后续清理修复也必须随精确候选验收：取消后底层abort/删除失败应提示检查本机数据，不能仅凭传输卡片取消推断文件已删除；暂存管理的旧校验与URL有界清理，列表隐藏/刷新释放未点击URL，已点击保留有界下载启动宽限，删除或页面退出时释放。原生OPFS哈希Worker故障后重新授权恢复的新集成用例须在其实际提交的完整CI执行，不能沿用e2a2088/CI59的早期结果。

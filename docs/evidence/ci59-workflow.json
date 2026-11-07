@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:33:10.512312+00:00",
+  "runId": 42367663439,
+  "runNumber": 59,
+  "jobId": 128389041205,
+  "headCommit": "e2a2088358e609435f188029be2c48da2d7155a9",
+  "revision": "8283668696e877e0",
+  "conclusion": "success",
+  "allJobStepsCompleted": 46,
+  "finalLogsRead": true,
+  "nodeTests": {
+    "passed": 324,
+    "failed": 0,
+    "skipped": 0
+  },
+  "rawEvidenceZip": {
+    "artifactId": 13572299309,
+    "bytes": 1910153,
+    "sha256": "1e58c5df6ba9560c30f57960d6148801c6dced39e4708dbd00715cfaafb22589"
+  },
+  "sourceArtifactId": 13571604402,
+  "checks": [
+    "three native stateful hash Worker engines",
+    "three whole-file/checklist Worker engines",
+    "Chromium 1 GiB and Firefox 100 MiB direct transfer",
+    "native OPFS and authorized recovery",
+    "six bidirectional engine pairs with independent SHA",
+    "HTTPS/WSS proxy",
+    "exact-revision offline PWA Workers",
+    "UI smoke/contrast/keyboard",
+    "audit/build/source candidate"
+  ],
+  "scope": "same Linux CI host; STUN disabled; not public NAT, Safari/mobile hardware, actual storage failure or production deployment; subsequent code requires its own CI"
+}

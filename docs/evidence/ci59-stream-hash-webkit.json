@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "engine": "webkit",
+  "scope": "built native incremental SHA Workers and bounded RPC copies; not total-memory, mobile hardware, Safari or WAN evidence",
+  "phase": "complete",
+  "checks": [
+    "native Worker snapshots leave SHA state usable, continuation/final match independent Node SHA, and final releases the handle",
+    "native Worker receives only owned copies of exact view ranges; original buffers stay attached, RPC chunks stay <=256 KiB and pending work is capped",
+    "four-handle cap holds; disposing one native Worker rejects its pending operations without interrupting another stateful Worker or future sessions",
+    "native Worker runtime failure and stalled RPC both reject and release resources without silently recomputing on the main thread"
+  ],
+  "errors": [],
+  "passed": true,
+  "browserVersion": "27.2",
+  "network": {
+    "httpRequests": 22,
+    "uploadAttempts": 0,
+    "externalAttempts": 0,
+    "signalingMessages": 1,
+    "signalingBytes": 16,
+    "fileDataObserved": false
+  },
+  "capabilities": {
+    "worker": true,
+    "chunkBytes": 262144,
+    "maxHandles": 4,
+    "maxPending": 4,
+    "versionQueryMatches": true
+  },
+  "stateful": {
+    "emptyDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "prefix": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+    "repeat": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+    "final": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "afterFinal": "HashClosedError",
+    "privateDigest": "70fb495ec271223c5456808c2c78e49e20c84b1d594b879535a7953b4c3e1c63",
+    "bytes": 3,
+    "backend": "worker",
+    "finalClosed": true,
+    "emptyClosed": true,
+    "remaining": 0,
+    "factoryCalls": 0
+  },
+  "bounds": {
+    "isolated": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "callerBufferBytes": 6,
+    "callerBytesRemainMutated": true,
+    "final": "bf63d8a95fcc2e64619813aae35fdcbe871fdd9264caa3f365eb3aed0f679129",
+    "bytes": 1048576,
+    "overQueue": "HashBusyError",
+    "oversized": "RangeError",
+    "lookalike": "TypeError",
+    "factoryCalls": 0,
+    "maximumRpcChunk": 262144,
+    "rpcEnvelopeOnly": true,
+    "updates": 5,
+    "remaining": 0
+  },
+  "cancellation": {
+    "overHandles": "HashBusyError",
+    "nativeWorkerStarted": true,
+    "outcomes": [
+      "AbortError",
+      "AbortError"
+    ],
+    "final": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "freshDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "victimClosed": true,
+    "remaining": 0
+  },
+  "crash": {
+    "resolved": false,
+    "errorName": "HashWorkerError",
+    "factoryCalls": 0,
+    "closed": true,
+    "workerReleased": true,
+    "remaining": 0
+  },
+  "timeout": {
+    "resolved": false,
+    "errorName": "HashTimeoutError",
+    "factoryCalls": 0,
+    "closed": true,
+    "workerReleased": true,
+    "remaining": 0
+  },
+  "nativeWorkersCreated": 10
+}
