@@ -18,12 +18,24 @@ const ZEYDROP_RECOVERY_WORKER_URL = (() => {
     } catch { return fallback; }
 })();
 class ZeydropRecoveryStore {
+    static MAX_PENDING = 32;
     constructor() {
         this.supported = typeof Worker !== 'undefined' && !!navigator.storage?.getDirectory;
         this.worker = null; this.sequence = 0; this.pending = new Map();
     }
     async request(type, ...args) {
         if (!this.supported) throw Error('此浏览器不支持本机断点保存');
+        // Refuse before starting a worker, allocating a job or cloning command
+        // arguments. Already-started filesystem operations keep their slots
+        // until a reply/error; a timeout cannot safely undo their side effects.
+        if (!Number.isSafeInteger(this.sequence) || this.sequence < 0 || this.sequence >= Number.MAX_SAFE_INTEGER) {
+            const error = Error('本机存储请求序号已耗尽，请刷新页面后重试');
+            error.name = 'StorageRequestLimitError'; throw error;
+        }
+        if (this.pending.size >= ZeydropRecoveryStore.MAX_PENDING) {
+            const error = Error('本机存储请求过多，请等待当前操作完成');
+            error.name = 'StorageBusyError'; throw error;
+        }
         if (!this.worker) {
             const worker = new Worker(ZEYDROP_RECOVERY_WORKER_URL);
             this.worker = worker;

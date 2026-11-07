@@ -14,10 +14,15 @@ async function rig({ deferHash = true, deferRestore = false, corrupt = false } =
     const meta = { id, name: '已保存前缀.bin', size: 32768, mime: 'application/octet-stream' };
     const sink = { size: prefix.length, aborted: 0, parkedHash: null,
         async abort() { this.aborted++; }, async park(hash) { this.parkedHash = hash; } };
-    const snapshot = { slice() { return { async *stream() {
+    const readPrefix = async () => {
         hashReads++; hashEntered.resolve(); if (deferHash) await releaseHash.promise;
-        yield corrupt ? new Uint8Array(prefix.length).fill(8) : prefix;
-    } }; } };
+        const bytes = corrupt ? new Uint8Array(prefix.length).fill(8) : prefix;
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    };
+    const snapshot = { slice() { return {
+        arrayBuffer: readPrefix,
+        async *stream() { yield new Uint8Array(await readPrefix()); }
+    }; } };
     const context = vm.createContext({
         crypto: crypto.webcrypto, performance, TextEncoder, Uint8Array, Blob, File,
         setTimeout: (fn,ms) => {const timer=setTimeout(fn,ms);timer.unref();return timer;}, clearTimeout,

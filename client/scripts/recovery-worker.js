@@ -194,8 +194,18 @@ async function checkpoint(id, sha256, force) {
 async function park(id, sha256) {
     const item = active.get(id);
     if (!item) return false;
-    await checkpoint(id, sha256, true);
-    item.access.close(); active.delete(id);
+    let committed = false;
+    try {
+        await checkpoint(id, sha256, true);
+        committed = true;
+    } finally {
+        // A failed metadata write must not leave the old checkpoint locked.
+        // Keep its original error if native close also fails; a close failure
+        // after a successful commit still rejects rather than claiming release.
+        try { item.access.close(); }
+        catch (error) { if (committed) throw error; }
+        finally { if (active.get(id) === item) active.delete(id); }
+    }
     return true;
 }
 async function completed(id) {

@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "scope": "current-version cached shell and native hash/recovery Workers in a fresh offline document; not update activation, Safari, mobile hardware, or public-network evidence",
+  "phase": "offline-reload",
+  "checks": [
+    "the activated controlling service worker precaches both exact worker URLs with the current build revision"
+  ],
+  "errors": [],
+  "offlineWorkers": [
+    {
+      "script": "recovery-worker.js",
+      "version": "7133a83a382e6a03",
+      "phase": "offline-reload"
+    }
+  ],
+  "passed": false,
+  "browserVersion": "156.0.8078.4",
+  "cache": {
+    "revision": "7133a83a382e6a03",
+    "name": "zeydrop-shell-7133a83a382e6a03",
+    "entryCount": 25,
+    "controllerActivated": true,
+    "workers": [
+      {
+        "script": "recovery-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "7133a83a382e6a03"
+      },
+      {
+        "script": "file-hash-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "7133a83a382e6a03"
+      }
+    ],
+    "hashWorkerStillLazy": true,
+    "peerCount": 0
+  },
+  "httpCacheCleared": true,
+  "failure": "TimeoutError",
+  "failureLine": {
+    "line": 78,
+    "column": 20
+  }
+}

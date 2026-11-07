@@ -33,3 +33,12 @@ Web Locks独占提交及revision比较防止多个标签覆盖；哈希在锁外
 Firefox验收修复：浏览器可能恢复动态勾选状态（[Mozilla说明](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/checkbox)）。本机发送清单同意框禁用表单自动恢复，页面初始化/退出及BFCache返回时重置，文件选择控件清空；浏览器恢复表单不等于新的用户存储授权。CI50保留了Firefox真实失败，后续必须以未放宽断言的新CI验证。
 
 最终CI52验证三引擎发送清单完整通过、Firefox errors=[]；许可/BFCache及锁callback修复均保持原错误和严格最终断言。完整范围见TEST_REPORT_20261107，实机存储验收仍开放。
+
+
+## 2026-11-07 错误保留策略（待新CI）
+
+准备sink完整校验后才交接；读取/哈希引擎失败只park此前checkpoint，不当作内容损坏。durable write/checkpoint/finish的存储错误、暂存失败或transient断网不再以删除原partial收尾；下一次仍须重新选择/授权、按旧offset/SHA校验恢复。未提交尾部可能被截断，不承诺每个已读字节已持久化。
+
+park提交失败仍尝试关闭自身访问句柄、释放active，保留主错误与此前元数据；native close失败或RPC挂起不保证立即解锁。RPC最多32项未完成，前缀片≤256KiB/共享4个未结束I/O，没有强制终止共享Worker。
+
+finish期间断网不重新adopt finishing；同一state的保留意图保护迟到本机结果，也不自动向对方报成功。主动取消/删除及确实完整性失配保持对应策略。详见ENGINEERING_AUDIT_20261107与Issue #6；真实磁盘耗尽/驱逐/移动生命周期仍待实测。

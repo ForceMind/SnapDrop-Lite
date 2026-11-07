@@ -65,6 +65,20 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
+      # These local UI/storage checks need no mDNS or ICE. Publish their
+      # diagnostics early so a failure can be investigated during long files.
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/pwa-workers-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/ui-contrast-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        with:
+          name: zeydrop-local-ui-evidence
+          path: |
+            test-results/pwa-workers-*.json
+            test-results/ui-contrast-*
+          retention-days: 7
       # Preserve native browser-default evidence before preparing the Linux
       # mDNS resolver used by WebKitGTK. Neither probe can authorize file data.
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
@@ -80,8 +94,6 @@ jobs:
       - run: node tests/interoperability.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/persistent-flow-browser.cjs
-      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: node tests/pwa-workers-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/file-hash-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}

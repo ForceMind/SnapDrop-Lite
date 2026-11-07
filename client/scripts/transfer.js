@@ -90,8 +90,8 @@ class TransferPeer {
             if (!state?.sink || state.accepting || state.awaitingResume || data.byteLength < 1 || data.byteLength > CHUNK_SIZE
                 || state.offset + data.byteLength > state.meta.size || state.offset + data.byteLength - state.acked > WINDOW_SIZE) throw Error('未授权或无效的文件分块');
             try { await state.sink.write(data); }
-            catch (error) { this.cancel(state.meta.id, saveError(error)); return; }
-            if (this._incoming !== state && this._held?.incoming !== state) return;
+            catch (error) { this._receiveStorageFailure(state, error); return; }
+            if (this._incoming !== state && this._held?.incoming !== state && !state.heldCleanup) return;
             state.hash.update(new Uint8Array(data)); state.offset += data.byteLength;
             if (this._incoming === state) this._progress(state, 'receiving');
             return;
@@ -177,7 +177,7 @@ class TransferPeer {
         if (msg.type === 'checkpoint' && incoming?.sink && msg.id === incoming.meta.id) {
             if (msg.offset !== incoming.offset) throw Error('文件偏移不一致');
             try { if (incoming.sink.checkpoint) await incoming.sink.checkpoint(hex(incoming.hash.clone().digest())); }
-            catch (error) { this.cancel(msg.id, saveError(error)); return; }
+            catch (error) { this._receiveStorageFailure(incoming, error); return; }
             if (this._incoming !== incoming) return;
             incoming.acked = incoming.offset;
             this.sendJSON({ type: 'ack', id: msg.id, offset: incoming.offset }); return;
@@ -189,11 +189,22 @@ class TransferPeer {
             this._progress(outgoing, 'sending'); return;
         }
         if (msg.type === 'finish' && incoming?.sink && msg.id === incoming.meta.id) {
-            if (incoming.awaitingResume || incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string' || msg.sha256 !== hex(incoming.hash.digest())) throw Error('SHA-256 校验失败');
+            if (incoming.awaitingResume || incoming.offset !== incoming.meta.size || typeof msg.sha256 !== 'string') throw Error('SHA-256 校验失败');
+            const finalSha256 = hex(incoming.hash.digest());
+            if (!/^[a-f0-9]{64}$/.test(finalSha256) || msg.sha256 !== finalSha256) throw Error('SHA-256 校验失败');
+            // digest() consumes the incremental hasher. Only retain a final
+            // value after actual local equality, for a failed durable finish.
+            incoming.verifiedFinalSha256 = finalSha256;
             let result;
             try { incoming.finishing = true; result = await incoming.sink.finish(msg.sha256); }
-            catch (error) { this.cancel(msg.id, saveError(error)); return; }
-            if (this._incoming !== incoming) { result.release?.(); return; }
+            catch (error) { this._receiveStorageFailure(incoming, error); return; }
+            if (this._incoming !== incoming) {
+                // A transient durable cancellation keeps the validated local
+                // file even when its storage operation completes late. This
+                // intent belongs to the exact state, never a newer same-ID file.
+                if (!(incoming.preserveDurableResult === true && result.locallyStored === true)) result.release?.();
+                return;
+            }
             clearTimeout(incoming.timer); this._incoming = null;
             this.sendJSON({ type: 'complete', id: msg.id, sha256: msg.sha256, readyNext: !!result.saved });
             Events.fire('file-received', { ...incoming.meta, ...result, sender: this._peerId, sha256: msg.sha256 });
@@ -226,7 +237,7 @@ class TransferPeer {
         const offered = this._outgoing?.phase === 'offered' ? this._outgoing : null;
         const pendingFiles = this._queueWaitId ? []
             : [...(offered ? [offered.file] : []), ...this._filesQueue];
-        if (!outgoing && !incoming && !pendingFiles.length) { this.abortAll(reason); return false; }
+        if (!outgoing && !incoming && !pendingFiles.length) { this.abortAll(reason, true); return false; }
         if (offered) {
             clearTimeout(offered.timer);
             this._outgoing = null;
@@ -235,7 +246,7 @@ class TransferPeer {
         if (this._queueWaitId && this._filesQueue.length)
             Events.fire('notify-user', '上一文件仍待保存，重连后请重新选择剩余文件');
         if (this._outgoing && !outgoing) this.cancel(this._outgoing.meta.id, reason, false);
-        if (this._incoming && !incoming) this.cancel(this._incoming.meta.id, reason, false);
+        if (this._incoming && !incoming) this.cancel(this._incoming.meta.id, reason, false, true);
         const deadline = Date.now() + 120000;
         for (const state of [outgoing, incoming]) {
             if (!state) continue;
@@ -263,42 +274,79 @@ class TransferPeer {
     }
     _dropHeld(reason) {
         const hold = this._held; if (!hold) return;
-        hold.cancelled = reason || '旧传输已取消';
         this._held = null; clearTimeout(hold.timer); this._pendingResumeOffer = null;
+        this._cleanupHeld(hold, reason);
+        this._queueEvent();
+    }
+    _cleanupHeld(hold, reason) {
+        if (hold.cleanupStarted) return;
+        hold.cleanupStarted = true;
+        hold.cancelled = reason || '旧传输已取消';
+        clearTimeout(hold.timer);
         // Drop references to local File objects once recovery is no longer authorized.
         hold.pendingFiles = [];
         for (const state of [hold.outgoing, hold.incoming]) {
             if (!state) continue;
+            // An already-started write still contributes to the digest before
+            // storage is parked, even if its old peer no longer holds the slot.
+            const previousCleanup = state.heldCleanup;
+            const cleanup = { hold, ready: Promise.all([hold.ready, previousCleanup?.ready]) };
+            state.heldCleanup = cleanup;
             // A write begun on the old peer may fail only after its checkpoint
             // was adopted. Route that failure to the current object owner;
             // transfer ID alone could target an unrelated, replayed new offer.
             if (state.resumeOwner && state.resumeOwner !== this) {
-                state.resumeOwner._cancelTransferredState(state, reason);
-                continue;
+                const owner = state.resumeOwner;
+                if (owner._incoming !== state && owner._outgoing !== state
+                    && ![owner._held?.incoming, owner._held?.outgoing].includes(state)) {
+                    if (state.heldCleanup === cleanup) state.heldCleanup = previousCleanup;
+                    continue;
+                }
+                if (owner._held === hold) owner._dropHeld(reason); // detach the same shared slot; cleanup remains here
+                else {
+                    owner._cancelTransferredState(state, reason, true);
+                    continue;
+                }
             }
             clearTimeout(state.timer); state.error = reason;
             state.waiter?.reject(Error(reason));
             if (state.sink) {
-                const cleanup = hold.ready.then(() => state.sink.park
-                    ? state.sink.park(hex(state.hash.clone().digest())) : state.sink.abort());
-                cleanup.catch(() => state.sink.abort().catch(() => {}));
+                const sink = state.sink, durable = typeof sink.park === 'function';
+                const disposal = cleanup.ready.then(() => durable
+                    ? sink.park(this._checkpointHash(state)) : sink.abort());
+                // A failed durable checkpoint publication does not invalidate
+                // the previously committed prefix. Ordinary sinks still abort.
+                disposal.catch(() => { if (durable) this._notifyCheckpointFailure(); })
+                    .finally(() => { if (state.heldCleanup === cleanup) state.heldCleanup = null; });
+            } else {
+                cleanup.ready.finally(() => { if (state.heldCleanup === cleanup) state.heldCleanup = null; });
             }
             this._progress(state, 'cancelled');
             Events.fire('file-offer-cancelled', { id: state.meta.id, sender: this._peerId });
         }
         Events.fire('notify-user', reason);
-        this._queueEvent();
     }
-    _cancelTransferredState(state, reason) {
-        if (this._incoming === state || this._outgoing === state) this.cancel(state.meta.id, reason);
-        else if (this._held && [this._held.incoming, this._held.outgoing].includes(state)) this.cancel(state.meta.id, reason);
+    _cancelTransferredState(state, reason, keepDurable = false) {
+        if (this._incoming === state || this._outgoing === state) this.cancel(state.meta.id, reason, true, keepDurable);
+        else if (this._held && [this._held.incoming, this._held.outgoing].includes(state)) this.cancel(state.meta.id, reason, true, keepDurable);
+    }
+    _receiveStorageFailure(state, error) {
+        // A write/checkpoint begun on an obsolete peer may settle only after
+        // adoption. Identity is the state object, never a replayable file ID.
+        const owner = state.resumeOwner || this;
+        if (owner._incoming === state || owner._held?.incoming === state)
+            owner.cancel(state.meta.id, saveError(error), true, true);
+    }
+    _checkpointHash(state) {
+        return typeof state.verifiedFinalSha256 === 'string' && /^[a-f0-9]{64}$/.test(state.verifiedFinalSha256)
+            ? state.verifiedFinalSha256 : hex(state.hash.clone().digest());
     }
     takeHeldTransfers() { return this._held; }
     adoptHeldTransfers(hold) {
         if (!hold || hold.cancelled || this._held || this._incoming || this._outgoing) return false;
         if (Date.now() >= hold.deadline) {
-            hold.pendingFiles = [];
-            hold.incoming?.sink?.abort().catch(() => {}); return false;
+            this._cleanupHeld(hold, '续传窗口已过期，请重新选择文件');
+            return false;
         }
         clearTimeout(hold.timer);
         this._held = hold;
@@ -351,6 +399,9 @@ class TransferPeer {
         job.cancelled = true;
         job.cancelRead?.();
         job.cancelRead = null;
+    }
+    _notifyCheckpointFailure() {
+        Events.fire('notify-user', '本机断点保存失败，请在本机暂存管理中检查此前检查点后重试');
     }
     _readPrefixChunk(job, file, start, end) {
         if (job.cancelled) return Promise.resolve({ cancelled: true });
@@ -423,14 +474,15 @@ class TransferPeer {
     async acceptIncoming(id, options = {}) {
         const state = this._incoming;
         if (!state || state.meta.id !== id || state.sink || state.accepting) return;
+        let prefixJob = null;
         const authorized = () => this._incoming === state && this._verified
-            && this._path?.direct && this._remoteHello && this._isConnected();
+            && (!prefixJob || !prefixJob.cancelled) && this._path?.direct && this._remoteHello && this._isConnected();
         if (!authorized()) { this.cancel(id, '请重新核对直连状态和安全码后接收'); return; }
         state.accepting = true;
         // Keep a preparing sink local. A persistent writer may already contain
         // N bytes while its prefix hash/transfer offset are still unverified.
         // Publishing it early would let suspendTransfers retain it as offset 0.
-        let preparingSink = null;
+        let preparingSink = null, parkOriginal = null, provenPrefixMismatch = false;
         const cancelStale = () => { if (this._incoming === state) this.cancel(id, '接收准备已失效，请重新确认'); };
         try {
             if (options.resumeLocalId) {
@@ -442,22 +494,51 @@ class TransferPeer {
                 const { sink, snapshot, offset, prefixSha256 } =
                     await window.ZeydropRecovery.restore(options.resumeLocalId, state.meta);
                 preparingSink = sink;
-                const parkOriginal = async () => {
+                prefixJob = { cancelled: false, done: false, cancelRead: null };
+                state.prefixJob = prefixJob;
+                let parkPromise = null;
+                parkOriginal = async (reason = '接收准备已失效，请重新确认') => {
                     // Cancelling/reconnecting during preparation does not delete
-                    // the previously committed prefix or replace its stored hash.
-                    await preparingSink.park(prefixSha256); preparingSink = null;
-                    cancelStale();
+                    // the committed prefix. Capture this exact sink once, never
+                    // a newer incoming state or a re-used local-file ID. Clear
+                    // local ownership before awaiting the storage RPC: failure
+                    // to park must not fall through to deleting the original.
+                    if (!parkPromise) {
+                        const original = preparingSink; preparingSink = null;
+                        parkPromise = Promise.resolve().then(() => original.park(prefixSha256));
+                    }
+                    await parkPromise;
+                    if (this._incoming === state) this.cancel(id, reason);
                 };
                 if (!authorized()) { await parkOriginal(); return; }
                 const hash = window.ZeydropHash.create();
-                for await (const bytes of snapshot.slice(0, offset).stream()) {
-                    if (!authorized()) { await parkOriginal(); return; }
-                    hash.update(new Uint8Array(bytes));
+                for (let pos = 0; pos < offset; pos += WINDOW_SIZE) {
+                    const end = Math.min(pos + WINDOW_SIZE, offset);
+                    const result = await this._readPrefixChunk(prefixJob, snapshot, pos, end);
+                    if (!authorized() || result.cancelled) { await parkOriginal(); return; }
+                    if (result.busy) { await parkOriginal('前次文件读取尚未结束，请稍后重试本机断点'); return; }
+                    if (result.error) throw result.error;
+                    let length;
+                    try { length = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, 'byteLength').get.call(result.bytes); }
+                    catch { throw Error('本机断点读取结果无效'); }
+                    if (length !== end - pos) throw Error('本机断点读取长度不一致');
+                    hash.update(new Uint8Array(result.bytes));
                 }
                 if (!authorized()) { await parkOriginal(); return; }
-                if (hex(hash.clone().digest()) !== prefixSha256) throw Error('本机断点校验失败，请删除断点后重新接收');
+                const digest = hash.clone().digest();
+                if (!(digest instanceof Uint8Array) || digest.byteLength !== 32 || !/^[a-f0-9]{64}$/.test(prefixSha256))
+                    throw Error('本机断点校验结果无效');
+                if (hex(digest) !== prefixSha256) {
+                    provenPrefixMismatch = true;
+                    throw Error('本机断点校验失败，请删除断点后重新接收');
+                }
                 state.hash = hash; state.offset = offset; state.acked = offset;
+                // No await separates validation from ownership handoff. Once
+                // published, ordinary active-transfer cancellation owns this
+                // sink; the old preparation must never park it afterwards.
+                prefixJob.done = true; state.prefixJob = null;
                 state.sink = preparingSink; preparingSink = null;
+                parkOriginal = null;
                 state.awaitingResume = true; state.accepting = false;
                 clearTimeout(state.timer);
                 state.timer = setTimeout(() => this.cancel(id, '续传协商超时'), 120000);
@@ -472,8 +553,18 @@ class TransferPeer {
             this.sendJSON({ type: 'accept', id });
             this._progress(state, 'receiving');
         } catch (error) {
-            if (preparingSink) { try { await preparingSink.abort(); } catch {} }
+            if (parkOriginal && !provenPrefixMismatch) {
+                // Read/hash engine failures are not proof of corrupt bytes.
+                // Preserve the exact original checkpoint even if parking fails.
+                try { await parkOriginal(error.name === 'AbortError' ? '已取消保存' : error.message); }
+                catch { this._notifyCheckpointFailure(); }
+            } else if (preparingSink) { try { await preparingSink.abort(); } catch {} }
             if (this._incoming === state) this.cancel(id, error.name === 'AbortError' ? '已取消保存' : error.message);
+        } finally {
+            if (prefixJob) {
+                prefixJob.done = true;
+                if (state.prefixJob === prefixJob) state.prefixJob = null;
+            }
         }
     }
     rejectIncoming(id) { if (this._incoming?.meta.id === id) this.cancel(id, '已拒绝接收'); }
@@ -606,9 +697,14 @@ class TransferPeer {
         if (incoming) {
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
             this._incoming = null;
-            if (keepDurable && state.sink?.park) {
-                this._messageChain.then(() => state.sink.park(hex(state.hash.clone().digest())))
-                    .catch(() => state.sink.abort().catch(() => {}));
+            this._cancelPrefixRead(state);
+            if (keepDurable && typeof state.sink?.park === 'function') {
+                state.preserveDurableResult = true;
+                const sink = state.sink;
+                const cleanup = state.heldCleanup;
+                Promise.all([this._messageChain, cleanup?.ready]).then(() => sink.park(this._checkpointHash(state)))
+                    .catch(() => this._notifyCheckpointFailure())
+                    .finally(() => { if (state.heldCleanup === cleanup) state.heldCleanup = null; });
             } else state.sink?.abort();
         }
         if (notify && this._isConnected()) this.sendJSON({ type: 'cancel', id });

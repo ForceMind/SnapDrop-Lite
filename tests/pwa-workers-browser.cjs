@@ -8,6 +8,29 @@ const{chromium}=require('playwright');
 const{startDev}=require('../scripts/dev.cjs');
 const errorType=error=>['AssertionError','TimeoutError','TypeError','SecurityError','QuotaExceededError',
     'HashWorkerError','HashTimeoutError','HashReadError'].includes(error?.name)?error.name:'Error';
+function readinessSnapshot(){
+    let peerCount=null;try{peerCount=zeydrop.peers.peers.size;}catch{}
+    return{navigatorOnline:navigator.onLine,offline:navigator.onLine===false,readyState:document.readyState,
+        controlled:!!navigator.serviceWorker.controller,controllerState:navigator.serviceWorker.controller?.state||null,
+        fileHashPresent:!!window.ZeydropFileHash,recoveryPresent:!!window.ZeydropRecovery,
+        hashClassPresent:typeof ZeydropFileHasher==='function',recoverySupported:window.ZeydropRecovery?.supported===true,
+        hashWorkerLazy:window.ZeydropFileHash?window.ZeydropFileHash._worker===null:null,
+        peerCount,
+        startupOnline:window.__pwaStartupOnline,connectivityEvents:window.__pwaConnectivityEvents||[]};
+}
+async function offlineProbe(page){
+    return page.evaluate(async()=>{
+        const controller=new AbortController();let timedOut=false;
+        const timer=setTimeout(()=>{timedOut=true;controller.abort();},5000);
+        try{
+            // The actual product SW explicitly excludes this endpoint, and
+            // no-store prevents a prior HTTP-cache response proving "offline".
+            const response=await fetch('/build.json',{cache:'no-store',signal:controller.signal});
+            return{rejected:false,status:response.status,timedOut};
+        }catch(error){return{rejected:true,errorName:['TypeError','AbortError'].includes(error?.name)?error.name:'Error',timedOut};}
+        finally{clearTimeout(timer);}
+    });
+}
 async function main(){
     const report={schema:1,engine:'chromium',scope:'current-version cached shell and native hash/recovery Workers in a fresh offline document; not update activation, Safari, mobile hardware, or public-network evidence',
         phase:'startup',checks:[],errors:[],offlineWorkers:[],passed:false};
@@ -17,6 +40,12 @@ async function main(){
         browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{
             executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']}:{} )});
         report.browserVersion=browser.version();context=await browser.newContext({serviceWorkers:'allow'});page=await context.newPage();
+        await page.addInitScript(()=>{
+            window.__pwaStartupOnline=navigator.onLine;window.__pwaConnectivityEvents=[];
+            for(const type of ['online','offline'])addEventListener(type,()=>{
+                if(window.__pwaConnectivityEvents.length<10)window.__pwaConnectivityEvents.push({type,online:navigator.onLine});
+            });
+        });
         page.on('pageerror',error=>{if(report.errors.length<20)report.errors.push({type:errorType(error),phase:report.phase});});
         page.on('worker',worker=>{
             if(!report.phase.startsWith('offline'))return;
@@ -74,7 +103,15 @@ async function main(){
         const session=await context.newCDPSession(page);
         await session.send('Network.clearBrowserCache');await session.send('Network.setCacheDisabled',{cacheDisabled:true});
         report.httpCacheCleared=true;
-        report.phase='offline-reload';await context.setOffline(true);await page.reload({waitUntil:'load'});
+        report.phase='offline-reload';await context.setOffline(true);report.contextOfflineApplied=true;
+        await page.reload({waitUntil:'load'});
+        report.readinessBeforeWait=await page.evaluate(readinessSnapshot);
+        report.offlineNetworkProbe=await offlineProbe(page);
+        assert.equal(report.offlineNetworkProbe.rejected,true,'uncached endpoint must be unreachable in the actual offline context');
+        assert.equal(report.offlineNetworkProbe.timedOut,false,'a probe timeout cannot establish network-offline evidence');
+        report.cacheObserverBeforeWait=await serviceWorker.evaluate(()=>({installed:typeof globalThis.__pwaOriginalMatch==='function',
+            hits:globalThis.__pwaWorkerCacheHits||[]})).catch(()=>({unavailable:true}));
+        report.cacheHits=report.cacheObserverBeforeWait.hits||[];
         await page.waitForFunction(()=>!navigator.onLine&&!!navigator.serviceWorker.controller&&!!window.ZeydropFileHash&&!!window.ZeydropRecovery,
             null,{timeout:30000});
         report.offlineDocument=await page.evaluate(()=>({offline:navigator.onLine===false,controlled:!!navigator.serviceWorker.controller,
@@ -110,7 +147,14 @@ async function main(){
         report.passed=true;report.phase='complete';
     }catch(error){
         report.failure=errorType(error);const line=String(error?.stack||'').match(/pwa-workers-browser\.cjs:(\d+):(\d+)/);
-        if(line)report.failureLine={line:Number(line[1]),column:Number(line[2])};throw error;
+        if(line)report.failureLine={line:Number(line[1]),column:Number(line[2])};
+        if(page)report.readinessAtFailure=await page.evaluate(readinessSnapshot).catch(()=>({unavailable:true}));
+        if(serviceWorker){
+            report.cacheObserverAtFailure=await serviceWorker.evaluate(()=>({installed:typeof globalThis.__pwaOriginalMatch==='function',
+                hits:globalThis.__pwaWorkerCacheHits||[]})).catch(()=>({unavailable:true}));
+            if(report.cacheObserverAtFailure.hits)report.cacheHits=report.cacheObserverAtFailure.hits;
+        }
+        throw error;
     }finally{
         try{
             if(page)await page.evaluate(async()=>{

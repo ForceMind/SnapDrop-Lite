@@ -59,3 +59,10 @@
 CI47/48是139项旧完整基线；CI49首条E2E TypeError未获得完整定位，后续增强驱动时序/安全源码定位后未复现，原失败保留。CI50暴露Firefox勾选恢复与应用hello未就绪；CI51清单功能完成但Firefox锁callback全局error失败。均保留原始证据，未删测试或降低路径/授权门槛；CI52对应实际修复后完整通过。
 
 main的既有历史计划原文与开发分支逐字相同；86c6ae4只将main同步入开发分支并保留历史说明，解决add/add冲突，未修改main。Git历史与前期审计保留，旧报告见TEST_REPORT_20261106及history/；当前状态以本文件和CI52报告为准。
+
+
+## CI55与后续数据保留审计
+
+CI55整套失败，仅离线PWA重载就绪等待超时；242项Node、原生OPFS/恢复、1GiB/100MiB、六组合与永久慢读者通过。两Worker版本已预缓存，具体哪个字段未就绪待新增逐字段和实际断网探针，原失败保留，不猜测原因。
+
+Issue #6追踪读取/park/实时存储失败、transient finishing及expired handoff的数据保留缺陷；修复与接收侧逻辑取消进入下一批验证。新增RPC32项界限、深色暂存可读性和真实UI对比度检查。见ENGINEERING_AUDIT_20261107，不能用CI55给这些改动背书。PR保持Draft。

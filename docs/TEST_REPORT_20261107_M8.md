@@ -46,3 +46,10 @@ RSS相加会重复计算共享页，PSS按共享比例分摊；两者不能混�
 ## 正式候选阻断
 
 真实WAN/NAT/IPv6/切网、移动设备和Safari/Edge、真实文件picker/磁盘不足/存储驱逐/后台/PWA/无障碍、独立授权主机TLS/systemd/升级回滚仍未完成，见Issue #4/#5和RELEASE_GATES。无relay、服务器文件代理或生产变更；main未合并、PR仍Draft、更名由用户手动完成。
+
+
+## CI55实际失败
+
+CI55的242项Node、1GiB/100MiB、原生OPFS/跨刷新、三引擎Worker和清单、六组合及永久不读者均通过；整套失败，唯一失败为离线PWA重载后的组合就绪predicate超时。此前已验证两Worker精确revision已缓存，errors为空；不能确定哪个字段未就绪。原始evidence/ci55-pwa-workers-chromium.json保留，新增逐字段和无缓存HTTP断网探针，原断言不删除。
+
+Issue #6后续断点保留、RPC界限、深色面板/文本/焦点改动需自身CI。夹具故障和物理I/O限制见ENGINEERING_AUDIT_20261107；小时实测仍未结束。
