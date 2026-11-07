@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:53:49.863259+00:00",
+  "baseCommit": "61e177343dd38832f6a64c2fb035c5a1502dbceb",
+  "revision": "50be36dcf5f9d638",
+  "nodeTests": {
+    "passed": 342,
+    "failed": 0,
+    "skipped": 0
+  },
+  "change": "explicit delete failure not suppressed when the panel generation changes; fixed local warning without raw native detail, stale successful operation does not refresh new rows",
+  "checks": [
+    "npm test",
+    "npm run build",
+    "node scripts/check-build.mjs",
+    "git diff --check"
+  ],
+  "scope": "local regression/reproducible build; native CI of this exact patch pending"
+}

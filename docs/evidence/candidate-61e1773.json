@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:49:36.817549+00:00",
+  "scope": "final documentation-only CI61 source artifact verified against exact Git source and independently 339-tested/dependency-reinstalled/git-free rebuilt runtime; workflow/browser outcome is recorded separately by root",
+  "workflow": {
+    "runId": 42369573242,
+    "runNumber": 61,
+    "artifactId": 13572309500,
+    "headCommit": "61e177343dd38832f6a64c2fb035c5a1502dbceb",
+    "manifestMergeCommit": "e1ae109def157d394db7bbb4795b9066d630b249",
+    "baseCommitFromMergeMessage": "2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "manifestMergeCommitMessage": "Merge 61e177343dd38832f6a64c2fb035c5a1502dbceb into 2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "manifestCommitFetchedFromGitHub": true
+  },
+  "outerZip": {
+    "path": "/workspace/scratch/322a85615223/zeydrop-0.3.0-dev.1-61e1773.zip",
+    "bytes": 781487,
+    "sha256": "dc4751b5c43f39b603492d0f887534d169ec0a3330078e6e4177d06bf72986c2",
+    "exactThreeRegularMembers": true,
+    "crcPassed": true,
+    "encryptedMembers": false
+  },
+  "archive": {
+    "bytes": 765708,
+    "sha256": "1909155898cfaa141b1605455bd2297dce1e7a5e29abc60b84063ffd17c1c3cb",
+    "regularFiles": 317,
+    "sourceFiles": 288,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 4242420,
+    "allMemberModesSizesShaMatchManifest": true,
+    "exactGitHeadSourceWhitelistAndBytesModes": true,
+    "exactClientDerivedBuildWhitelist": true,
+    "noDuplicateLinkSpecialOrUnsafePathMembers": true,
+    "normalizedOwnerMtime": true
+  },
+  "revision": "25c4bc95c5f8c577",
+  "extractedRoot": "/workspace/scratch/322a85615223/verify-final-61e1773/zeydrop-candidate",
+  "gitMetadataAbsent": true,
+  "runtimeEquivalence": {
+    "referenceCommit": "3e7fd6c1b03133d1e93484a8535d5e9ad804ddbe",
+    "referenceReport": "/workspace/scratch/322a85615223/cleanup-runtime-verification.json",
+    "referenceReportSha256": "065d84cba9c9f5df24453c548c2c5629b6025227863bc004ef4c9d7a6a84a549",
+    "referenceExtractedRoot": "/workspace/scratch/322a85615223/verify-cleanup-runtime/zeydrop-candidate",
+    "allNonReadmeDocsFileSetsBytesModesMatch": true,
+    "comparedFiles": 148,
+    "all29BuildFilesByteIdentical": true,
+    "exclusions": [
+      "README.md",
+      "README.en.md",
+      "README_EN.md",
+      "docs/**"
+    ],
+    "gitChangedPathsAllReadmeDocs": true,
+    "gitChangedPaths": [
+      "README.en.md",
+      "README.md",
+      "docs/ARCHITECTURE.md",
+      "docs/DEPLOYMENT.md",
+      "docs/PROJECT_STATUS.md",
+      "docs/REAL_DEVICE_TESTING.md",
+      "docs/RELEASE_GATES.md",
+      "docs/RELEASE_NOTES.md",
+      "docs/TEST_MATRIX.md",
+      "docs/TEST_REPORT_20261107_STREAM_HASH.md",
+      "docs/evidence/ci60-browser-chromium.json",
+      "docs/evidence/ci60-browser-firefox.json",
+      "docs/evidence/ci60-ci-mdns-preflight.json",
+      "docs/evidence/ci60-pwa-workers-chromium.json",
+      "docs/evidence/ci60-stream-hash-chromium.json",
+      "docs/evidence/ci60-stream-hash-firefox.json",
+      "docs/evidence/ci60-stream-hash-recovery-chromium.json",
+      "docs/evidence/ci60-stream-hash-webkit.json",
+      "docs/evidence/ci60-ui-contrast-chromium.json",
+      "docs/evidence/ci60-webkit-transfer-matrix.json",
+      "docs/evidence/ci60-workflow.json",
+      "docs/evidence/cleanup-ci60-candidate.json",
+      "docs/evidence/cleanup-runtime-extraction.json"
+    ],
+    "reusedIndependentChecks": {
+      "rootNpmCiIgnoreScripts": {
+        "exitCode": 0
+      },
+      "serverNpmCiIgnoreScripts": {
+        "exitCode": 0
+      },
+      "nodeTests": {
+        "passed": 339,
+        "failed": 0,
+        "skipped": 0,
+        "exitCode": 0
+      },
+      "gitFreeBuild": {
+        "revision": "25c4bc95c5f8c577",
+        "exitCode": 0
+      },
+      "repeatBuildAndLocalReferences": {
+        "exitCode": 0
+      },
+      "shellSyntax": {
+        "exitCode": 0
+      },
+      "allRebuiltDistFilesByteMatchArchive": {
+        "count": 29,
+        "passed": true
+      },
+      "allSourceAndBuildBytesModesStillMatchManifest": {
+        "count": 304,
+        "passed": true
+      }
+    },
+    "repeatedNpmTests": false,
+    "reason": "Every runtime, test, deployment, lockfile, CI and build input byte/mode and all generated outputs are identical to the independently installed/tested/rebuilt runtime; only README/docs changed."
+  },
+  "passed": true,
+  "limitation": "Package content and runtime equivalence verification only; not evidence of real WAN/NAT, mobile/Safari hardware, actual storage faults or production deployment."
+}

@@ -101,6 +101,33 @@ test('delete revokes pending verification immediately rather than waiting for st
     assert.equal(h.erased, 1); assert.equal(h.globalCancellations, 0); assert.equal(h.unrelated.signal.aborted, false);
 });
 
+for (const reopen of [false, true]) test('failed explicit erase still reports retained data after panel ' + (reopen ? 'hide/reopen' : 'hide'), async () => {
+    const h = await fixture({ delayedErase: true }), verifying = h.load.onclick(); await turn();
+    const deleting = h.row.children.find(child => child.textContent === '删除本机数据').onclick();
+    await h.manage.onclick(); if (reopen) await h.manage.onclick();
+    const children = [...h.records.children];
+    h.eraseGate.reject(Object.assign(Error('PRIVATE_FILE_ID native permission details'), { name: 'NotAllowedError' }));
+    await deleting; h.complete(); await verifying;
+    const notices = h.events.filter(event => event.type === 'notify-user');
+    assert.deepEqual(notices.map(event => event.detail), ['本机数据删除失败，文件可能仍保留。请重新打开本机暂存管理，检查并重试']);
+    assert.equal(h.records.hidden, !reopen); assert.equal(h.records.children.length, children.length);
+    children.forEach((child, index) => assert.equal(h.records.children[index], child, 'old delete completion must not replace the current render'));
+    assert.equal(h.urls.length, 0); assert.equal(h.calls.length, 1); assert.equal(h.completedReads, 1);
+    assert.equal(h.signals[0].aborted, true); assert.equal(h.globalCancellations, 0);
+});
+
+test('a successful erase from a retired render neither claims failure nor changes the current panel', async () => {
+    for (const reopen of [false, true]) {
+        const h = await fixture({ delayedErase: true });
+        const deleting = h.row.children.find(child => child.textContent === '删除本机数据').onclick();
+        await h.manage.onclick(); if (reopen) await h.manage.onclick();
+        const children = [...h.records.children]; h.eraseGate.resolve(); await deleting;
+        assert.equal(h.events.length, 0); assert.equal(h.records.children.length, children.length);
+        children.forEach((child, index) => assert.equal(h.records.children[index], child));
+        assert.equal(h.urls.length, 0); assert.equal(h.calls.length, 0);
+    }
+});
+
 test('render replacement preserves a clicked download grace period and immediately revokes only unclicked links', async () => {
     const h = await fixture(), pending = h.load.onclick(); await turn(); h.complete(); await pending;
     const link = h.row.children.find(child => child.tagName === 'a'); link.listeners.get('click')();

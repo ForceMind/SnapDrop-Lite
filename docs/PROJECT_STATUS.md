@@ -2,7 +2,11 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 当前结论
+## 最新追加修复（需对应提交CI）
+
+最终复核发现：显式删除本机记录时，用户在RPC结束前隐藏/重开面板，迟到删除失败被render代次检查吞掉。现先发送不含文件ID/原生细节的固定失败提示，再用代次检查限制刷新；不影响新列表，成功的旧操作不误报失败。新增隐藏失败/重开失败/成功控制3项，342/342 Node、revision50be36dcf5f9d638及重复构建本地通过。下述CI60只覆盖此前3e7fd6c，追加修复须读取其对应新提交CI结果，不沿用旧绿灯。
+
+## 当前完整已验基线
 
 [CI60全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277)，运行代码3e7fd6c1b03133d1e93484a8535d5e9ad804ddbe，revision25c4bc95c5f8c577：339/339 Node、两侧依赖audit、重复构建、临时HTTPS/WSS、三引擎Worker/清单、Chromium1GiB/Firefox100MiB、OPFS/跨刷新/故障恢复、严格六组合双向SHA、离线PWA与UI均通过。已读真实最终日志及下载JSON；[本轮完整报告](TEST_REPORT_20261107_STREAM_HASH.md)。
 

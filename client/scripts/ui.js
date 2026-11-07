@@ -560,8 +560,8 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
                     const pending = document.createElement('p'); pending.textContent = '正在删除本机数据…'; records.append(pending);
                     let error;
                     try { await localRecovery.erase(item.id); } catch (e) { error = e; }
+                    if (error) Events.fire('notify-user', '本机数据删除失败，文件可能仍保留。请重新打开本机暂存管理，检查并重试');
                     if (deletionGeneration !== renderGeneration || records.hidden) return;
-                    if (error) Events.fire('notify-user', error.message);
                     try { await refresh(); } catch (e) { Events.fire('notify-user', e.message); }
                 };
                 row.append(del); records.append(row);

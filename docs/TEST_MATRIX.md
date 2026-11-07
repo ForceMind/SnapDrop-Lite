@@ -1,6 +1,10 @@
 # 测试矩阵与证据范围
 
-## 当前完整云端验收
+## 追加删除反馈回归
+
+显式删除失败与界面代次分离：隐藏/重开后的失败仍固定提示本机数据可能保留，不操作新行、不恢复旧hash/URL；过期成功保持静默。新增3项，当前本地342/342、revision50be36dcf5f9d638及重复构建通过。需对应新提交CI；下述CI60不验证此追加补丁。
+
+## 当前完整云端基线
 
 3e7fd6c / revision25c4bc95c5f8c577的[CI60](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277)全套通过，339/339 Node、0失败/跳过；已读实际最终日志、下载JSON并独立复验候选。原始证据evidence/ci60-*，报告TEST_REPORT_20261107_STREAM_HASH。main/生产未改，真实外部门槛继续开放。
 
