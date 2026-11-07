@@ -1,6 +1,22 @@
 'use strict';
 // Only activated after explicit receiver opt-in. Holds no access tokens or
 // file contents in URLs, cookies, localStorage, signaling or remote services.
+// Capture while this script executes: recovery may only be activated much
+// later, after currentScript has changed. Match the versioned PWA cache key.
+const ZEYDROP_RECOVERY_WORKER_URL = (() => {
+    const fallback = '/scripts/recovery-worker.js';
+    const source = globalThis.document?.currentScript?.src;
+    const page = globalThis.location?.href || globalThis.document?.baseURI;
+    if (typeof source !== 'string' || !source || !page || typeof URL !== 'function') return fallback;
+    try {
+        const script = new URL(source,page);
+        if (!['https:','http:'].includes(script.protocol) || script.origin !== new URL(page).origin
+            || script.username || script.password) return fallback;
+        const worker = new URL('recovery-worker.js',script);
+        worker.search = script.search; worker.hash = '';
+        return worker.href;
+    } catch { return fallback; }
+})();
 class ZeydropRecoveryStore {
     constructor() {
         this.supported = typeof Worker !== 'undefined' && !!navigator.storage?.getDirectory;
@@ -9,7 +25,7 @@ class ZeydropRecoveryStore {
     async request(type, ...args) {
         if (!this.supported) throw Error('此浏览器不支持本机断点保存');
         if (!this.worker) {
-            const worker = new Worker('/scripts/recovery-worker.js');
+            const worker = new Worker(ZEYDROP_RECOVERY_WORKER_URL);
             this.worker = worker;
             worker.onmessage = event => {
                 if (this.worker !== worker) return;

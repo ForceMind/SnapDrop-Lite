@@ -3,6 +3,10 @@
 // All transfer messages, including hashes and metadata, travel over DataChannel.
 const CHUNK_SIZE = 16 * 1024;
 const WINDOW_SIZE = 256 * 1024;
+// Blob.arrayBuffer() has no abort API. Retired prefix reads remain counted
+// until their underlying I/O settles, so repeated cancellation stays bounded.
+const MAX_PREFIX_READS = 4;
+let prefixReadsInFlight = 0;
 const hex = bytes => Array.from(bytes, n => n.toString(16).padStart(2, '0')).join('');
 const safeName = value => String(value).replace(/[\\/\x00-\x1f\x7f]/g, '_').slice(0, 255) || 'file';
 const safeMime = value => typeof value === 'string' && value.length <= 128 && /^[\w.+-]+\/[\w.+-]+$/.test(value) ? value : 'application/octet-stream';
@@ -71,11 +75,11 @@ class TransferPeer {
         }
         this._messageChain = this._messageChain.then(() => {
             if (stillCurrent && !stillCurrent()) return;
-            return this._onMessage(data);
+            return this._onMessage(data, stillCurrent);
         }).catch(error => { if (!stillCurrent || stillCurrent()) this._protocolError(error.message); })
             .finally(() => { this._queuedBytes -= typeof data === 'string' ? data.length : data.byteLength; });
     }
-    async _onMessage(data) {
+    async _onMessage(data, stillCurrent = null) {
         // Already queued chunks from a dead channel must not become protocol errors.
         if (this._held && typeof data !== 'string') return;
         if (typeof data !== 'string') {
@@ -122,7 +126,16 @@ class TransferPeer {
         }
         if (this._held && msg.type !== 'cancel') return;
         if (msg.type === 'resume-at') {
-            await this._resumeFromOffset(msg); return;
+            // Outgoing prefix I/O must not hold the ordered incoming message
+            // queue: remote cancel, incoming ACKs and the opposite direction
+            // still need processing while a local File read is pending.
+            const state = this._outgoing, epoch = state?.sendEpoch || 0, pathEpoch = this._pathEpoch;
+            this._resumeFromOffset(msg, stillCurrent).catch(error => {
+                if ((!stillCurrent || stillCurrent()) && this._pathEpoch === pathEpoch
+                    && (!state || (this._outgoing === state && (state.sendEpoch || 0) === epoch)))
+                    this._protocolError(error.message);
+            });
+            return;
         }
         if (msg.type === 'resume-confirm') {
             const state = this._incoming;
@@ -171,6 +184,7 @@ class TransferPeer {
         }
         if (msg.type === 'ack' && outgoing?.meta.id === msg.id && outgoing.waiter) {
             if (msg.offset !== outgoing.offset || msg.offset !== outgoing.expectedAck) throw Error('写入确认偏移不一致');
+            if (outgoing.phase !== 'sending' || outgoing.resumeBusy) return;
             outgoing.acked = msg.offset; outgoing.waiter.resolve(); outgoing.waiter = null;
             this._progress(outgoing, 'sending'); return;
         }
@@ -228,7 +242,7 @@ class TransferPeer {
             // A restored transfer can reuse the same state object on the same
             // RTCPeer. Object identity alone cannot retire an old asynchronous
             // File read, drain waiter or prefix hash from the previous attempt.
-            if (state === outgoing) { state.sendEpoch = (state.sendEpoch || 0) + 1; state.resumeBusy = false; }
+            if (state === outgoing) { state.sendEpoch = (state.sendEpoch || 0) + 1; this._cancelPrefixRead(state); state.resumeBusy = false; }
             state.resumeDeadline = Math.min(state.resumeDeadline || deadline, deadline);
             clearTimeout(state.timer);
             state.awaitingResume = true;
@@ -331,7 +345,37 @@ class TransferPeer {
         this._pendingResumeOffer = null;
         this.sendJSON({ type: 'resume-at', id: state.meta.id, offset: state.offset, sha256: hex(state.hash.clone().digest()) });
     }
-    async _resumeFromOffset(msg) {
+    _cancelPrefixRead(state) {
+        const job = state?.prefixJob;
+        if (!job) return;
+        job.cancelled = true;
+        job.cancelRead?.();
+        job.cancelRead = null;
+    }
+    _readPrefixChunk(job, file, start, end) {
+        if (job.cancelled) return Promise.resolve({ cancelled: true });
+        if (prefixReadsInFlight >= MAX_PREFIX_READS) return Promise.resolve({ busy: true });
+        prefixReadsInFlight++;
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = result => {
+                if (settled) return;
+                settled = true;
+                if (job.cancelRead === cancel) job.cancelRead = null;
+                resolve(result);
+            };
+            const cancel = () => finish({ cancelled: true });
+            job.cancelRead = cancel;
+            // Both late outcomes are consumed even after cancellation. Only
+            // actual I/O completion releases the global read reservation.
+            Promise.resolve().then(() => job.cancelled ? null : file.slice(start, end).arrayBuffer()).then(
+                bytes => { prefixReadsInFlight--; finish(bytes === null ? { cancelled: true } : { bytes }); },
+                error => { prefixReadsInFlight--; finish({ error }); }
+            );
+            if (job.cancelled) cancel();
+        });
+    }
+    async _resumeFromOffset(msg, stillCurrent = null) {
         const state = this._outgoing;
         if (!state || !['resuming', 'offered'].includes(state.phase) || msg.id !== state.meta.id
             || !Number.isSafeInteger(msg.offset) || msg.offset < 0 || msg.offset > state.meta.size
@@ -339,29 +383,42 @@ class TransferPeer {
             || !this._verified || !this._path?.direct) throw Error('无效的续传确认');
         if (state.resumeBusy) throw Error('重复续传确认');
         const epoch = state.sendEpoch || 0;
+        const job = { cancelled: false, done: false, cancelRead: null };
+        state.prefixJob = job;
         const current = () => this._outgoing === state && (state.sendEpoch || 0) === epoch
-            && this._verified && this._path?.direct;
+            && !job.cancelled && (!stillCurrent || stillCurrent()) && this._verified && this._path?.direct;
         state.resumeBusy = true; state.phase = 'resuming';
         clearTimeout(state.timer);
         state.timer = setTimeout(() => { if (current()) this.cancel(msg.id, '本机前缀比对超时'); }, 5 * 60 * 1000);
         const hash = window.ZeydropHash.create();
         try {
             for (let pos = 0; pos < msg.offset; pos += WINDOW_SIZE) {
-                const bytes = await state.file.slice(pos, Math.min(pos + WINDOW_SIZE, msg.offset)).arrayBuffer();
-                if (!current()) return;
-                hash.update(new Uint8Array(bytes));
+                const end = Math.min(pos + WINDOW_SIZE, msg.offset);
+                const result = await this._readPrefixChunk(job, state.file, pos, end);
+                if (!current() || result.cancelled) return;
+                if (result.busy) { this.cancel(msg.id, '前次文件读取尚未结束，请稍后重试或重新发送完整文件'); return; }
+                if (result.error) throw result.error;
+                let length;
+                try { length = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, 'byteLength').get.call(result.bytes); }
+                catch { throw Error('本机文件读取结果无效'); }
+                if (length !== end - pos) throw Error('本机文件读取长度不一致');
+                hash.update(new Uint8Array(result.bytes));
             }
+            if (hex(hash.clone().digest()) !== msg.sha256) {
+                this.cancel(msg.id, '文件前缀与接收方记录不一致，已取消续传');
+                return;
+            }
+            if (!current()) return;
+            state.hash = hash; state.offset = msg.offset; state.acked = msg.offset;
+            state.phase = 'sending'; state.resumeBusy = false;
+            clearTimeout(state.timer);
+            this.sendJSON({ type: 'resume-confirm', id: msg.id, offset: msg.offset, sha256: msg.sha256 });
+            this._pump(state).catch(error => { if (current()) this.cancel(msg.id, error.message); });
         } catch (error) { if (!current()) return; throw error; }
-        if (hex(hash.clone().digest()) !== msg.sha256) {
-            this.cancel(msg.id, '文件前缀与接收方记录不一致，已取消续传');
-            return;
+        finally {
+            job.done = true;
+            if (state.prefixJob === job) state.prefixJob = null;
         }
-        if (!current()) return;
-        state.hash = hash; state.offset = msg.offset; state.acked = msg.offset;
-        state.phase = 'sending'; state.resumeBusy = false;
-        clearTimeout(state.timer);
-        this.sendJSON({ type: 'resume-confirm', id: msg.id, offset: msg.offset, sha256: msg.sha256 });
-        this._pump(state).catch(error => { if (this._outgoing === state) this.cancel(msg.id, error.message); });
     }
     async acceptIncoming(id, options = {}) {
         const state = this._incoming;
@@ -475,7 +532,7 @@ class TransferPeer {
     async _pump(state) {
         const epoch = state.sendEpoch || 0;
         const current = () => this._outgoing === state && (state.sendEpoch || 0) === epoch
-            && this._verified && this._path?.direct;
+            && state.phase === 'sending' && !state.resumeBusy && this._verified && this._path?.direct;
         try {
             while (state.offset < state.meta.size) {
                 if (!current()) return;
@@ -543,6 +600,7 @@ class TransferPeer {
         clearTimeout(state.timer); state.error = reason;
         if (outgoing) {
             state.sendEpoch = (state.sendEpoch || 0) + 1; this._outgoing = null; state.waiter?.reject(Error(reason));
+            this._cancelPrefixRead(state);
             if (!this._aborting) { this._rememberRetry(state); this._queueBlocked = true; }
         }
         if (incoming) {

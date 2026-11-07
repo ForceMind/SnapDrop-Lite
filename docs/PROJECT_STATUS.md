@@ -2,11 +2,13 @@
 
 记录：2026-11-07 UTC。版本 **0.3.0-dev.1 未发布开发候选**，开发分支 `feat/direct-first-workspace-20261019` / [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 本轮进行中（2026-11-07 00:19 PST）
+## 本轮进行中（2026-11-07 00:33 PST）
 
-基线开发头 87953ed 的 CI53 全套通过；以下新改动尚未推送/未取得本轮浏览器 CI：发送清单专用分块哈希 Worker（含取消/错误/本机进度）、23项公开输入构建、owning-browser 进程 RSS/PSS/CPU 观察、真实慢读者 WS 保护及墙钟 soak 工具。本地 Node 223 项与构建通过。实时传输/断点前缀哈希仍在主线程。
+[CI54全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42355134135)，已推送运行代码4d617b1 / revision cac0d96fd4285f5d：223项、三引擎清单哈希Worker（WebKit基准实际8MiB，其它100MiB OPFS）、真实慢读者约束背压、owning-browser RSS/PSS/CPU、1GiB与六组合等。226文件候选已独立解压/重装/测试/无Git重建核验。见 [M8报告](TEST_REPORT_20261107_M8.md)。
 
-1 小时/64连接实测已于08:12:05 UTC启动，结束及真实 grace 回收前不判通过。短 CLI 已真实等待124秒、原生 sweep 将连接/session/房间全部清零。原始数据和源码哈希见 [SERVER_SOAK](SERVER_SOAK.md)。新代码必须取得自身 CI，下面保留上一完整候选证据而不冒充新结果。
+后续发送端前缀可取消后台任务、真实ArrayBuffer与长度检查、4挂读上限、恢复Worker版本继承/离线PWA、永久不读者30秒回收与soak末尾检查修复，当前本地242项及构建通过，待自己的CI。实时传输/前缀SHA仍在主线程；接收准备与OPFS底层取消另行验收。
+
+1小时/64连接实测自08:12:05 UTC运行中，完成及真实grace前不记通过。初版长测工具已在4d617b1保留；后续工具另有6秒/4连接、真实124秒自动清理通过，不将旧长测冒充新工具验收。详见SERVER_SOAK/SERVER_PERFORMANCE。下面CI52及候选保留为历史证据。
 
 ## 上一完整候选结论
 

@@ -65,7 +65,7 @@ async function workerMain(hardDeadlineMs) {
     });
     process.send({ type: 'ready', port: server._wss.address().port, node: process.version, platform: process.platform, arch: process.arch });
 }
-async function scenario(input, shortProbe, onProgress) {
+async function scenario(input, shortProbe, onProgress, lateControlFailure = false) {
     const config = normalizeSoakOptions(input);
     if (shortProbe && config.durationSeconds > 10) throw fail('invalid-short-duration');
     const started = performance.now(), hardDeadlineMs = config.durationSeconds * 1000 + RESUME_TTL + 90000;
@@ -212,7 +212,16 @@ async function scenario(input, shortProbe, onProgress) {
             await delay(Math.min(nextSignal, nextReconnect, nextSample, activeEnd) - performance.now());
         }
         report.activeElapsedMs = Math.round(performance.now() - activeStarted);
+        if (shortProbe && lateControlFailure) {
+            // Test-only fault after the loop's last state check. The production
+            // service returns a real room-error without changing room/session
+            // state or the already-completed synthetic signal counts.
+            cohort[0].send({ type: 'join-room', roomId: 'invalid-short-probe-room' });
+            await until(() => cohort[0].failure === 'room-control-rejected', 'short-fault-not-observed');
+            report.testProbe = { lateControlFailureInjected: true, controlFailureHandled: true, phase: 'after-active-loop' };
+        }
         assertCounts(await sample('active-complete'));
+        if (cohort.some(client => client.closed || client.failure)) throw fail('unexpected-client-state');
         if (sentSignals !== receivedSignals) throw fail('signal-count-mismatch');
         await Promise.all(cohort.map(closeClient));
         await until(async () => (await rpc('sample')).connections === 0, 'connection-cleanup-timeout');
@@ -232,6 +241,7 @@ async function scenario(input, shortProbe, onProgress) {
             report.cleanup.afterGrace = { connections: afterGrace.connections, sessions: afterGrace.sessions, rooms: afterGrace.rooms, webSocketClients: afterGrace.webSocketClients };
             report.cleanup.verified = true;
         }
+        if (cohort.some(client => client.failure)) throw fail('unexpected-client-state');
         report.status = shortProbe ? 'short-profile-passed' : 'passed'; report.phase = 'complete';
     } catch (error) {
         report.status = 'failed'; report.failure = { code: typeof error?.code === 'string' && /^[a-z]+(?:-[a-z]+)+$/.test(error.code) ? error.code : 'soak-failed' };
@@ -249,7 +259,12 @@ async function scenario(input, shortProbe, onProgress) {
     return report;
 }
 const runServerSoak = (input, onProgress) => scenario(input, false, onProgress);
-const runShortSoakProbe = (input = { connections: 4, durationSeconds: 6 }) => scenario(input, true);
+const runShortSoakProbe = (input = { connections: 4, durationSeconds: 6 }, internal = {}) => {
+    if (!internal || typeof internal !== 'object' || Array.isArray(internal)
+        || Object.keys(internal).some(key => key !== 'lateControlFailure')
+        || (internal.lateControlFailure !== undefined && typeof internal.lateControlFailure !== 'boolean')) throw fail('invalid-short-options');
+    return scenario(input, true, undefined, internal.lateControlFailure === true);
+};
 async function main() {
     const { values } = parseArgs({ options: { connections: { type: 'string' }, 'duration-seconds': { type: 'string' }, out: { type: 'string' }, help: { type: 'boolean' } } });
     if (values.help) { process.stdout.write('Usage: node scripts/server-soak.cjs [--duration-seconds 1_TO_3600] [--connections EVEN_2_TO_1000] [--out REPORT_PATH]\nStarts only a new loopback service; no remote endpoint or file transfer. Default 3600 seconds plus real 120-second session grace and automatic sweep. Maximum hard deadline: duration + 210 seconds.\n'); return; }

@@ -38,6 +38,9 @@ test('soak CLI has bounded help and rejects remote arguments without echoing the
     assert.ok(!result.stdout.includes('do-not-connect'));
     assert.ok(!result.stderr.includes('do-not-connect'));
     assert.deepEqual(privateKeys(failure), []);
+    const internalFault = spawnSync(process.execPath, ['scripts/server-soak.cjs', '--late-control-failure'], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(internalFault.status, 1, 'a short-regression fault cannot be enabled through the public CLI');
+    assert.equal(JSON.parse(internalFault.stderr).status, 'failed');
 });
 
 test('short soak uses real isolated sockets, heartbeat and identity resume without claiming grace cleanup', { timeout: 20000 }, async () => {
@@ -88,4 +91,19 @@ test('short soak uses real isolated sockets, heartbeat and identity resume witho
     assert.ok(!/\b\d{1,3}(?:\.\d{1,3}){3}\b/.test(JSON.stringify(report)));
     assert.ok(!JSON.stringify(report).includes('resumeToken'));
     assert.ok(!JSON.stringify(report).includes('ws://'));
+});
+
+test('a real control failure after the final activity-loop check cannot pass a short probe', { timeout: 10000 }, async () => {
+    const report = await runShortSoakProbe({ connections: 2, durationSeconds: 1 }, { lateControlFailure: true });
+    assert.deepEqual(report.testProbe, { lateControlFailureInjected: true, controlFailureHandled: true, phase: 'after-active-loop' });
+    assert.equal(report.counters.signalMessagesSent, report.counters.signalMessagesReceived,
+        'late control failure must be detected even when every expected signal was delivered');
+    const active = report.samples.find(sample => sample.phase === 'active-complete');
+    assert.equal(active.server.connections, 2); assert.equal(active.server.sessions, 2); assert.equal(active.server.rooms, 1);
+    assert.equal(active.server.budgetExceeded, false);
+    assert.equal(report.status, 'failed', 'resource counts and expected signal totals cannot override a handled late error');
+    assert.equal(report.failure.code, 'unexpected-client-state');
+    assert.equal(report.cleanup.verified, false);
+    assert.deepEqual(privateKeys(report), []);
+    assert.ok(!JSON.stringify(report).includes('invalid-short-probe-room'));
 });

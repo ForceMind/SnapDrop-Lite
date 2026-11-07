@@ -2,9 +2,9 @@
 
 ## 当前工作树新增验证（2026-11-07，尚待本轮 CI）
 
-- Node 223 项本地通过：新增哈希 Worker/清单接缝、浏览器进程采样、soak 参数及真实短连接回归；构建与资源引用检查通过。
+- Node 242 项本地通过：新增哈希 Worker/清单接缝、浏览器进程采样、soak 参数及真实短连接回归；构建与资源引用检查通过。
 - `tests/file-hash-browser.cjs` 将对 Chromium/Firefox/Linux WebKit 使用真实原生 Worker，独立 SHA-256、取消/故障隔离、明确无 Worker 回退以及有界哈希响应性观察。必须看本轮 head 的实际 CI，不能沿用下方 CI52。
-- `tests/slow-reader.cjs` 两次本地真实 socket 测试触发服务端 128 KiB 背压；默认 TCP 缓冲未达阈值，受约束测试 socket 达 177429B，独立房间正常。不是永久不读取客户端回收证据。
+- `tests/slow-reader.cjs` 两次本地真实 socket 测试触发服务端 128 KiB 背压；默认 TCP 缓冲未达阈值，受约束测试 socket 达 177429B，独立房间正常。新增--permanent独立试验已真实等30秒终止不读端并保持健康房间，当前本地通过、待本轮CI；原恢复读取用例不能替代这项。
 - `scripts/server-soak.cjs` 1 小时/64连接真实墙钟实测正在运行，真实两分钟 grace 短集成已通过；长测结束前不记通过。详见 [SERVER_SOAK](SERVER_SOAK.md)。
 - `tests/browser-resources.cjs` 新增 owning-browser CDP 进程的 Linux RSS/PSS/CPU 差额；当前只有夹具边界通过，真实浏览器数据待 CI。缺测/partial 与重叠范围必须随原始报告保留。
 
@@ -78,3 +78,6 @@ E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服
 CI50实际新增清单：Chromium/WebKit全流程和390px截图通过；Firefox原复选框刷新断言失败，已修复但等待新CI。CI50 Chromium1GiB恢复执行并通过。测试专用browser-resources只采Chromium目标CDP有界JS heap/backingStorage/renderer duration，遇不支持字段缺省，非RSS/全CPU。实际数据待新CI，4项采样边界+2项表单恢复回归使本地Node合计183项。
 
 握手修复新增10项实际network+transfer源码回归（旧代码可复现单向丢hello后提前verify），以及1项连接阶段分类；nonce ACK先到、旧通道/epoch、已open绑定、十次截止、legacy兼容和重复消息无echo均覆盖。锁回调2项回归先红后绿，证明原Quota/Corrupt对象对调用方保留而不逃出锁callback。合计196项本地测试，真实浏览器结果待新head。
+
+
+新增11项发送端前缀取消/队列/旧wire与epoch/真实ArrayBuffer及短读/4挂读上限回归，问题均有修复前失败证据；5项恢复Worker URL版本捕获与公开资源边界回归。它们只证明本机源码状态机边界，真实流恢复仍需对应head的浏览器与实机验证。PWA离线Worker集成另外使用原生SW/CacheStorage/Worker，不用静态URL断言冒充实际缓存命中。

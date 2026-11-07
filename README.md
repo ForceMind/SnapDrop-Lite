@@ -6,7 +6,7 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 未发布隔离测试候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。代码a1dfef9 / revision 6a2caec304bbd413 的 [CI52全通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42349478384)：196项Node、三引擎跨刷新发送清单、Chromium1GiB/Firefox100MiB、OPFS/恢复、六组合双向独立SHA-256、UI与真实临时HTTPS/WSS。失败任务重发、双向协议握手、Firefox许可/锁错误和有界资源采样已验证。构建现在仅发布23项批准的客户端输入。新增清单哈希Worker和资源测试的验证进展见当前状态，不能沿用CI52的绿灯。见[最新验收报告](docs/TEST_REPORT_20261107.md)与[精确候选/当前状态](docs/PROJECT_STATUS.md)。
+当前为 **0.3.0-dev.1 未发布隔离测试候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。代码4d617b1 / revision cac0d96fd4285f5d 的 [CI54全通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42355134135)：223项Node、三引擎发送清单/原生哈希Worker、Chromium1GiB/Firefox100MiB、OPFS/恢复、六组合双向独立SHA-256、UI与真实临时HTTPS/WSS；新增浏览器进程资源实测。WebKit哈希基准实际为8MiB回退，不是100MiB OPFS通过。后续恢复取消/PWA改动待自身CI，23项公共输入构建。见[M8验收报告](docs/TEST_REPORT_20261107_M8.md)与[当前状态](docs/PROJECT_STATUS.md)。
 
 此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。
 

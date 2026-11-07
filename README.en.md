@@ -102,3 +102,5 @@ The default main branch is still the older application. For isolated deployment 
 
 
 The current worktree adds a dedicated, bounded local SHA-256 worker for saving/reselecting the opt-in sending checklist, plus slow-reader and owned-browser process-resource tests. These changes require fresh CI. Live-transfer incremental and recovery-prefix hashing remain on the main thread; this is not a complete hashing migration. A real one-hour signaling soak is running in this session and is not yet accepted; see [current status](docs/PROJECT_STATUS.md) and [soak scope](docs/SERVER_SOAK.md).
+
+CI54 passed all 223 Node tests, three-engine checklist/hash-worker flows, the 1 GiB/100 MiB transfers, six interoperability pairs, and temporary HTTPS/WSS. Native OPFS hash benchmarks used 100 MiB on Chromium/Firefox; Linux WebKit fell back to 8 MiB and has no 100 MiB OPFS benchmark claim. Owned-browser process measurements retain coverage/overlap limits. Later prefix-cancellation and offline-PWA fixes still require their own CI; see the [M8 report](docs/TEST_REPORT_20261107_M8.md).
