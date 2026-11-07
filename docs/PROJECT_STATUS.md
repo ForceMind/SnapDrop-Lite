@@ -2,7 +2,15 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 当前结论
+## 本轮进程恢复与初始化加固（CI65 全套通过）
+
+运行代码 `26aed4136ee849a84689c1915e59feb891f00ca7`，文档头 `e8ac72c4e670cc5d5b57e2d860db30c7a952589e`，revision `06d9143aa3bbb8fe`；[本轮报告](TEST_REPORT_20261107_PROCESS_RECOVERY.md)。已修复两处同 ID OPFS 初始化覆盖/迟到删除竞态、BFCache 后清理不恢复，以及本机现场核验读取变动文件仍可能报告一致和 CLI 错误泄漏路径的问题。
+
+[CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628)全套通过，job128451749732；已读最终日志（369/369、0失败/跳过）及下载JSON。两侧audit0、重复构建、临时HTTPS/WSS/Nginx、三引擎Worker/清单、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、OPFS/跨刷新/故障恢复及离线PWA/UI通过。原始证据evidence/ci65-*。独立源包341文件重装369项与无Git重建通过，实际CI tar逐字节一致。
+
+新增两项原生验收：双页面/双Worker争用同ID时，partial/complete/corrupt三态的16KiB正文和元数据不变、无erase，未重载即重新取锁；实际SIGKILL测试专属Chromium隔离进程组，旧存活成员归零，1MiB检查点和metadata保留，新进程/页面/身份不自动绑定。新邀请/核码/重选/手动断点同意后仅传3MiB尾部，4MiB下载完整SHA一致。这不是断电、磁盘故障、Safari或公网证明。本地socket EPERM未算成功，原生结果来自实际Runner。
+
+## 前一轮已验基线
 
 [CI62全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657)，运行代码88ebde0cfee36e7a06071a85661996b620d87c30，revision50be36dcf5f9d638：342/342 Node、两侧依赖audit、重复构建、临时HTTPS/WSS、三引擎Worker/清单、Chromium1GiB/Firefox100MiB、OPFS/跨刷新/故障恢复、严格六组合双向SHA、离线PWA与UI均通过。已读真实最终日志及下载JSON；[本轮完整报告](TEST_REPORT_20261107_STREAM_HASH.md)。
 
@@ -20,7 +28,7 @@
 | 生命周期 | 自然会话结束保留自愿暂存、不保留身份；取消清理失败明确提示，显式删除失败不受面板隐藏/重开影响；面板代次/各自取消和URL总数20，已点击下载保留60秒宽限 |
 | UI/PWA | 深浅主题/键盘/暂存组件；三个同revision Worker从真实缓存离线启动；不是物理断网/硬件PWA升级证明 |
 | 资源 | 有界分块/队列，前缀共享4未结束I/O、恢复RPC32项；owning-browser资源观察、实际慢读者回收，不是整机或生产SLA |
-| 交付 | 25项公开输入快照、版本缓存/隐藏路径、manifest/有限秘密扫描；319文件候选独立解压重装342项、无Git重建、29项dist逐字节一致 |
+| 交付 | 25项公开输入快照、版本缓存/隐藏路径、manifest/有限秘密扫描；341文件候选独立解压重装369项、无Git重建、29项dist逐字节一致 |
 
 原生故障用例：1MiB已提交、额外16KiB写入后真实SHA Worker崩溃；metadata原样保留、无erase/错误ACK/完成；同一存储Worker重载前释放锁。新页面/邀请/核码/手动选择后只发送3MiB尾部，下载4MiB独立SHA一致。此为可控本机Worker故障，不是实际磁盘故障、WAN或Safari证据。
 
@@ -30,9 +38,9 @@
 
 ## 精确已验源码候选
 
-[CI62 artifact](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657/artifacts/13573442924)，319文件（290源码/29构建），保留7天。ZIP SHA-256为84322b5c6b4fcdef88be7c7bda6df7cb8ef4fce4c0876eab5f9c64d2491575ac；tar SHA-256为ed0c7be03eacf98b39baa6011b0858e162b460c0a7a5eff4e0efb163e0b3cbec。见evidence/delete-feedback-ci62-candidate.json和delete-feedback-runtime-extraction.json；实际tar与独立安装/342项测试/无Git重建的归档逐字节一致。manifest的81ff700临时合并来源已核对，不等于main被合并。
+[CI65 artifact](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628/artifacts/13580781957)，341普通文件（312源码/29构建），保留7天。ZIP851747字节，SHA-256为45fb7682dfdceaf2ace7757b6ffb512e9e98e7742f7706ecfc10701a59b515af；tar834496字节，SHA-256为a76db517fff94ca2c8160c1887fb2f7c835e80d2f288bc4c6d5847d89f4428f6。见evidence/process-recovery-ci65-candidate.json和process-recovery-runtime-extraction.json；全部成员、模式/大小/SHA、安全归档边界及实际临时合并父提交/树均核对，tar与独立重装369项/无Git重建的归档字节完全一致。
 
-后续纯文档候选以自己的manifest/SHA为准，PR保留最新下载/校验；不能把上面哈希用于另一包。main仍是旧版，部署不要仅依赖main或移动分支名。CI57/59历史证据及失败记录保留于各报告。
+manifest的932803071af62139e172939e232b1d2a29abee3f为e8ac72c进入原main2b4f75c的临时PR合并，不是main被合并。后续纯文档候选使用自己的manifest/SHA，PR记录最终链接/校验；不能用这里哈希核验另一包。main仍是旧版，部署请核对精确候选，不只依赖main或移动分支名。旧失败/通过记录与原始控制保留在各历史报告。
 
 ## 尚未完成的正式验收
 

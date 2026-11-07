@@ -1,5 +1,15 @@
 # Zeydrop 0.3.0-dev.1 · unreleased development candidate
 
+## 0.3.0-dev.1 · 2026-11-07 进程恢复与并发初始化加固（CI65 全套通过）
+
+运行代码26aed41、文档头e8ac72c、revision06d9143aa3bbb8fe；本地369项和341文件独立重装/无Git重建通过，原生双Worker争用、整Chromium组SIGKILL/新授权恢复与完整CI全套通过，最终日志/原始JSON已读。见TEST_REPORT_20261107_PROCESS_RECOVERY；未发布、未合并main。
+
+- 修复同ID OPFS新建在等待数据锁后覆盖另一标签已提交内容：持锁后再次检查元数据，partial/complete/损坏记录都不覆盖。
+- 初始化失败后不在释放锁后异步按旧ID删除，避免删除后继标签记录；只保留尚未接受正文的空桩供过期或手动清理。原始失败保留，物理close失败不虚报解锁。
+- BFCache返回时幂等恢复暂存过期清理，不恢复旧文件授权或下载链接。
+- 本机现场核验从固定普通文件句柄有界读取，检测实际读取期间内容/路径/大小变化，拒绝不稳定证据；固定CLI错误不泄漏私有路径/输入片段。仍非原子快照或独立网络拓扑证明。
+- 新增原生双页/双Worker OPFS三态争用，以及仅针对验证归属的测试专属Chromium进程组实际SIGKILL、持久化profile重开、新身份/新邀请/手动断点恢复测试。本地启动EPERM未算通过，原生验收来自CI65；不能外推断电/OS崩溃或真实设备成功率。
+
 ## 0.3.0-dev.1 · 2026-11-07 状态式哈希与清理验收（CI62）
 
 88ebde0/revision50be36dcf5f9d638完成CI62全套342项、原生OPFS故障恢复、三引擎Worker、六组合及大文件；319文件候选独立重装/无Git复验通过。未发布、未合并main；真实WAN/设备/Safari/主机仍阻断正式RC。见TEST_REPORT_20261107_STREAM_HASH。

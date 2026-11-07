@@ -1,6 +1,20 @@
 # 测试矩阵与证据范围
 
-## 当前完整云端验收
+## 本轮进程恢复与并发初始化加固
+
+运行代码26aed41 / revision06d9143aa3bbb8fe，文档头e8ac72c的[CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628)全套通过：369/369、0失败/跳过；新增BFCache4、现场工具11、OPFS start9、专属进程守卫3，共27项，重叠焦点集不额外计数。已读最终真实日志和JSON，见evidence/ci65-*及TEST_REPORT_20261107_PROCESS_RECOVERY。
+
+| 本轮范围 | 实际结果及边界 |
+|---|---|
+| 同ID start保留 | 9项实际源码夹具；原生双页/双Worker partial/complete/corrupt三态16KiB/metadata不变、无erase、重载前原生锁立即重取，通过；第二初始化失败/迟到删除只做边界注入回归 |
+| 整进程中断恢复 | 专属Chromium组实际SIGKILL、10个观察核心进程/12个组成员、旧存活0；1MiB检查点/metadata不变，新身份/邀请/核码/原件重选/手动同意后3MiB尾部及4MiB完整SHA通过；非断电/OS崩溃 |
+| BFCache/现场工具 | controller4项、实际文件11项、信号守卫3项通过；不是原生BFCache或原子文件快照/独立网络拓扑证明 |
+| 既有浏览器/安全/部署 | 三引擎Worker/清单、六组合双向SHA、Chromium1GiB/Firefox100MiB、OPFS/跨刷新/Worker故障、HTTPS/WSS/Nginx、audit/构建、离线PWA/UI通过 |
+| 精确候选 | 341普通文件/29dist，独立重装369项/无Git重建，实际CI tar字节相同；ZIP/manifest/成员/模式/大小/SHA/临时合并来源核验通过 |
+
+本地实际Chromium启动socket EPERM未计通过，以上原生结果来自Runner。真实WAN/NAT/IPv6、移动/Safari、磁盘/驱逐/PWA升级和独立主机仍未验证。
+
+## 前一轮完整云端验收
 
 88ebde0 / revision50be36dcf5f9d638的[CI62](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657)全套通过，342/342 Node、0失败/跳过；已读实际最终日志、下载JSON并独立复验候选。原始证据evidence/ci62-*，报告TEST_REPORT_20261107_STREAM_HASH。main/生产未改，真实外部门槛继续开放。
 

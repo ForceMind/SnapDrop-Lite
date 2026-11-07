@@ -6,11 +6,13 @@ Zeydrop sends files directly between browsers over a reliable WebRTC DataChannel
 
 ## Current status
 
-This is **0.3.0-dev.1, an unreleased development candidate** on [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2). Runtime 88ebde0 / revision50be36dcf5f9d638 passed [CI62](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657): 342 Node tests, dependency audits, reproducible build, temporary HTTPS/WSS, three native Worker/checklist engines, Chromium 1 GiB / Firefox 100 MiB, six bidirectional file pairings, OPFS/recovery, offline-PWA emulation and UI checks. See the [current report](docs/TEST_REPORT_20261107_STREAM_HASH.md) and [exact source candidate/checksums](docs/PROJECT_STATUS.md).
+This is **0.3.0-dev.1, an unreleased development candidate** on [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2). Runtime `26aed41` / build `06d9143aa3bbb8fe`, documented head `e8ac72c`, passed [CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628): **369/369 Node checks**, both audits, reproducible build, temporary HTTPS/WSS, three native Worker/checklist engines, Chromium 1 GiB / Firefox 100 MiB, all six bidirectional file pairings, OPFS/recovery, offline-PWA emulation and UI checks. See the [current report](docs/TEST_REPORT_20261107_PROCESS_RECOVERY.md) and [exact source candidate/checksums](docs/PROJECT_STATUS.md).
 
-Live send/receive and recovery-prefix hashes use bounded local stateful Workers. Covered failures preserve committed checkpoints without publishing an unhashed tail; natural session expiry retires identity without erasing opt-in local data. Cancellation reports failed native cleanup. Local-file verification rejects stale panel results and bounds download URLs while preserving clicked downloads' startup grace. All 319 candidate files were independently extracted, dependency-reinstalled, tested (342), and rebuilt without Git; all 29 built files match byte-for-byte.
+Two cross-tab OPFS initialization races now preserve a checkpoint published by another tab: metadata is rechecked under the exclusive data handle before truncation, and failed initialization never schedules a stale ID-based erase after close. BFCache restores expiry sweeping without restoring old file consent. The local field verifier uses bounded, anchored regular-file reads, rejects observed mutations and emits fixed CLI errors without private paths or JSON snippets.
 
-A native Chromium test crashes the actual SHA Worker after OPFS append, reacquires the physical file lock before reload, preserves a separate active record, then requires a fresh invite, safety-code clicks, file reselection and explicit checkpoint consent before resuming only the tail. Complete downloaded SHA is independently checked. This controlled Worker fault is not a real disk-failure certification.
+Native two-page/two-Worker partial, complete and corrupt-record collisions preserve all 16 KiB and metadata, with immediate physical-lock reacquisition before reload. A second test actually SIGKILLs only a verified test-owned Chromium group. Committed 1 MiB metadata survives; a fresh process/document/identity requires a new invitation, safety-code clicks, original-file reselection and explicit checkpoint consent before sending only the 3 MiB tail. The 4 MiB downloaded full SHA independently matches. This is controlled process-exit evidence, not OS shutdown, power loss or disk-failure certification.
+
+Live/prefix hashes remain bounded local Workers with explicit failure and no silent fallback. All 341 candidate files were independently extracted, dependency-reinstalled, tested (369 checks) and rebuilt without Git; all 29 built files match byte-for-byte. Actual CI archive bytes match that independently verified package.
 
 All browser transfer evidence is from one Linux CI host with STUN disabled and substituted picker selection. It does not establish WAN/NAT success, real Safari/mobile behavior or production capacity. Whole-file benchmarks use 100 MiB OPFS on Chromium/Firefox and only 8 MiB Blob fallback on Linux WebKit. Offline PWA tests use actual SW/cache/Workers under browser emulation, not physical network outages or hardware upgrade-lifecycle tests. Native close/RPC hangs may still delay physical lock release; checkpoint retention is not a backup guarantee.
 
@@ -60,6 +62,8 @@ BROWSER_TYPE=firefox npm run test:browser
 BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
+node tests/recovery-start-race-browser.cjs
+node tests/browser-crash-recovery.cjs
 node tests/persistent-flow-browser.cjs
 node tests/stream-hash-browser.cjs
 BROWSER_TYPE=firefox node tests/stream-hash-browser.cjs

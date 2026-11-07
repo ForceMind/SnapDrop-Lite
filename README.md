@@ -6,9 +6,9 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 未发布开发候选**，工作在[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。代码88ebde0 / revision50be36dcf5f9d638已完成[CI62全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42370267657)：342项Node、三引擎原生Worker/清单、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、原生OPFS/恢复、临时HTTPS/WSS、离线PWA与UI检查。[本轮报告](docs/TEST_REPORT_20261107_STREAM_HASH.md)与[精确源码候选/校验](docs/PROJECT_STATUS.md)。
+当前为 **0.3.0-dev.1 未发布开发候选**，工作在[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。运行代码26aed41 / revision06d9143aa3bbb8fe、文档头e8ac72c完成[CI65全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628)：**369/369项Node**、三引擎原生Worker/清单、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、原生OPFS/恢复、临时HTTPS/WSS、离线PWA与UI检查。[本轮报告](docs/TEST_REPORT_20261107_PROCESS_RECOVERY.md)与[精确源码候选/校验](docs/PROJECT_STATUS.md)。
 
-实时传输与恢复前缀SHA已迁入有界本机Worker；修复自然会话到期误删断点、写入后哈希失败的检查点一致性、双向文件故障隔离、取消清理异常和下载URL生命周期。原生OPFS故障测试在重载前验证锁释放，重新明确授权后只传尾部并核验完整文件。319文件候选已独立重装342项测试、无Git重建并逐字节复验。以上仍是同机云端证据，不是正式RC。
+本轮修复两处跨标签OPFS初始化竞态、BFCache清理恢复、现场工具在文件读取期间发生变化仍可能误报一致及CLI错误泄漏路径。真实双Worker争用三态均保留正文/元数据；测试专属Chromium进程组实际SIGKILL后保留已提交断点，新邀请/核码/重选原件/手动选择后仅发送尾部并核验完整SHA。341文件候选已独立重装369项、无Git重建，29个构建文件字节一致。实时/恢复前缀SHA继续使用有界本机Worker，失败不静默回退。以上均为同机云端证据，不保证断电、OS崩溃、磁盘故障或正式RC。
 
 此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。
 
@@ -58,6 +58,8 @@ BROWSER_TYPE=firefox npm run test:browser
 BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
+node tests/recovery-start-race-browser.cjs
+node tests/browser-crash-recovery.cjs
 node tests/persistent-flow-browser.cjs
 node tests/stream-hash-browser.cjs
 BROWSER_TYPE=firefox node tests/stream-hash-browser.cjs
