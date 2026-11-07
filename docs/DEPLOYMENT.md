@@ -17,6 +17,12 @@
 
 静态 `/health` 仅证明 Nginx 服务就绪；必须另外实际执行 WS hello、邀请两端配对、candidate pair、文件校验才能证明信令 / P2P 可用。开发 CI 中增加 `node tests/https-proxy.cjs`：临时自签名 TLS 证书和非特权端口启动**真实 Nginx/WSS 同主机双客户端配对**，并验证上传拒绝和安全头；只作为部署模板的云端演练，不能替代正式证书续期、systemd 重启或真实公网测试。不得将静态健康检查写成完整产品验收。
 
+## 首次安装与已有活动指针
+
+本轮脚本只把实际存在的有效 current 符号链接作为 previous：canonical 目标须为 `/opt/zeydrop/releases/<16位十六进制revision>`，且有 dist/build.json 与 server/index.js。current 不存在表示首次安装；不能把 GNU readlink -f 对不存在最终组件返回的路径视为旧版本。已有 current 若为普通文件、自指、悬空或越界链接，会在受管配置与服务变更前拒绝；应先检查实际安装状态，不以随意重建链接绕过校验。首次安装成功不写虚假 previous，失败恢复也不创建 current 自环。隔离 shell 回归通过不等于真实主机验收，本轮完整验证见 TEST_REPORT_20261107_LIFECYCLE。
+
+已知限制：失败安装会保留本次已创建的 release；相同 revision 重试将因目录已存在而拒绝。本轮没有自动清理策略。保留失败备份并核查 current、previous、实际服务和 release 引用；不要在尚未确认恢复完成时删除目录。安全失败清理仍需独立事务验证。
+
 ## 从旧 Snapdrop 安装迁移
 
 不删除 `/opt/snapdrop`、旧服务配置或 Git 历史。若检测到旧 `snapdrop` 服务仍运行，部署脚本退出，不会自动停止它。
@@ -80,3 +86,10 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 本轮后续清理修复也必须随精确候选验收：取消后底层abort/删除失败应提示检查本机数据，不能仅凭传输卡片取消推断文件已删除；暂存管理的旧校验与URL有界清理，列表隐藏/刷新释放未点击URL，已点击保留有界下载启动宽限，删除或页面退出时释放。这些清理修复及原生OPFS故障后重新授权恢复已在3e7fd6c/CI60通过，不依赖e2a2088/CI59的旧结果。精确包/校验见PROJECT_STATUS；实际主机部署仍须用户自行验收。
 
 88ebde0/revision50be36dcf5f9d638的CI62进一步验证342项及完整浏览器套件；显式删除失败即使面板已关闭/重开仍提示数据可能保留。请使用PROJECT_STATUS/PR所指精确新候选，不沿用旧包校验值。
+
+
+## 跨版本本机存储与 PWA
+
+本轮恢复 Worker 的短目录变更使用保留的零字节 mutation-lock；旧版本 Worker 不参与新锁协议。升级或回滚前先完成/停止传输并关闭本站全部旧标签，再打开同一次构建的 shell 和三个 Worker。不要只替换 recovery-worker.js，不要清站点数据来实现升级：清理会删除自愿保存的断点。新版本等待旧客户端退出、不强制接管正在传输的页面；失败安装应保留当前可用 shell。
+
+真实 A/B Service Worker 安装失败、waiting、关闭客户端后升级/回滚、同版本三个 Worker 离线启动和 OPFS 保留组合正在本轮 CI 集成，当前不得记为通过。即使云端组合通过，也须在授权测试主机/真实设备核验旧标签全部退出、离线表现及实际保存权限，不替代 TLS/systemd/证书续期。

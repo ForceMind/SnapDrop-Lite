@@ -109,7 +109,7 @@ test('releasing unhashed appended bytes preserves the committed prefix and a lat
 test('a zero committed offset remains distinguishable from an already released handle without making it resumable', async () => {
     const h = await prepare({ prefix: Buffer.alloc(0), tail: Buffer.from([7]) }); available(h);
     assert.equal(await h.ops.releaseCommitted(h.meta.id), 0); intact(h);
-    assert.equal(await h.ops.releaseCommitted(h.meta.id), null); assert.equal(h.state.closes.length, 1);
+    assert.equal(await h.ops.releaseCommitted(h.meta.id), null); assert.equal(h.state.closes.filter(name => name.endsWith('.part')).length, 1);
     await assert.rejects(h.ops.resume(h.meta.id, h.meta), /匹配/);
 });
 
@@ -125,7 +125,7 @@ test('release is scoped to the requested active item, idempotent and rejects inv
     assert.equal(h.ops.active.has(other.id), true); assert.equal(h.state.files.get(other.id + '.part').locked, true);
     assert.deepEqual(h.state.files.get(other.id + '.json').bytes, otherMetadata);
     assert.deepEqual(h.state.files.get(other.id + '.part').bytes, Buffer.from([6]));
-    assert.deepEqual(h.state.closes, [h.meta.id + '.part']); await h.ops.releaseCommitted(other.id);
+    assert.deepEqual(h.state.closes.filter(name => name.endsWith('.part')), [h.meta.id + '.part']); await h.ops.releaseCommitted(other.id);
 });
 
 test('native close failure rejects the original error, drops logical ownership and preserves data without claiming physical unlock', async () => {
@@ -145,14 +145,14 @@ test('actual worker task ordering completes an append before releasing the same 
     await h.state.commitEntered.promise;
     const appended = Buffer.from([4, 5]), append = h.dispatch('append', h.meta.id, arrayBuffer(appended));
     const release = h.dispatch('releaseCommitted', h.meta.id);
-    assert.deepEqual(h.state.replies, []); assert.equal(h.state.closes.length, 0);
+    assert.deepEqual(h.state.replies, []); assert.equal(h.state.closes.filter(name => name.endsWith('.part')).length, 0);
     assert.equal(h.ops.active.get(h.meta.id).offset, h.prefix.length);
     block.resolve();
     const responses = await Promise.all([checkpoint, append, release]);
     assert.ok(responses.every(response => response.ok === true));
     assert.deepEqual(h.state.replies.map(response => response.request), [1, 2, 3]);
     assert.equal(responses[1].value, h.prefix.length + appended.length); assert.equal(responses[2].value, h.prefix.length);
-    assert.equal(h.ops.active.has(h.meta.id), false); assert.equal(h.state.closes.length, 1);
+    assert.equal(h.ops.active.has(h.meta.id), false); assert.equal(h.state.closes.filter(name => name.endsWith('.part')).length, 1);
     assert.deepEqual(h.state.files.get(h.meta.id + '.json').bytes, h.committed);
     assert.deepEqual(h.state.files.get(h.meta.id + '.part').bytes, Buffer.concat([h.prefix, appended]));
     const restored = await h.ops.resume(h.meta.id, h.meta);

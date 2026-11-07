@@ -1,5 +1,9 @@
 # Zeydrop 0.3.0-dev.1 · unreleased development candidate
 
+## 2026-11-07 生命周期加固（新原生CI待验）
+
+本地400项、构建cc281863f488aa68与审计通过；修复旧ICE异步出口、短目录/数据锁下的过期删除与首次部署活动指针。新增PWA升级/回滚和原生暂存删除组合待CI；服务器与Direct-only原则保持，详见TEST_REPORT_20261107_LIFECYCLE。失败release仍保留且可能阻止同版本重试（Issue #9），不能冒险自动删除可能在用代码。尚未发布正式RC，main未合并。
+
 ## 0.3.0-dev.1 · 2026-11-07 进程恢复与并发初始化加固（CI65 全套通过）
 
 运行代码26aed41、文档头e8ac72c、revision06d9143aa3bbb8fe；本地369项和341文件独立重装/无Git重建通过，原生双Worker争用、整Chromium组SIGKILL/新授权恢复与完整CI全套通过，最终日志/原始JSON已读。见TEST_REPORT_20261107_PROCESS_RECOVERY；未发布、未合并main。

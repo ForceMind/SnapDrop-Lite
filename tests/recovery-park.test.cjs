@@ -38,7 +38,7 @@ function rig(){
                             entry.bytes.set(value,at);return value.length;
                         },
                         flush(){if(state.flushError)throw state.flushError;entry.modified=Date.now();},
-                        close(){state.closeCalls++;if(state.closeError)throw state.closeError;entry.locked=false;}
+                        close(){if(name.endsWith('.part'))state.closeCalls++;if(state.closeError)throw state.closeError;entry.locked=false;}
                     };
                 }
             };
@@ -60,7 +60,8 @@ async function prepared(){
 }
 function retained(h){
     const part=h.state.files.get(h.meta.id+'.part');
-    assert.equal(h.state.files.size,2);assert.equal(h.state.eraseCalls,0,'parking must never erase file data');
+    assert.deepEqual([...h.state.files.keys()].sort(),['mutation-lock',h.meta.id+'.json',h.meta.id+'.part'].sort());
+    assert.equal(h.state.files.get('mutation-lock').bytes.length,0);assert.equal(h.state.eraseCalls,0,'parking must never erase file data');
     assert.deepEqual(h.state.files.get(h.meta.id+'.json').bytes,h.previous,'the previous committed metadata remains intact');
     assert.deepEqual(part.bytes,Buffer.concat([h.prefix,h.tail]),'the uncommitted tail is preserved until explicit resume rollback');
     assert.equal(h.methods.active.has(h.meta.id),false,'the failed park must release its active ownership');

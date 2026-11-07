@@ -90,7 +90,8 @@ test('erase waits for an earlier checkpoint commit instead of deleting its data 
     await turn(); const dataStillPresent = storage.files.has(meta.id + '.part');
     release.resolve(); await checkpoint; const erased = await settledErase;
     assert.equal(dataStillPresent, true, 'erase must not race the in-progress checkpoint');
-    assert.equal(erased, true); assert.equal(storage.files.size, 0, 'no metadata or part can be resurrected');
+    assert.equal(erased, true); assert.deepEqual([...storage.files.keys()], ['mutation-lock'], 'no metadata or part can be resurrected');
+    assert.equal(storage.files.get('mutation-lock').bytes.length, 0);
 });
 
 test('resume rereads the latest committed checkpoint after acquiring its data lock', async () => {
@@ -164,5 +165,5 @@ test('expired or corrupt records stay manageable when safe cleanup is blocked', 
     const part = storage.files.get(meta.id + '.part'); part.modified = stale; part.locked = true;
     const corrupt = await a.request('list');
     assert.equal(corrupt.length, 1); assert.equal(corrupt[0].phase, 'invalid');
-    part.locked = false; await a.request('erase', meta.id); assert.equal(storage.files.size, 0);
+    part.locked = false; await a.request('erase', meta.id); assert.deepEqual([...storage.files.keys()], ['mutation-lock']); assert.equal(storage.files.get('mutation-lock').bytes.length, 0);
 });

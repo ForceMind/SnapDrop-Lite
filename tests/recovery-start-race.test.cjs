@@ -160,7 +160,7 @@ test('fresh initialization remains usable and a failed publication retains only 
     assert.equal(b.activeCount(), 0); assert.equal(storage.files.get(bad.id + '.part').bytes.length, 0);
     assert.equal(storage.files.get(bad.id + '.json').bytes.length, 0);
     assert.equal(storage.files.get(bad.id + '.part').locked, false);
-    assert.deepEqual(storage.closeCalls.slice(closes), [bad.id + '.part']);
+    assert.deepEqual(storage.closeCalls.slice(closes), [bad.id + '.part', 'mutation-lock']);
     for (const [name, bytes] of old) assert.deepEqual(storage.files.get(name).bytes, bytes);
     assert.deepEqual(storage.erased, [], 'post-close initialization cleanup must never erase by a reused ID');
     const listed = await b.request('list');
@@ -204,7 +204,7 @@ test('initial publication error survives a simultaneous close failure without cl
     storage.failMetaWrite = true; storage.failClose = true;
     await assert.rejects(a.request('start', meta), /initial publication failed/);
     assert.equal(a.activeCount(), 0); assert.equal(storage.files.get(meta.id + '.part').locked, true);
-    assert.deepEqual(storage.closeCalls, [meta.id + '.part']); assert.deepEqual(storage.erased, []);
+    assert.deepEqual(storage.closeCalls, [meta.id + '.part', 'mutation-lock']); assert.deepEqual(storage.erased, []);
     assert.equal(storage.files.get(meta.id + '.part').bytes.length, 0);
     storage.files.get(meta.id + '.part').locked = false; // fixture teardown only
 });
@@ -218,5 +218,6 @@ test('a failed headerless initialization is later removed by the existing orphan
     assert.equal(storage.files.get(meta.id + '.part').locked, false); assert.deepEqual(storage.erased, []);
     storage.files.get(meta.id + '.part').modified = Date.now() - 25 * 60 * 60 * 1000;
     assert.equal((await a.request('list')).length, 0);
-    assert.equal(storage.files.size, 0); assert.deepEqual(storage.erased, [meta.id + '.part']);
+    assert.deepEqual([...storage.files.keys()], ['mutation-lock']);
+    assert.equal(storage.files.get('mutation-lock').bytes.length, 0); assert.deepEqual(storage.erased, [meta.id + '.part']);
 });

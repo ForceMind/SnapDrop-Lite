@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T19:45:21.172351+00:00",
+  "baseline": "30b66f1e27948ddec3a5a3b7352da580d07fffde",
+  "revision": "cc281863f488aa68",
+  "node": {
+    "version": "v24.22.1",
+    "tests": 400,
+    "passed": 400,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "5a7db0fc728f373d631727c70343c4f87975cdab20ec1cd9b6ebf7a610bef08d"
+  },
+  "newRegressions": {
+    "ice": 14,
+    "retirement": 12,
+    "deployment": 5
+  },
+  "build": {
+    "passed": true,
+    "checkBuild": true,
+    "shellSyntax": true,
+    "diffCheck": true
+  },
+  "audit": {
+    "root": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "server": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "negativeControls": {
+    "ice": {
+      "testedSource": "30b66f1",
+      "tests": 14,
+      "failed": 8,
+      "passed": 6
+    },
+    "deployment": {
+      "testedSource": "30b66f1",
+      "tests": 5,
+      "failed": 4,
+      "passed": 1
+    },
+    "retirement": {
+      "initialReproductions": 2,
+      "bothFailedBeforeGuard": true,
+      "activeWriterFollowupFailedBeforeDataGuard": true
+    }
+  },
+  "nativeBrowser": {
+    "passed": false,
+    "reason": "Actual local Chromium process_singleton socket EPERM; new native CI pending."
+  },
+  "serverIndexSha256": "b3aa2d2f4a3f6a547f3e6bb7661f010bcbf326702461c425657fddadd850e52f",
+  "knownOpenIssue": 9,
+  "scope": "Linux source/filesystem/shell fixtures and build/audits; not native browser, WAN, mobile/Safari or independent deployment certification."
+}

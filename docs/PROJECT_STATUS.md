@@ -2,7 +2,11 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 本轮进程恢复与初始化加固（CI65 全套通过）
+## 本轮ICE、暂存删除与部署生命周期（原生CI待验）
+
+本地400/400（0失败/跳过）、构建cc281863f488aa68、check-build/shell/diff及两侧audit0通过。修复ICE旧协商异步回调污染新代、过期/重叠删除与活动提交之间的断点丢失，以及首次部署current自环；新增原生PWA failed-install/等待/升级回滚与暂存删除组合待新CI。见[本轮报告](TEST_REPORT_20261107_LIFECYCLE.md)。[Issue #8](https://github.com/ForceMind/SnapDrop-Lite/issues/8)跟踪集成，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)保留失败release同版本重试限制，未做不安全自动删除。旧Worker不采用新锁，升级前须结束传输并关闭全部旧标签。本地真实浏览器启动再次socket EPERM，未算通过。
+
+## 前轮进程恢复与初始化加固（CI65 全套通过）
 
 运行代码 `26aed4136ee849a84689c1915e59feb891f00ca7`，文档头 `e8ac72c4e670cc5d5b57e2d860db30c7a952589e`，revision `06d9143aa3bbb8fe`；[本轮报告](TEST_REPORT_20261107_PROCESS_RECOVERY.md)。已修复两处同 ID OPFS 初始化覆盖/迟到删除竞态、BFCache 后清理不恢复，以及本机现场核验读取变动文件仍可能报告一致和 CLI 错误泄漏路径的问题。
 

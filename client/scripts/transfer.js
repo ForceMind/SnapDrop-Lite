@@ -14,6 +14,7 @@ let reservedMemory = 0;
 function saveError(error) {
     if (error?.name === 'QuotaExceededError') return '保存空间不足，文件未完成。请释放磁盘或浏览器存储空间后重试。';
     if (error?.name === 'NotAllowedError') return '没有文件保存权限，请重新选择保存位置。';
+    if (error?.name === 'NoModificationAllowedError') return '本机文件正在另一标签页或存储操作中使用，请等待当前操作结束后重试。';
     return '文件保存失败：' + String(error?.message || error).slice(0, 160);
 }
 class ReceiveSink {

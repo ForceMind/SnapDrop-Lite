@@ -52,7 +52,17 @@ revision=$(node -p "require('./dist/build.json').revision")
 release="/opt/zeydrop/releases/$revision"
 [[ ! -e $release ]] || { echo 'Release already exists; use rollback.sh to select it.' >&2; exit 1; }
 # Snapshot managed configuration and active target before changing either.
-previous=$(readlink -f /opt/zeydrop/current || true)
+previous=''
+if [[ -e /opt/zeydrop/current || -L /opt/zeydrop/current ]]; then
+    # GNU readlink -f also succeeds for an absent final component. Only an
+    # existing, valid release pointer is a previous target; a fresh install
+    # must not turn the path "current" into its own rollback symlink.
+    [[ -L /opt/zeydrop/current ]] || { echo 'Invalid current release pointer' >&2; exit 1; }
+    previous=$(readlink -f -- /opt/zeydrop/current) || { echo 'Invalid current release pointer' >&2; exit 1; }
+    [[ $previous =~ ^/opt/zeydrop/releases/[a-f0-9]{16}$ && -f $previous/dist/build.json && -f $previous/server/index.js ]] || {
+        echo 'Invalid current release pointer' >&2; exit 1;
+    }
+fi
 was_active=$(systemctl is-active zeydrop 2>/dev/null || true)
 was_enabled=$(systemctl is-enabled zeydrop 2>/dev/null || true)
 backup_dir=$(mktemp -d /etc/zeydrop-deploy.XXXXXX)

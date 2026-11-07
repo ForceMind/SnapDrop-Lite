@@ -4,6 +4,8 @@
 
 [English](README.en.md)
 
+本轮生命周期加固已完成本地 **400/400项**、构建cc281863f488aa68及两侧audit；新增ICE旧回调隔离、原生暂存删除事务和首次部署指针修复。新原生PWA升级/回滚及过期删除组合待CI，以下旧CI65/66不认证新代码。[本轮报告](docs/TEST_REPORT_20261107_LIFECYCLE.md)。
+
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
 当前为 **0.3.0-dev.1 未发布开发候选**，工作在[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。运行代码26aed41 / revision06d9143aa3bbb8fe、文档头e8ac72c完成[CI65全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628)：**369/369项Node**、三引擎原生Worker/清单、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、原生OPFS/恢复、临时HTTPS/WSS、离线PWA与UI检查。[本轮报告](docs/TEST_REPORT_20261107_PROCESS_RECOVERY.md)与[精确源码候选/校验](docs/PROJECT_STATUS.md)。
@@ -59,6 +61,8 @@ BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
 node tests/recovery-start-race-browser.cjs
+node tests/recovery-retirement-browser.cjs
+node tests/pwa-upgrade-browser.cjs
 node tests/browser-crash-recovery.cjs
 node tests/persistent-flow-browser.cjs
 node tests/stream-hash-browser.cjs

@@ -173,17 +173,23 @@ class RTCPeer extends TransferPeer {
         this._connectionEvent();
     }
     async _offer(restart) {
+        const conn = this._conn, epoch = this._identityEpoch;
+        const current = () => !this._closed && this._state !== 'failed'
+            && conn === this._conn && epoch === this._identityEpoch;
         try {
-            if (this._closed || this._conn.signalingState !== 'stable') return;
+            if (!current() || conn.signalingState !== 'stable') return;
             this._negotiating = true;
-            const offer = await this._conn.createOffer({ iceRestart: restart });
-            if (this._closed || this._state === 'failed') return;
-            await this._conn.setLocalDescription(offer);
-            if (this._closed || this._state === 'failed') return;
+            const offer = await conn.createOffer({ iceRestart: restart });
+            if (!current()) return;
+            await conn.setLocalDescription(offer);
+            if (!current()) return;
             this._server.send({ type: 'signal', to: this._peerId, sdp: { type: offer.type, sdp: offer.sdp } });
-        } catch (error) { if (!this._closed) this._fail(error.message); }
+        } catch (error) { if (current()) this._fail(error.message); }
     }
     onServerMessage(msg) {
+        // Bind continuations to the operation's logical negotiation, not the
+        // path epoch: normal native ICE checking events also change the latter.
+        let current = () => !this._closed;
         this._signalChain = this._signalChain.then(async () => {
             if (this._closed) return;
             if (msg.sdp) {
@@ -198,24 +204,34 @@ class RTCPeer extends TransferPeer {
                     if (this._isConnected()) this._statsTimer = setInterval(() => this._samplePath(), 2000);
                     this._connectionEvent();
                 }
+            }
+            const conn = this._conn, epoch = this._identityEpoch;
+            current = () => !this._closed && this._state !== 'failed'
+                && conn === this._conn && epoch === this._identityEpoch;
+            if (msg.sdp) {
+                if (!current()) return;
                 this._negotiating = true;
-                await this._conn.setRemoteDescription(msg.sdp);
-                if (this._closed || this._state === 'failed') return;
+                await conn.setRemoteDescription(msg.sdp);
+                if (!current()) return;
                 if (msg.sdp.type === 'offer') {
-                    const answer = await this._conn.createAnswer();
-                    if (this._closed || this._state === 'failed') return;
-                    await this._conn.setLocalDescription(answer);
-                    if (this._closed || this._state === 'failed') return;
+                    const answer = await conn.createAnswer();
+                    if (!current()) return;
+                    await conn.setLocalDescription(answer);
+                    if (!current()) return;
                     this._server.send({ type: 'signal', to: this._peerId, sdp: { type: answer.type, sdp: answer.sdp } });
                 }
-                await this._flushRemoteIce();
+                await this._flushRemoteIce(current);
+                if (!current()) return;
                 this._negotiating = false;
                 await this._securityCode();
+                if (!current()) return;
                 await this._samplePath();
             } else if (msg.ice) {
+                // A recoverable failed callee can receive the next ufrag
+                // before its new offer. Keep the bounded generation queue.
                 await this._acceptRemoteIce(msg.ice);
             }
-        }).catch(error => { if (!this._closed) this._fail('连接协商失败：' + error.message); });
+        }).catch(error => { if (current()) this._fail('连接协商失败：' + error.message); });
     }
     _matchesRemoteIce(ice) {
         if (!this._conn.remoteDescription) return false;
@@ -229,13 +245,23 @@ class RTCPeer extends TransferPeer {
         // never apply a proven different generation to the current description.
         else if (this._pendingIce.length < 64) this._pendingIce.push({ ice, expires: Date.now() + 10000 });
     }
-    async _flushRemoteIce() {
+    async _flushRemoteIce(stillCurrent = () => !this._closed) {
         const pending = this._pendingIce.splice(0);
-        for (const item of pending) {
+        const putBack = from => {
             if (this._closed) return;
+            // A newer ufrag may already be waiting in this batch. Preserve its
+            // untouched entries without applying old work to a new generation.
+            this._pendingIce = [...pending.slice(from), ...this._pendingIce]
+                .filter(item => item.expires > Date.now()).slice(0, 64);
+        };
+        for (let index = 0; index < pending.length; index++) {
+            if (!stillCurrent()) { putBack(index); return; }
+            const item = pending[index];
             if (item.expires <= Date.now()) continue;
-            if (this._matchesRemoteIce(item.ice)) await this._conn.addIceCandidate(item.ice);
-            else this._pendingIce.push(item);
+            try {
+                if (this._matchesRemoteIce(item.ice)) await this._conn.addIceCandidate(item.ice);
+                else this._pendingIce.push(item);
+            } catch (error) { putBack(index + 1); throw error; }
         }
     }
     async _securityCode() {

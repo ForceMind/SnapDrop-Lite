@@ -137,10 +137,19 @@ CI60的原生OPFS故障组合验证写入后Worker异常、原metadata保留、�
 
 显式删除属于已授权的存储操作，失败通知独立于面板render代次：先发固定“数据可能仍保留、请检查重试”提示，再以generation/hidden限制刷新。迟到成功不更新新列表；不泄漏file ID/原生细节、不恢复旧hash/URL。该追加P2和13项暂存UI回归在88ebde0/revision50be36dcf5f9d638的CI62（342项）通过。
 
-### 并发初始化与缓存页面返回（2026-11-07，本轮原生 CI 待验）
+### 并发初始化与缓存页面返回（2026-11-07，CI65/CI66 已验证）
 
 新接收记录的 start 在取得独占 `.part` 数据句柄后、truncate/write 之前重查同 ID 的元数据存在性；早期存在检查只负责快速拒绝，不能作为经过异步等待后的所有权依据。其他标签先发布的 partial、complete 或损坏 header 都使本次 start 拒绝；仅关闭本次取得的句柄，不擦除已有记录。查找/原生 close 失败必须拒绝，不声称物理解锁成功。
 
-新记录的初始 metadata 发布失败后，不得在释放数据锁后调用 erase：另一标签可能已经重新初始化同 ID。实现保留发布主错误，尝试关闭本次 access，并留下尚未接受正文的空初始化桩，而非竞争删除后继记录。无 header 的零字节孤立 `.part` 不作为可恢复记录显示，超过24小时且未被占用后由惰性 listing 尝试清理；损坏 header 显示为不可恢复记录，可手动删除，或在 header/正文均过期且可删除时清理。原生 close 失败仍有物理锁边界；保留桩不是事务回滚或断电持久化保证。实际 Worker 源码 9 项并发/失败回归通过，原生双 Worker 三态测试待本轮 CI 验证。
+新记录的初始 metadata 发布失败后，不得在释放数据锁后调用 erase：另一标签可能已经重新初始化同 ID。实现保留发布主错误，尝试关闭本次 access，并留下尚未接受正文的空初始化桩，而非竞争删除后继记录。无 header 的零字节孤立 `.part` 不作为可恢复记录显示，超过24小时且未被占用后由惰性 listing 尝试清理；损坏 header 显示为不可恢复记录，可手动删除，或在 header/正文均过期且可删除时清理。原生 close 失败仍有物理锁边界；保留桩不是事务回滚或断电持久化保证。实际 Worker 源码 9 项并发/失败回归与原生双 Worker 三态已在 [CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628) 通过；精确运行代码26aed41，文档头30b66f1 的 [CI66](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42389964683) 亦已全套通过，详见 TEST_REPORT_20261107_PROCESS_RECOVERY。
 
 本机暂存清理 sweep 的句柄可幂等 start/stop：页面创建时立即 list 并每小时清理，pagehide 清空周期句柄；仅 persisted pageshow 立即 list 并重启一个周期，重复 pageshow 不叠加，普通 pageshow 不重复初始化。list 的拒绝消费，无可用 Recovery 时不设置计时器。缓存页面返回不自动显示管理面板，不重建旧 hash/下载 URL、不恢复文件绑定或配对授权。4 项实际 controller 生命周期回归通过，真实浏览器 BFCache 和移动冻结仍按实机门槛验证。
+
+
+## 后续 ICE 与暂存目录生命周期（本轮集成待验）
+
+ICE 相关异步操作必须归属于精确 RTCPeerConnection 和当前身份/协商代次；旧 createOffer/setDescription/addIceCandidate 或 flush 的完成、失败和计时器都不能判定新轮协商成功/失败、清除新 restart 或提前核验路径。当前 SDP、实际 selected 非 relay、双方人工核码与逐文件同意仍分别必要；候选成功应用不是身份或路径授权。具体本轮回归结果见 TEST_REPORT_20261107_LIFECYCLE，不能沿用 CI65 认证新改动。
+
+OPFS 目录新增一个保留的零字节 `mutation-lock`，短操作取得原生 SyncAccessHandle 以序列化 start/resume/手动 erase/TTL 删除重查。它不在整段传输期间占用，也不替代活动 `.part` 的独占数据锁。listing 的旧快照只是线索，自动回收必须在目录锁内重读当前 header、正文和时间条件；erase 在关闭旧数据句柄到删除记录期间仍持有目录锁，防止新记录插入删除窗口。争用取得 guard 返回 NoModificationAllowedError，不关闭当前活动 writer；由用户重试或下次惰性清理再尝试。存储错误必须明确拒绝或跳过惰性清理，不能假报删除完成；guard close 失败会拒绝并使 start/resume 清除、尝试关闭本次新收养的数据句柄，保留主错误，但仍不能保证物理解锁。
+
+该固定零字节文件不含用户数据，不作为断点列出、不作为恢复容量项，也不删除或每次重建；它不是新授权机制。旧 Worker 未使用此目录协议，升级前必须完成/停止传输并关闭本站所有旧标签，再打开同版本新 shell。旧文件格式、已提交检查点、主动删除语义、新邀请/核码/原件重选/明确断点同意均保持；不自动绑定历史文件。真实跨版本旧标签混用、磁盘故障和浏览器存储驱逐不能由锁协议本身保证。

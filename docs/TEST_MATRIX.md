@@ -1,6 +1,10 @@
 # 测试矩阵与证据范围
 
-## 本轮进程恢复与并发初始化加固
+## 本轮生命周期集成（原生CI待验）
+
+本地400/400、0失败/跳过，revision cc281863f488aa68；新增14项ICE、12项暂存删除、5项完整隔离shell回归。两侧audit0、构建/check-build/shell/diff通过；原生双Worker删除三场景及PWA failed-install/等待/关闭全部旧客户端后升级和回滚正在加入CI，尚不记为成功。见TEST_REPORT_20261107_LIFECYCLE及evidence/lifecycle-local-20261107.json；真实WAN/Safari/移动/systemd门槛继续开放。
+
+## 前轮进程恢复与并发初始化加固
 
 运行代码26aed41 / revision06d9143aa3bbb8fe，文档头e8ac72c的[CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628)全套通过：369/369、0失败/跳过；新增BFCache4、现场工具11、OPFS start9、专属进程守卫3，共27项，重叠焦点集不额外计数。已读最终真实日志和JSON，见evidence/ci65-*及TEST_REPORT_20261107_PROCESS_RECOVERY。
 

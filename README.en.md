@@ -6,6 +6,8 @@ Zeydrop sends files directly between browsers over a reliable WebRTC DataChannel
 
 ## Current status
 
+Current lifecycle follow-up: **400/400 local checks**, build `cc281863f488aa68`, both audits passed. It isolates stale ICE continuations, serializes native OPFS retirement and fixes fresh-install release pointers. New native PWA upgrade/rollback and retirement checks await CI; prior CI65/66 below do not certify the new changes. [Follow-up report](docs/TEST_REPORT_20261107_LIFECYCLE.md).
+
 This is **0.3.0-dev.1, an unreleased development candidate** on [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2). Runtime `26aed41` / build `06d9143aa3bbb8fe`, documented head `e8ac72c`, passed [CI65](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628): **369/369 Node checks**, both audits, reproducible build, temporary HTTPS/WSS, three native Worker/checklist engines, Chromium 1 GiB / Firefox 100 MiB, all six bidirectional file pairings, OPFS/recovery, offline-PWA emulation and UI checks. See the [current report](docs/TEST_REPORT_20261107_PROCESS_RECOVERY.md) and [exact source candidate/checksums](docs/PROJECT_STATUS.md).
 
 Two cross-tab OPFS initialization races now preserve a checkpoint published by another tab: metadata is rechecked under the exclusive data handle before truncation, and failed initialization never schedules a stale ID-based erase after close. BFCache restores expiry sweeping without restoring old file consent. The local field verifier uses bounded, anchored regular-file reads, rejects observed mutations and emits fixed CLI errors without private paths or JSON snippets.
@@ -63,6 +65,8 @@ BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
 node tests/recovery-start-race-browser.cjs
+node tests/recovery-retirement-browser.cjs
+node tests/pwa-upgrade-browser.cjs
 node tests/browser-crash-recovery.cjs
 node tests/persistent-flow-browser.cjs
 node tests/stream-hash-browser.cjs
