@@ -31,6 +31,18 @@ async function main() {
         }
         const [a, b] = pages;
         await a.goto(server.origin); await a.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
+        // Fail on any live/prefix hashing fallback while native Workers exist.
+        // Independent disk rehashes later deliberately use the Node-checked
+        // synchronous implementation and are outside this product hook.
+        const instrumentHash = async page => page.evaluate(() => {
+            const manager=window.ZeydropStreamHash;
+            window.__liveHash={handles:0,mainCalls:0,workerHandles:0};
+            manager._factory=()=>{window.__liveHash.mainCalls++;throw Error('Native live hash Worker required');};
+            const create=manager.create.bind(manager);
+            manager.create=()=>{const hash=create();window.__liveHash.handles++;
+                if(hash.backend==='worker')window.__liveHash.workerHandles++;return hash;};
+        });
+        await instrumentHash(a);
         if (process.env.TEST_CJK_CSS) {
             const base = path.dirname(process.env.TEST_CJK_CSS);
             let css = await fs.readFile(process.env.TEST_CJK_CSS, 'utf8');
@@ -46,7 +58,7 @@ async function main() {
         await a.setViewportSize({ width: 1440, height: 1080 });
         await a.locator('#createRoomBtn').click(); await a.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
         const invite = await a.locator('#inviteUrl').inputValue(); assert.ok(!invite.includes('?room='));
-        await b.goto(invite);
+        await b.goto(invite); await instrumentHash(b);
         for (const page of pages) await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._path?.direct, null, { timeout: 30000 });
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText())); assert.equal(codes[0], codes[1]); console.log('PASS direct connection and DTLS code');
         for (const page of pages) { assert.equal(await page.locator('x-peer input').isDisabled(), true); await page.locator('.verify-peer').click(); }
@@ -187,6 +199,9 @@ async function main() {
         results.resume = { name: resumeName, size: resumeFile.length, writtenAtBreak: await b.evaluate(() => window.__resumeProbe.writtenAtBreak), dataChannelBytes: resumeBytes, sha256: resumeExpected };
         results.cases.push('real WebSocket peer rebuild resumes 8 MiB native OPFS sink after fresh matching safety codes and SHA-256 prefix check');
         await b.evaluate(async name => (await navigator.storage.getDirectory()).removeEntry(name), resumeName);
+        results.liveHashWorkers=await Promise.all(pages.map(page=>page.evaluate(()=>({...window.__liveHash,active:window.ZeydropStreamHash._handles.size}))));
+        assert.ok(results.liveHashWorkers.every(item=>item.handles>0&&item.workerHandles===item.handles&&item.mainCalls===0&&item.active===0));
+        results.cases.push('actual transfer and reconnection prefix hashes use native Workers, with no main fallback and no remaining leases');
         results.peakReceiveQueues = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._peakQueuedBytes || 0)));
         assert.ok(results.peakReceiveQueues.every(bytes => bytes <= 1024 * 1024));
         assert.ok(traffic.every(message => !message.binary && !message.text.includes('PRIVATE_FILE_BODY_SENTINEL') && !message.text.includes('PRIVATE_FILE_SENTINEL')));

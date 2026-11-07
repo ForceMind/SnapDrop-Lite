@@ -6,7 +6,9 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 未发布隔离测试候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。代码172adc8 / revision10c5794070ac6a1b的 [CI57全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42357894421)：285项Node、三引擎清单/原生哈希Worker、Chromium1GiB/Firefox100MiB、OPFS恢复、六组合双向独立SHA、真实临时HTTPS/WSS、离线PWA仿真及深浅UI检查。断点故障保留和旧写入结算已修复；构建批准23项公共输入。WebKit哈希基准实际8MiB回退，真实WAN/移动Safari/独立主机仍待验收。见[最终云端报告](docs/TEST_REPORT_20261107_FINAL.md)与[当前状态/候选](docs/PROJECT_STATUS.md)。
+当前为 **0.3.0-dev.1 未发布隔离测试候选**，工作在 [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。既有基线代码172adc8 / revision10c5794070ac6a1b的 [CI57全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42357894421)：285项Node、三引擎清单/原生哈希Worker、Chromium1GiB/Firefox100MiB、OPFS恢复、六组合双向独立SHA、临时HTTPS/WSS、离线PWA仿真及深浅UI检查。该基线报告见[最终云端报告](docs/TEST_REPORT_20261107_FINAL.md)。
+
+本轮继续把实时发送/接收与恢复前缀SHA迁入有界本机Worker，并为已完成暂存文件复验复用全文件Worker；修复会话自然到期误删自愿暂存的路径，以及写入后哈希失败时的检查点一致性。公共构建输入增至25项。**这些新改动尚待对应提交的完整CI和候选复验，不沿用CI57绿灯。** 最新结果以[当前状态/候选](docs/PROJECT_STATUS.md)为准。WebKit既有哈希基准仅8MiB回退，真实WAN/移动Safari/独立主机仍待验收。
 
 此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。
 
@@ -25,12 +27,12 @@
 ## 文件能力与限制
 
 - 16 KiB 分块，256 KiB 接收写入确认窗口；DataChannel 背压和接收消息队列均有上限。
-- 增量 SHA-256，完整长度和哈希均匹配后才报告完成。
+- 增量 SHA-256，完整长度和哈希均匹配后才报告完成。实时传输与恢复前缀在本机专用Worker中计算；每页最多4个状态，每状态最多4个待完成操作、分块复制不超过256KiB，单操作默认30秒超时。仅没有Worker能力时分块回退主线程，Worker故障明确停止，不静默重算。
 - 支持多文件发送队列、当前连接内暂停 / 继续和取消。单个文件失败或拒绝会暂停并保留后续队列，可选择重新发送或继续后续文件；重发使用新的文件请求并重新征求接收同意，同页失败引用最多30项/15分钟，断线释放。**同一页面中短时断线可尝试续传已同意接收的文件**：原设备在 120 秒内重新配对，双方重新核对安全码，先校验接收端实际已写入偏移与 SHA-256 前缀，成功后只发剩余字节；不一致则取消。
 - **跨刷新本机断点恢复是实验功能，仅接收端主动勾选后使用**：原始文件分块在当前浏览器 OPFS 保存，每约 1 MiB 提交持久化检查点；刷新/重新开页后需建立新邀请、重新核对安全码，发送端重新选择原文件并对比已存前缀 SHA-256，不匹配必须取消。默认保存模式不会产生持久化断点；浏览器清站点数据、磁盘配额不足、崩溃或存储驱逐仍可能导致丢失，绝不保证恢复成功。服务器重启后需要新配对，不恢复旧信令身份。待发文件队列可在同页短时重连（最多 120 秒）后恢复；新增自愿保存的**跨刷新发送清单**仅保留本机元数据和完整哈希，刷新后须重选全部原件、重新配对及核对安全码，并手动发送；未接受的文件仍须接收方重新明确同意。详见 [本地恢复说明](docs/RECOVERY_STORAGE.md)。
 - 支持 `showSaveFilePicker` 的浏览器直接写入接收方选择的文件；必须由接收按钮触发授权。兼容性和用户操作仍需实机验证。
 - 无流式文件保存能力时，接收中与待保存文件合计最多 **64 MiB**；超限在传输前拒绝。Safari / iOS 不宣称支持 1 GiB 文件。
-- 拒绝、超时或校验失败不交付完成文件；接收方取消时尽力 abort 未完成写入。中断恢复不保留未经验证的进度。
+- 拒绝、超时或校验失败不交付完成文件；接收方主动取消时尽力 abort 未完成写入。会话结束不沿用旧身份，但保留已启用的本机检查点供重新授权恢复。若文件块已写入而哈希失败，仅释放句柄并保留上一个已提交offset/SHA，不发布未验证尾部；下次显式恢复时截断尾部。已完成的本机文件也需重新通过大小及SHA校验才提供保存。
 
 “服务器文件正文流量为零”不等于“服务器总流量为零”：页面资源、WebSocket 心跳 / 信令和 STUN 探测都会产生少量流量；第三方 STUN 可看到探测来源地址。
 
@@ -57,6 +59,9 @@ BROWSER_TYPE=webkit npm run test:smoke
 node tests/interoperability.cjs
 node tests/recovery-browser.cjs
 node tests/persistent-flow-browser.cjs
+node tests/stream-hash-browser.cjs
+BROWSER_TYPE=firefox node tests/stream-hash-browser.cjs
+BROWSER_TYPE=webkit node tests/stream-hash-browser.cjs
 BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
 node tests/webrtc-primitives.cjs
 ```

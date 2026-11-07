@@ -432,9 +432,9 @@ class Zeydrop {
             try { await navigator.clipboard.writeText($('inviteUrl').value); Events.fire('notify-user', '邀请链接已复制'); }
             catch { $('inviteUrl').focus(); $('inviteUrl').select(); Events.fire('notify-user', '请复制选中的邀请链接'); }
         };
-        $('leaveRoomBtn').onclick = () => { this.server.leaveRoom(); clearInvite(); status('已离开，可创建新的邀请'); };
+        $('leaveRoomBtn').onclick = () => { this.server.leaveRoom(); clearInvite(); status('会话已结束，可创建新的邀请。已启用的本机暂存可在本机暂存管理中查看'); };
         Events.on('room-joined', event => { if (event.detail.roomId !== currentRoom) return; expires = event.detail.expiresAt; paired = event.detail.paired === true; showInvite(currentRoom); status(paired ? '配对已锁定，请核对安全码；此邀请不再接受其他设备' : '房间已就绪，等待另一台设备加入并核对安全码', 'connected'); history.replaceState({}, '', location.pathname + '#room=' + currentRoom); });
-        Events.on('room-expired', () => { clearInvite(); status('邀请或会话已过期，连接已结束。请创建新邀请', 'error'); });
+        Events.on('room-expired', () => { clearInvite(); status('邀请或会话已过期，连接已结束。请创建新邀请；已启用的本机暂存可在本机暂存管理中查看', 'error'); });
         Events.on('room-error', event => { if (['expired', 'missing', 'invalid', 'exists'].includes(event.detail.code)) clearInvite(); status(event.detail.message, 'error'); });
         Events.on('signal-state', event => {
             const state = event.detail.state; $('signalStatus').dataset.state = state;
@@ -498,9 +498,10 @@ if (localRecovery?.supported) localRecovery.available().then(available => {
                         load.disabled = true;
                         try {
                             const { blob, meta } = await localRecovery.completed(item.id);
-                            const hash = window.ZeydropHash.create();
-                            for await (const chunk of blob.stream()) hash.update(new Uint8Array(chunk));
-                            if (hex(hash.digest()) !== meta.completeSha256) throw Error('本机文件校验失败，请删除损坏记录');
+                            const result = await window.ZeydropFileHash.hash(blob);
+                            if (!Number.isSafeInteger(result?.bytes) || result.bytes !== blob.size || result.bytes !== meta.size
+                                || typeof result.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(result.sha256)
+                                || result.sha256 !== meta.completeSha256) throw Error('本机文件校验失败，请删除损坏记录');
                             const link = document.createElement('a');
                             link.textContent = '点击保存'; link.href = URL.createObjectURL(blob);
                             link.download = meta.name; link.className = 'button';

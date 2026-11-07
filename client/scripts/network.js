@@ -127,7 +127,7 @@ class ServerConnection {
         return true;
     }
     leaveRoom() {
-        Events.fire('resume-clear', '主动退出会话，已丢弃未完成文件');
+        Events.fire('resume-clear', '已退出会话；已启用的本机暂存可在本机暂存管理查看');
         this._desiredRoomId = null; this._desiredType = null;
         this.send({ type: 'leave-room' }); Events.fire('peers', []);
     }
@@ -389,9 +389,13 @@ class RTCPeer extends TransferPeer {
         if (resetIdentity || ['disconnected', 'failed', 'closed'].includes(state)) this._clearHelloHandshake();
         if (resetIdentity) { this._identityEpoch = (this._identityEpoch || 0) + 1; this._code = null; }
         if (reason) {
-            // Transient loss retains a bounded local checkpoint; terminal failure aborts.
+            // Transient loss retains a bounded live checkpoint. Permanent
+            // session removal also parks opt-in durable data without keeping
+            // its peer/identity alive: the server sends peers=[] before its
+            // room-expired notice. Explicit file cancel/integrity failure has
+            // already used the destructive transfer path before close().
             if (['connecting', 'disconnected'].includes(state) && typeof this.suspendTransfers === 'function') this.suspendTransfers(reason);
-            else this.abortAll(reason, state === 'failed');
+            else this.abortAll(reason, state === 'failed' || state === 'closed');
         }
     }
     _pathUnavailable(reason) {

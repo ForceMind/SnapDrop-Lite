@@ -99,6 +99,13 @@ class ZeydropDurableSink {
         return this.lastCommitted;
     }
     async park(sha256) { await this.store.request('park', this.id, sha256); }
+    async parkCommitted() {
+        // Returns the last committed offset (including 0), or null when there
+        // was no active handle. A physical close failure rejects instead.
+        const offset = await this.store.request('releaseCommitted', this.id);
+        if (offset !== null) this.lastCommitted = offset;
+        return offset;
+    }
     async finish(sha256) {
         if (this.size !== this.meta.size) throw Error('文件长度不一致');
         const result = await this.store.request('finish', this.id, sha256);

@@ -51,7 +51,7 @@ async function main(){
             if(!report.phase.startsWith('offline'))return;
             try{
                 const url=new URL(worker.url()),script=url.pathname.split('/').at(-1);
-                if(!['file-hash-worker.js','recovery-worker.js'].includes(script))return;
+                if(!['file-hash-worker.js','recovery-worker.js','stream-hash-worker.js'].includes(script))return;
                 report.offlineWorkers.push({script,version:/^[a-f0-9]{16}$/.test(url.searchParams.get('v')||'')?url.searchParams.get('v'):null,
                     phase:report.phase});
             }catch{}
@@ -73,13 +73,13 @@ async function main(){
                     version:versioned?.searchParams.get('v')||null};
             };
             return{revision:build.revision,name,entryCount:requests.length,controllerActivated:navigator.serviceWorker.controller.state==='activated',
-                workers:[workerEntry('recovery-worker.js'),workerEntry('file-hash-worker.js')],
+                workers:[workerEntry('recovery-worker.js'),workerEntry('file-hash-worker.js'),workerEntry('stream-hash-worker.js')],
                 hashWorkerStillLazy:window.ZeydropFileHash._worker===null,peerCount:zeydrop.peers.peers.size};
         });
         assert.match(report.cache.revision,/^[a-f0-9]{16}$/);assert.equal(report.cache.controllerActivated,true);
         assert.equal(report.cache.hashWorkerStillLazy,true);assert.equal(report.cache.peerCount,0);
         for(const worker of report.cache.workers){assert.equal(worker.exactVersionCached,true);assert.equal(worker.version,report.cache.revision);}
-        report.checks.push('the activated controlling service worker precaches both exact worker URLs with the current build revision');
+        report.checks.push('the activated controlling service worker precaches all three exact worker URLs with the current build revision');
 
         serviceWorker=context.serviceWorkers().find(worker=>{
             try{return new URL(worker.url()).pathname==='/service-worker.js';}catch{return false;}
@@ -94,7 +94,7 @@ async function main(){
                 try{
                     const request=args[0],url=new URL(typeof request==='string'?request:request.url,self.location.href);
                     const script=url.pathname.split('/').at(-1),version=url.searchParams.get('v');
-                    if(response&&['recovery-worker.js','file-hash-worker.js'].includes(script)&&globalThis.__pwaWorkerCacheHits.length<20)
+                    if(response&&['recovery-worker.js','file-hash-worker.js','stream-hash-worker.js'].includes(script)&&globalThis.__pwaWorkerCacheHits.length<20)
                         globalThis.__pwaWorkerCacheHits.push({script,version:/^[a-f0-9]{16}$/.test(version||'')?version:null,status:response.status});
                 }catch{}
                 return response;
@@ -143,11 +143,26 @@ async function main(){
         });
         assert.equal(report.hash.backend,'worker');assert.equal(report.hash.bytes,3);assert.equal(report.hash.mainFactoryCalls,0);
         assert.equal(report.hash.sha256,crypto.createHash('sha256').update('abc').digest('hex'));
+        report.streamHash=await page.evaluate(async()=>{
+            const manager=window.ZeydropStreamHash,original=manager._factory;let mainFactoryCalls=0;
+            manager._factory=()=>{mainFactoryCalls++;throw Error('Offline stateful Worker must not use main fallback');};
+            const hash=manager.create();
+            try{
+                await hash.update(new TextEncoder().encode('a'));const prefix=await hash.digestHex();
+                await hash.update(new TextEncoder().encode('bc'));const sha256=await hash.digestHex({final:true});
+                return{backend:hash.backend,bytes:hash.bytes,closed:hash.closed,prefix,sha256,mainFactoryCalls};
+            }finally{hash.dispose();manager._factory=original;}
+        });
+        assert.equal(report.streamHash.backend,'worker');assert.equal(report.streamHash.mainFactoryCalls,0);
+        assert.equal(report.streamHash.bytes,3);assert.equal(report.streamHash.closed,true);
+        assert.equal(report.streamHash.prefix,crypto.createHash('sha256').update('a').digest('hex'));
+        assert.equal(report.streamHash.sha256,crypto.createHash('sha256').update('abc').digest('hex'));
+        report.checks.push('an offline native stateful hash Worker snapshots a prefix, continues and finalizes without main fallback');
         report.recovery=await page.evaluate(async()=>({available:await window.ZeydropRecovery.available(),
             records:(await window.ZeydropRecovery.list()).length,nativeWorker:window.ZeydropRecovery.worker instanceof Worker}));
         assert.equal(report.recovery.available,true);assert.equal(report.recovery.records,0);assert.equal(report.recovery.nativeWorker,true);
         report.cacheHits=await serviceWorker.evaluate(()=>globalThis.__pwaWorkerCacheHits||[]);
-        for(const script of ['file-hash-worker.js','recovery-worker.js']){
+        for(const script of ['file-hash-worker.js','recovery-worker.js','stream-hash-worker.js']){
             assert.ok(report.cacheHits.some(hit=>hit.script===script&&hit.version===report.cache.revision&&hit.status===200),
                 'offline worker must actually match its exact revision in native Cache Storage: '+script);
             assert.ok(report.offlineWorkers.some(worker=>worker.script===script&&worker.version===report.cache.revision),
@@ -171,7 +186,7 @@ async function main(){
     }finally{
         try{
             if(page)await page.evaluate(async()=>{
-                window.ZeydropFileHash?.cancelAll();window.ZeydropRecovery?.worker?.terminate();
+                window.ZeydropFileHash?.cancelAll();window.ZeydropStreamHash?.disposeAll();window.ZeydropRecovery?.worker?.terminate();
                 for(const registration of await navigator.serviceWorker.getRegistrations())await registration.unregister();
                 for(const name of await caches.keys())if(name.startsWith('zeydrop-shell-'))await caches.delete(name);
             }).catch(()=>{});

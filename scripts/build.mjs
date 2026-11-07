@@ -19,6 +19,7 @@ await build({ stdin: { contents: publicClient.get('client/scripts/vendor.js').to
 // The dedicated hasher uses the same validated source snapshot and locked
 // Noble implementation; no runtime module/CDN fetch is required by the worker.
 await build({ stdin: { contents: publicClient.get('client/scripts/file-hash-worker.js').toString('utf8'), resolveDir: path.join(root, 'client/scripts'), sourcefile: 'file-hash-worker.js' }, outfile: 'dist/scripts/file-hash-worker.js', bundle: true, format: 'iife', minify: true, legalComments: 'eof', target: ['es2022'] });
+await build({ stdin: { contents: publicClient.get('client/scripts/stream-hash-worker.js').toString('utf8'), resolveDir: path.join(root, 'client/scripts'), sourcefile: 'stream-hash-worker.js' }, outfile: 'dist/scripts/stream-hash-worker.js', bundle: true, format: 'iife', minify: true, legalComments: 'eof', target: ['es2022'] });
 let notices = '';
 for (const [label, file] of [['ws', 'server/node_modules/ws/LICENSE'], ['@noble/hashes', 'node_modules/@noble/hashes/LICENSE'], ['qrcode', 'node_modules/qrcode/license'], ['dijkstrajs', 'node_modules/dijkstrajs/LICENSE.md'], ['pngjs', 'node_modules/pngjs/LICENSE']]) {
     notices += label + '\n' + await readFile(file, 'utf8') + '\n\n';

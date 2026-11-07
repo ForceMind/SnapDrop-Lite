@@ -70,7 +70,7 @@ OPFS Worker请求按顺序执行；恢复在取得独占句柄后重读元数据
 
 ## 公共静态资源发布边界（2026-11-06）
 
-构建只从显式公共资源清单读取当前23项客户端输入，核对文件及父目录均非符号链接、文件为普通文件后，对同一份内存快照计算revision并写入dist；vendor和文件哈希Worker也从已核验源码快照打包。未批准的本地.env、笔记或其它client额外文件不进入dist，也不参与revision。不依赖.git，解压源码候选也适用；添加公开资源时必须同步该清单。dist仍是重新生成的公共目录，不放入本地配置。
+构建只从显式公共资源清单读取当前25项客户端输入，核对文件及父目录均非符号链接、文件为普通文件后，对同一份内存快照计算revision并写入dist；vendor、全文件和增量哈希Worker也从已核验源码快照打包。未批准的本地.env、笔记或其它client额外文件不进入dist，也不参与revision。不依赖.git，解压源码候选也适用；添加公开资源时必须同步该清单。dist仍是重新生成的公共目录，不放入本地配置。
 
 Nginx另外拒绝隐藏路径（含嵌套及编码后的.env/.git），保留标准.well-known路径。临时HTTPS测试故意在独立静态目录放入可读合成私密文件，验证实际404及正常ACME示例路径200；它不证明真实证书签发或续期。此边界源于旧9ad隔离构建会把两个未追踪client文件复制到dist的可复现实验，并非已观察到真实用户秘密泄漏。
 
@@ -97,7 +97,7 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 
 同一桥接最多一个活动任务和四个等待任务，含排队的总超时为五分钟。进度最多每秒十次，开始/结束强制反馈；取消、pagehide、崩溃和超时释放引用/终止旧 Worker。消息绑定当前 Worker 和递增任务号，格式、字节数、进度与最终 SHA-256 严格核验。仅浏览器没有 Worker 能力时使用 256 KiB 主线程回退；Worker 创建或运行失败明确失败，不偷偷重算。清单原有 opt-in、锁外计算/锁内 CAS、重选全部原件、跨标签失效及手动重新授权均保留。
 
-这只是发送清单的全量哈希迁移。实时 RTCDataChannel 发送/接收增量哈希及断点前缀哈希仍使用现有主线程可克隆状态；OPFS 写入 Worker 和本模块互不等价。不能据此宣称全部大文件计算已离开主线程，也不把桌面 CI 的响应时间当作移动真机表现。
+上述CI57结果只覆盖当时发送清单的全量哈希Worker，不能用它为后续实时/前缀Worker背书。当前实现已扩展到下面的状态式哈希路径，须以新提交的完整CI验证；OPFS写入Worker与SHA Worker职责不同，桌面响应时间也不代表移动真机表现。
 
 
 ## 前缀准备与消息队列（2026-11-07，CI57已验证）
@@ -112,3 +112,16 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 
 
 数据保留最终修复在CI57通过：durable存储失败按原state/resumeOwner定位；活动取消、过期交接均等当前消息链、旧adopt ready及已开始write正确记账后park。真实最终SHA匹配后缓存用于finish失败清理，transient迟到locallyStored结果不自动删除/报远端完成。Worker park提交失败仍尝试关闭句柄并释放active，保留旧metadata与主错误；RPC最多32项且序号安全。主动取消/删除、确证损坏和普通sink保持对应策略。详见ENGINEERING_AUDIT_20261107与RECOVERY_STORAGE。
+
+
+## 状态式传输哈希与安全释放（2026-11-07，本轮待完整CI验证）
+
+`stream-hash.js`管理实时发送/接收及双方恢复前缀的独立本机Worker。每页最多4个状态句柄，每状态最多4个活动或排队操作；单次update只复制不超过256KiB，待处理应用数据每状态最多1MiB。调用方原始ArrayBuffer保持可用，不能因Worker转移而破坏随后DataChannel发送。Worker按顺序校验session、请求号和精确offset；状态留在Worker内，`digestHex()`只返回克隆摘要并允许继续，`final:true`消费并释放该状态，不导出Noble内部状态。
+
+Worker延迟到首个操作才创建，每操作默认30秒截止；失败、取消、最终摘要和pagehide释放自身句柄/引用。只有没有Worker能力时才走相同异步FIFO的有界主线程回退；Worker创建/运行/协议异常不会静默重算。构建从批准快照打包本地Noble，脚本与Worker继承同一revision并进入PWA预缓存，不访问网络服务。清单与已完成本机文件复验使用另一全文件Worker桥接，完成复验还要求blob、记录与结果字节数相等。
+
+文件协议本身不改：新异步计算后仍须检查当前wire、路径代次、发送代次及精确state，旧操作不能发ACK、resume-confirm、finish或complete。已开始的接收write即使断线也要完成其对应哈希/offset结算，再通过消息链/交接屏障park；最终消费摘要前标记finishing，不能把已消费状态交给新连接。临时前缀Worker校验通过前不替换活动状态，取消后释放自己的临时Worker；发送侧本机前缀读取/Worker故障只取消该发送文件，不把另一方向接收文件作为协议损坏而删除。
+
+若write已经成功、update或摘要Worker却失败，不能将旧摘要发布到新的磁盘偏移。`parkCommitted()`调用恢复Worker的`releaseCommitted`，只关闭精确记录的活动句柄并返回原已提交offset，不flush/改写metadata、不truncate/erase、不终止共享恢复Worker；显式恢复仍按旧metadata核验并截断未提交尾部。native close失败原样拒绝，逻辑active清理不等于物理锁立即释放；offset为0的原恢复限制不变。
+
+自然会话到期时服务端先发peers=[]再发room-expired，永久连接移除因此统一走保留自愿durable检查点的清理路径。旧身份和held授权随会话结束，不自动绑定历史文件。明确文件取消、手动删除及确证完整性失配仍走相应删除策略；普通非持久sink照常abort。

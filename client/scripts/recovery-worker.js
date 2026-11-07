@@ -208,6 +208,17 @@ async function park(id, sha256) {
     }
     return true;
 }
+async function releaseCommitted(id) {
+    if (!validId(id)) throw Error('无效的本机断点标识');
+    const item = active.get(id);
+    if (!item) return null;
+    // The append may have reached disk before its hash failed. Preserve the
+    // last committed metadata; resume will truncate any uncommitted tail.
+    // A native close failure rejects, even though logical ownership is removed.
+    try { item.access.close(); }
+    finally { if (active.get(id) === item) active.delete(id); }
+    return item.committed;
+}
 async function completed(id) {
     const meta = await readMeta(id);
     if (!meta || meta.phase !== 'complete' || !validHash(meta.completeSha256))
@@ -240,7 +251,7 @@ async function finish(id, sha256) {
     return { meta: complete, file: await item.file.getFile() };
 }
 async function list() { return listing(); }
-const tasks = { probe, start, resume, append, checkpoint, park, finish, completed, erase, list };
+const tasks = { probe, start, resume, append, checkpoint, park, releaseCommitted, finish, completed, erase, list };
 let taskChain = Promise.resolve();
 self.onmessage = event => {
     const { request, type, args = [] } = event.data || {};

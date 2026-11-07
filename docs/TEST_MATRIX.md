@@ -1,6 +1,19 @@
 # 测试矩阵与证据范围
 
-## 当前完整云端验收
+## 本轮更改待验
+
+实时发送/接收及恢复前缀现已接入状态式SHA Worker，已完成本机文件复验使用全文件Worker；新增自然会话到期和写入后哈希失败保留旧checkpoint的路径。本轮必须执行对应提交的完整CI和候选复验，不能沿用以下基线绿灯。本地检查时点324/324 Node、重复构建/语法、双方依赖audit通过；浏览器启动受socket EPERM限制，仍待GitHub Runner的实际执行。
+
+| 新增范围 | 方法/门槛 | 当前状态 |
+|---|---|---|
+| 状态式SHA Worker | 独立Node摘要、快照继续/最终释放、调用方buffer不detach、4句柄/4操作/256KiB上限、故障/超时/取消及旧消息隔离 | 实现与自动化用例已加入，待完整CI |
+| 异步传输集成 | 写入后update失败、snapshot/final期间取消与断线、旧wire/新owner、无错误ACK/完成、精确已提交offset/SHA保留 | 新回归及原生文件矩阵待本轮验证 |
+| 发送前缀本机故障 | 读取/Worker失败只取消当前发送文件，同时接收文件与通道继续；保留独立内容校验 | 新2项回归本地通过，待完整CI |
+| 永久会话退出 | 真实server过期消息次序驱动network+transfer，不保留身份，普通sink/主动取消策略不变 | 新回归待完整CI |
+| 当前PWA Worker缓存 | 三个Worker均为批准源码、本地打包、精确revision及原生离线启动 | 新stream Worker须随本轮复验 |
+| 已完成暂存下载 | 全文件Worker结果大小/格式/完整SHA均核对后才建URL，失败可管理重试 | 新UI回归待完整CI |
+
+## 既有完整云端基线
 
 172adc8 / revision10c5794070ac6a1b的 [CI57](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42357894421)全套通过，285/285 Node。完整原始证据见evidence/ci57-*与TEST_REPORT_20261107_FINAL。下面的通过均限定对应环境，不转化为真实公网/硬件成功率。
 

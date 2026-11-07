@@ -68,3 +68,10 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 
 
 静态发布进一步采用显式公共输入清单，不递归复制client目录，未批准的本地.env/笔记不发布且不改变revision；批准路径的文件/父目录符号链接或特殊文件拒绝构建。Nginx隐藏路径再作独立防护，保留.well-known，真实临时HTTPS回归覆盖文件存在时也拒绝访问。直接Git检出与无.git源码候选都使用该边界；添加公开资源必须更新scripts/public-assets.mjs。
+
+
+## 状态式哈希Worker随版本交付
+
+当前批准公共输入为25项，新增stream-hash桥接及其本地打包Worker。不要单独替换某一脚本或复用旧dist：index、三个Worker（recovery/file-hash/stream-hash）、同版本查询参数和Service Worker预缓存应来自同一次已验证构建。Worker只做浏览器本机计算/存储，不新增服务器端点、文件上传、代理或依赖服务。
+
+升级/回滚实测除静态健康及信令hello外，还应确认本轮CI对应的实时传输/前缀哈希、已完成本机暂存复验和Worker离线缓存。旧CI57绿灯不覆盖这次运行代码；请以PROJECT_STATUS的精确候选及完整CI为准。会话结束只解除旧配对，已启用的本机检查点独立管理；明确删除文件仍按存储策略执行。
