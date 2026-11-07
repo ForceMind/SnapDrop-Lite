@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "scope": "actual local cloud-session loopback signaling; normal flow, not WAN/files/production",
+  "exitCodeObservedByOwningExecSession": 0,
+  "reportSha256": "9b0161eb699e7f6af2d33cc07490b02e386c54d52b3c9f00386546a75a42882d",
+  "reportAndStdoutBytesEqual": true,
+  "toolSourceCommit": "4d617b13e9c0553a358c8deb111a8c8dbb80448e",
+  "serverSha256": "b3aa2d2f4a3f6a547f3e6bb7661f010bcbf326702461c425657fddadd850e52f",
+  "toolSha256": "b19fd3b4e5793a415c5f680af56c307e0967675a08c944ec6b151725aa10633b",
+  "limitation": "original final-client-failure coverage gap is disclosed; later guard tool has separate short/grace proof; hashes are not signatures"
+}

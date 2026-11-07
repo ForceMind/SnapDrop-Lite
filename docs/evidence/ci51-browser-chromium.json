@@ -1,0 +1,4241 @@
+{
+  "engine": "chromium",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "sealed pair continues actual file transfers after the invitation deadline",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "rejection preserves pending queue; manual retry uses fresh ID and explicit consent; next offer waits for Blob saving",
+    "storage quota failure reports cancellation without closing the direct channel",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "native streamed file 1073741824 bytes with independent disk SHA-256",
+    "real WebSocket peer rebuild resumes 8 MiB native OPFS sink after fresh matching safety codes and SHA-256 prefix check",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P",
+    "real delayed discovery: earlier SDP/ICE buffered until authorized peer appears",
+    "local diagnostic download records selected path without identities, invitation, tokens or file metadata"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "profiles": "two persistent profiles (disk-backed OPFS)",
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 4
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 2
+    }
+  ],
+  "storageBefore": {
+    "quota": 10738055479,
+    "usage": 637239,
+    "usageDetails": {
+      "caches": 635136,
+      "fileSystem": 184,
+      "serviceWorkerRegistrations": 1919
+    }
+  },
+  "resourceObservations": {
+    "0": {
+      "sender": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 1,
+          "count": 1,
+          "limitReached": false,
+          "elapsedMs": 97
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 7327824,
+              "peak": 7327824,
+              "last": 7327824
+            },
+            "totalSize": {
+              "first": 15888384,
+              "peak": 15888384,
+              "last": 15888384
+            },
+            "embedderHeapUsedSize": {
+              "first": 7706256,
+              "peak": 7706256,
+              "last": 7706256
+            },
+            "backingStorageSize": {
+              "first": 1934362,
+              "peak": 1934362,
+              "last": 1934362
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.000057,
+              "peak": 0.000057,
+              "last": 0.000057,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 9,
+            "heap": {
+              "usedSize": 7327824,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 7706256,
+              "backingStorageSize": 1934362
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000057
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "receiver": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 1,
+          "count": 1,
+          "limitReached": false,
+          "elapsedMs": 97
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 4192516,
+              "peak": 4192516,
+              "last": 4192516
+            },
+            "totalSize": {
+              "first": 6168576,
+              "peak": 6168576,
+              "last": 6168576
+            },
+            "embedderHeapUsedSize": {
+              "first": 4320544,
+              "peak": 4320544,
+              "last": 4320544
+            },
+            "backingStorageSize": {
+              "first": 552090,
+              "peak": 552090,
+              "last": 552090
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.000069,
+              "peak": 0.000069,
+              "last": 0.000069,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0,
+              "last": 0,
+              "counterResetObserved": false,
+              "delta": null
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 9,
+            "heap": {
+              "usedSize": 4192516,
+              "totalSize": 6168576,
+              "embedderHeapUsedSize": 4320544,
+              "backingStorageSize": 552090
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000069
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "window": "before automated file selection/consent until verified complete; excludes subsequent independent disk rehash"
+    },
+    "104857600": {
+      "sender": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 11,
+          "count": 11,
+          "limitReached": false,
+          "elapsedMs": 10926
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 7411144,
+              "peak": 8786352,
+              "last": 3578176
+            },
+            "totalSize": {
+              "first": 15888384,
+              "peak": 15888384,
+              "last": 5558272
+            },
+            "embedderHeapUsedSize": {
+              "first": 7927400,
+              "peak": 9664288,
+              "last": 2750288
+            },
+            "backingStorageSize": {
+              "first": 1934966,
+              "peak": 44166678,
+              "last": 4049257
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.000096,
+              "peak": 5.246928,
+              "last": 5.246928,
+              "counterResetObserved": false,
+              "delta": 5.2468319999999995
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0.025246,
+              "last": 0.025246,
+              "counterResetObserved": false,
+              "delta": 0.025246
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0.021907,
+              "last": 0.021907,
+              "counterResetObserved": false,
+              "delta": 0.021907
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0.005039,
+              "last": 0.005039,
+              "counterResetObserved": false,
+              "delta": 0.005039
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 63,
+            "heap": {
+              "usedSize": 7411144,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 7927400,
+              "backingStorageSize": 1934966
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000096
+            }
+          },
+          {
+            "atMs": 1067,
+            "heap": {
+              "usedSize": 7752872,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 8215568,
+              "backingStorageSize": 8607509
+            },
+            "performance": {
+              "LayoutDuration": 0.003142,
+              "RecalcStyleDuration": 0.000763,
+              "ScriptDuration": 0.004183,
+              "TaskDuration": 0.623585
+            }
+          },
+          {
+            "atMs": 2068,
+            "heap": {
+              "usedSize": 8135796,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 8691872,
+              "backingStorageSize": 18722536
+            },
+            "performance": {
+              "LayoutDuration": 0.004863,
+              "RecalcStyleDuration": 0.001113,
+              "ScriptDuration": 0.005979,
+              "TaskDuration": 1.132986
+            }
+          },
+          {
+            "atMs": 3070,
+            "heap": {
+              "usedSize": 8474972,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 9249032,
+              "backingStorageSize": 28821198
+            },
+            "performance": {
+              "LayoutDuration": 0.007487,
+              "RecalcStyleDuration": 0.001765,
+              "ScriptDuration": 0.008745,
+              "TaskDuration": 1.648203
+            }
+          },
+          {
+            "atMs": 4073,
+            "heap": {
+              "usedSize": 8786352,
+              "totalSize": 15888384,
+              "embedderHeapUsedSize": 9664288,
+              "backingStorageSize": 39051015
+            },
+            "performance": {
+              "LayoutDuration": 0.009466,
+              "RecalcStyleDuration": 0.002232,
+              "ScriptDuration": 0.010814,
+              "TaskDuration": 2.15902
+            }
+          },
+          {
+            "atMs": 5075,
+            "heap": {
+              "usedSize": 3615732,
+              "totalSize": 11325440,
+              "embedderHeapUsedSize": 2894800,
+              "backingStorageSize": 3640770
+            },
+            "performance": {
+              "LayoutDuration": 0.012165,
+              "RecalcStyleDuration": 0.002829,
+              "ScriptDuration": 0.012956,
+              "TaskDuration": 2.69595
+            }
+          },
+          {
+            "atMs": 6078,
+            "heap": {
+              "usedSize": 3917512,
+              "totalSize": 11325440,
+              "embedderHeapUsedSize": 3233792,
+              "backingStorageSize": 13559132
+            },
+            "performance": {
+              "LayoutDuration": 0.013884,
+              "RecalcStyleDuration": 0.003235,
+              "ScriptDuration": 0.015388,
+              "TaskDuration": 3.195951
+            }
+          },
+          {
+            "atMs": 7080,
+            "heap": {
+              "usedSize": 4236464,
+              "totalSize": 11325440,
+              "embedderHeapUsedSize": 3768728,
+              "backingStorageSize": 23887351
+            },
+            "performance": {
+              "LayoutDuration": 0.015415,
+              "RecalcStyleDuration": 0.003601,
+              "ScriptDuration": 0.017625,
+              "TaskDuration": 3.699599
+            }
+          },
+          {
+            "atMs": 8083,
+            "heap": {
+              "usedSize": 4544456,
+              "totalSize": 11325440,
+              "embedderHeapUsedSize": 4222896,
+              "backingStorageSize": 34018781
+            },
+            "performance": {
+              "LayoutDuration": 0.01746,
+              "RecalcStyleDuration": 0.004028,
+              "ScriptDuration": 0.019805,
+              "TaskDuration": 4.199542
+            }
+          },
+          {
+            "atMs": 9085,
+            "heap": {
+              "usedSize": 4861448,
+              "totalSize": 11325440,
+              "embedderHeapUsedSize": 4693856,
+              "backingStorageSize": 44166678
+            },
+            "performance": {
+              "LayoutDuration": 0.019629,
+              "RecalcStyleDuration": 0.004519,
+              "ScriptDuration": 0.023134,
+              "TaskDuration": 4.705703
+            }
+          },
+          {
+            "atMs": 10087,
+            "heap": {
+              "usedSize": 3578176,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 2750288,
+              "backingStorageSize": 4049257
+            },
+            "performance": {
+              "LayoutDuration": 0.021907,
+              "RecalcStyleDuration": 0.005039,
+              "ScriptDuration": 0.025246,
+              "TaskDuration": 5.246928
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "receiver": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 11,
+          "count": 11,
+          "limitReached": false,
+          "elapsedMs": 10932
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 4326544,
+              "peak": 6084268,
+              "last": 3372648
+            },
+            "totalSize": {
+              "first": 6430720,
+              "peak": 10362880,
+              "last": 9314304
+            },
+            "embedderHeapUsedSize": {
+              "first": 4595336,
+              "peak": 6121680,
+              "last": 2440488
+            },
+            "backingStorageSize": {
+              "first": 552709,
+              "peak": 16749634,
+              "last": 2225717
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.00007,
+              "peak": 3.609453,
+              "last": 3.609453,
+              "counterResetObserved": false,
+              "delta": 3.609383
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0.050513,
+              "last": 0.050513,
+              "counterResetObserved": false,
+              "delta": 0.050513
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0.023972,
+              "last": 0.023972,
+              "counterResetObserved": false,
+              "delta": 0.023972
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0.006133,
+              "last": 0.006133,
+              "counterResetObserved": false,
+              "delta": 0.006133
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 6,
+            "heap": {
+              "usedSize": 4326544,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 4595336,
+              "backingStorageSize": 552709
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.00007
+            }
+          },
+          {
+            "atMs": 1010,
+            "heap": {
+              "usedSize": 3787956,
+              "totalSize": 8265728,
+              "embedderHeapUsedSize": 5289288,
+              "backingStorageSize": 6683846
+            },
+            "performance": {
+              "LayoutDuration": 0.004556,
+              "RecalcStyleDuration": 0.001579,
+              "ScriptDuration": 0.006036,
+              "TaskDuration": 0.318401
+            }
+          },
+          {
+            "atMs": 2015,
+            "heap": {
+              "usedSize": 4222612,
+              "totalSize": 8527872,
+              "embedderHeapUsedSize": 6121680,
+              "backingStorageSize": 16749634
+            },
+            "performance": {
+              "LayoutDuration": 0.006959,
+              "RecalcStyleDuration": 0.002177,
+              "ScriptDuration": 0.010996,
+              "TaskDuration": 0.681741
+            }
+          },
+          {
+            "atMs": 3019,
+            "heap": {
+              "usedSize": 3011312,
+              "totalSize": 8790016,
+              "embedderHeapUsedSize": 2546224,
+              "backingStorageSize": 981046
+            },
+            "performance": {
+              "LayoutDuration": 0.009603,
+              "RecalcStyleDuration": 0.002694,
+              "ScriptDuration": 0.016103,
+              "TaskDuration": 1.073846
+            }
+          },
+          {
+            "atMs": 4023,
+            "heap": {
+              "usedSize": 6084268,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 3267240,
+              "backingStorageSize": 11341935
+            },
+            "performance": {
+              "LayoutDuration": 0.011345,
+              "RecalcStyleDuration": 0.003176,
+              "ScriptDuration": 0.021186,
+              "TaskDuration": 1.445199
+            }
+          },
+          {
+            "atMs": 5025,
+            "heap": {
+              "usedSize": 5512408,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 3065760,
+              "backingStorageSize": 9489430
+            },
+            "performance": {
+              "LayoutDuration": 0.013136,
+              "RecalcStyleDuration": 0.003657,
+              "ScriptDuration": 0.025738,
+              "TaskDuration": 1.798522
+            }
+          },
+          {
+            "atMs": 6030,
+            "heap": {
+              "usedSize": 5073136,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 2980656,
+              "backingStorageSize": 7996383
+            },
+            "performance": {
+              "LayoutDuration": 0.015373,
+              "RecalcStyleDuration": 0.004074,
+              "ScriptDuration": 0.030777,
+              "TaskDuration": 2.15307
+            }
+          },
+          {
+            "atMs": 7031,
+            "heap": {
+              "usedSize": 4744948,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 2914528,
+              "backingStorageSize": 6882958
+            },
+            "performance": {
+              "LayoutDuration": 0.017859,
+              "RecalcStyleDuration": 0.004756,
+              "ScriptDuration": 0.03623,
+              "TaskDuration": 2.526768
+            }
+          },
+          {
+            "atMs": 8034,
+            "heap": {
+              "usedSize": 4347712,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 2707688,
+              "backingStorageSize": 5586345
+            },
+            "performance": {
+              "LayoutDuration": 0.019701,
+              "RecalcStyleDuration": 0.005189,
+              "ScriptDuration": 0.041225,
+              "TaskDuration": 2.896657
+            }
+          },
+          {
+            "atMs": 9037,
+            "heap": {
+              "usedSize": 3952612,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 2639920,
+              "backingStorageSize": 4177834
+            },
+            "performance": {
+              "LayoutDuration": 0.022054,
+              "RecalcStyleDuration": 0.005673,
+              "ScriptDuration": 0.046057,
+              "TaskDuration": 3.258797
+            }
+          },
+          {
+            "atMs": 10040,
+            "heap": {
+              "usedSize": 3372648,
+              "totalSize": 9314304,
+              "embedderHeapUsedSize": 2440488,
+              "backingStorageSize": 2225717
+            },
+            "performance": {
+              "LayoutDuration": 0.023972,
+              "RecalcStyleDuration": 0.006133,
+              "ScriptDuration": 0.050513,
+              "TaskDuration": 3.609453
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "window": "before automated file selection/consent until verified complete; excludes subsequent independent disk rehash"
+    },
+    "1073741824": {
+      "sender": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 108,
+          "count": 108,
+          "limitReached": false,
+          "elapsedMs": 108126
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 3869880,
+              "peak": 4404744,
+              "last": 4384128
+            },
+            "totalSize": {
+              "first": 5558272,
+              "peak": 6082560,
+              "last": 5820416
+            },
+            "embedderHeapUsedSize": {
+              "first": 3200432,
+              "peak": 3831608,
+              "last": 3729096
+            },
+            "backingStorageSize": {
+              "first": 12215271,
+              "peak": 28428979,
+              "last": 27855035
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.000058,
+              "peak": 54.325843,
+              "last": 54.325843,
+              "counterResetObserved": false,
+              "delta": 54.325784999999996
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0.216111,
+              "last": 0.216111,
+              "counterResetObserved": false,
+              "delta": 0.216111
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0.220173,
+              "last": 0.220173,
+              "counterResetObserved": false,
+              "delta": 0.220173
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0.050299,
+              "last": 0.050299,
+              "counterResetObserved": false,
+              "delta": 0.050299
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 4,
+            "heap": {
+              "usedSize": 3869880,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3200432,
+              "backingStorageSize": 12215271
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000058
+            }
+          },
+          {
+            "atMs": 1006,
+            "heap": {
+              "usedSize": 4225816,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3680496,
+              "backingStorageSize": 21461695
+            },
+            "performance": {
+              "LayoutDuration": 0.002512,
+              "RecalcStyleDuration": 0.000611,
+              "ScriptDuration": 0.002587,
+              "TaskDuration": 0.478053
+            }
+          },
+          {
+            "atMs": 2010,
+            "heap": {
+              "usedSize": 3661208,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2916960,
+              "backingStorageSize": 6657232
+            },
+            "performance": {
+              "LayoutDuration": 0.005044,
+              "RecalcStyleDuration": 0.001168,
+              "ScriptDuration": 0.005023,
+              "TaskDuration": 0.995545
+            }
+          },
+          {
+            "atMs": 3014,
+            "heap": {
+              "usedSize": 3996944,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3242048,
+              "backingStorageSize": 16706825
+            },
+            "performance": {
+              "LayoutDuration": 0.006859,
+              "RecalcStyleDuration": 0.001611,
+              "ScriptDuration": 0.006995,
+              "TaskDuration": 1.490533
+            }
+          },
+          {
+            "atMs": 4018,
+            "heap": {
+              "usedSize": 4316160,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3789904,
+              "backingStorageSize": 26887429
+            },
+            "performance": {
+              "LayoutDuration": 0.009174,
+              "RecalcStyleDuration": 0.002195,
+              "ScriptDuration": 0.009149,
+              "TaskDuration": 1.98876
+            }
+          },
+          {
+            "atMs": 5023,
+            "heap": {
+              "usedSize": 3766056,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2943504,
+              "backingStorageSize": 9639680
+            },
+            "performance": {
+              "LayoutDuration": 0.011116,
+              "RecalcStyleDuration": 0.002571,
+              "ScriptDuration": 0.011279,
+              "TaskDuration": 2.509493
+            }
+          },
+          {
+            "atMs": 6027,
+            "heap": {
+              "usedSize": 4091480,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3467712,
+              "backingStorageSize": 19788925
+            },
+            "performance": {
+              "LayoutDuration": 0.01327,
+              "RecalcStyleDuration": 0.00303,
+              "ScriptDuration": 0.013006,
+              "TaskDuration": 3.0074
+            }
+          },
+          {
+            "atMs": 7031,
+            "heap": {
+              "usedSize": 3523644,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2780304,
+              "backingStorageSize": 1770590
+            },
+            "performance": {
+              "LayoutDuration": 0.015338,
+              "RecalcStyleDuration": 0.003528,
+              "ScriptDuration": 0.015132,
+              "TaskDuration": 3.512141
+            }
+          },
+          {
+            "atMs": 8034,
+            "heap": {
+              "usedSize": 3855244,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3027936,
+              "backingStorageSize": 12034523
+            },
+            "performance": {
+              "LayoutDuration": 0.017456,
+              "RecalcStyleDuration": 0.004011,
+              "ScriptDuration": 0.016885,
+              "TaskDuration": 4.02776
+            }
+          },
+          {
+            "atMs": 9039,
+            "heap": {
+              "usedSize": 4164396,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3460448,
+              "backingStorageSize": 22166051
+            },
+            "performance": {
+              "LayoutDuration": 0.019574,
+              "RecalcStyleDuration": 0.004577,
+              "ScriptDuration": 0.018886,
+              "TaskDuration": 4.526517
+            }
+          },
+          {
+            "atMs": 10044,
+            "heap": {
+              "usedSize": 3629160,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 2748496,
+              "backingStorageSize": 4690122
+            },
+            "performance": {
+              "LayoutDuration": 0.021817,
+              "RecalcStyleDuration": 0.005068,
+              "ScriptDuration": 0.020706,
+              "TaskDuration": 5.049436
+            }
+          },
+          {
+            "atMs": 11047,
+            "heap": {
+              "usedSize": 3940216,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3097328,
+              "backingStorageSize": 14739700
+            },
+            "performance": {
+              "LayoutDuration": 0.02381,
+              "RecalcStyleDuration": 0.005523,
+              "ScriptDuration": 0.022742,
+              "TaskDuration": 5.551058
+            }
+          },
+          {
+            "atMs": 12052,
+            "heap": {
+              "usedSize": 4242264,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3653208,
+              "backingStorageSize": 24510521
+            },
+            "performance": {
+              "LayoutDuration": 0.026272,
+              "RecalcStyleDuration": 0.006008,
+              "ScriptDuration": 0.024706,
+              "TaskDuration": 6.053406
+            }
+          },
+          {
+            "atMs": 13057,
+            "heap": {
+              "usedSize": 3691840,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2766160,
+              "backingStorageSize": 7229851
+            },
+            "performance": {
+              "LayoutDuration": 0.028529,
+              "RecalcStyleDuration": 0.006492,
+              "ScriptDuration": 0.026757,
+              "TaskDuration": 6.569173
+            }
+          },
+          {
+            "atMs": 14060,
+            "heap": {
+              "usedSize": 4026840,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3203456,
+              "backingStorageSize": 17543029
+            },
+            "performance": {
+              "LayoutDuration": 0.030657,
+              "RecalcStyleDuration": 0.006978,
+              "ScriptDuration": 0.028822,
+              "TaskDuration": 7.07282
+            }
+          },
+          {
+            "atMs": 15063,
+            "heap": {
+              "usedSize": 4340312,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3712944,
+              "backingStorageSize": 27903996
+            },
+            "performance": {
+              "LayoutDuration": 0.032933,
+              "RecalcStyleDuration": 0.00746,
+              "ScriptDuration": 0.03094,
+              "TaskDuration": 7.589322
+            }
+          },
+          {
+            "atMs": 16068,
+            "heap": {
+              "usedSize": 3810140,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2856720,
+              "backingStorageSize": 10378859
+            },
+            "performance": {
+              "LayoutDuration": 0.034856,
+              "RecalcStyleDuration": 0.007877,
+              "ScriptDuration": 0.033234,
+              "TaskDuration": 8.105776
+            }
+          },
+          {
+            "atMs": 17072,
+            "heap": {
+              "usedSize": 4122384,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3422624,
+              "backingStorageSize": 20657906
+            },
+            "performance": {
+              "LayoutDuration": 0.036758,
+              "RecalcStyleDuration": 0.008269,
+              "ScriptDuration": 0.035064,
+              "TaskDuration": 8.612614
+            }
+          },
+          {
+            "atMs": 18075,
+            "heap": {
+              "usedSize": 3588712,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2715296,
+              "backingStorageSize": 3280240
+            },
+            "performance": {
+              "LayoutDuration": 0.03881,
+              "RecalcStyleDuration": 0.008751,
+              "ScriptDuration": 0.037118,
+              "TaskDuration": 9.135811
+            }
+          },
+          {
+            "atMs": 19078,
+            "heap": {
+              "usedSize": 3913916,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3079304,
+              "backingStorageSize": 13411846
+            },
+            "performance": {
+              "LayoutDuration": 0.040681,
+              "RecalcStyleDuration": 0.009185,
+              "ScriptDuration": 0.038876,
+              "TaskDuration": 9.642115
+            }
+          },
+          {
+            "atMs": 20082,
+            "heap": {
+              "usedSize": 4219980,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3585704,
+              "backingStorageSize": 23608973
+            },
+            "performance": {
+              "LayoutDuration": 0.042574,
+              "RecalcStyleDuration": 0.009628,
+              "ScriptDuration": 0.040684,
+              "TaskDuration": 10.147261
+            }
+          },
+          {
+            "atMs": 21085,
+            "heap": {
+              "usedSize": 3660612,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2757472,
+              "backingStorageSize": 5901942
+            },
+            "performance": {
+              "LayoutDuration": 0.044424,
+              "RecalcStyleDuration": 0.010046,
+              "ScriptDuration": 0.042673,
+              "TaskDuration": 10.663996
+            }
+          },
+          {
+            "atMs": 22089,
+            "heap": {
+              "usedSize": 3981972,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3164680,
+              "backingStorageSize": 16034881
+            },
+            "performance": {
+              "LayoutDuration": 0.046646,
+              "RecalcStyleDuration": 0.010543,
+              "ScriptDuration": 0.045348,
+              "TaskDuration": 11.166172
+            }
+          },
+          {
+            "atMs": 23093,
+            "heap": {
+              "usedSize": 4285820,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3628056,
+              "backingStorageSize": 26297544
+            },
+            "performance": {
+              "LayoutDuration": 0.048144,
+              "RecalcStyleDuration": 0.010907,
+              "ScriptDuration": 0.04709,
+              "TaskDuration": 11.677131
+            }
+          },
+          {
+            "atMs": 24098,
+            "heap": {
+              "usedSize": 3733252,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2816224,
+              "backingStorageSize": 7755824
+            },
+            "performance": {
+              "LayoutDuration": 0.050127,
+              "RecalcStyleDuration": 0.011449,
+              "ScriptDuration": 0.049481,
+              "TaskDuration": 12.195364
+            }
+          },
+          {
+            "atMs": 25102,
+            "heap": {
+              "usedSize": 4035128,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3287608,
+              "backingStorageSize": 17805495
+            },
+            "performance": {
+              "LayoutDuration": 0.051705,
+              "RecalcStyleDuration": 0.011822,
+              "ScriptDuration": 0.051132,
+              "TaskDuration": 12.705424
+            }
+          },
+          {
+            "atMs": 26107,
+            "heap": {
+              "usedSize": 4336580,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3770672,
+              "backingStorageSize": 27740240
+            },
+            "performance": {
+              "LayoutDuration": 0.053929,
+              "RecalcStyleDuration": 0.012303,
+              "ScriptDuration": 0.053027,
+              "TaskDuration": 13.203778
+            }
+          },
+          {
+            "atMs": 27111,
+            "heap": {
+              "usedSize": 3773320,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2807880,
+              "backingStorageSize": 9574051
+            },
+            "performance": {
+              "LayoutDuration": 0.05546,
+              "RecalcStyleDuration": 0.012712,
+              "ScriptDuration": 0.055,
+              "TaskDuration": 13.709066
+            }
+          },
+          {
+            "atMs": 28114,
+            "heap": {
+              "usedSize": 4086096,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3399512,
+              "backingStorageSize": 19559457
+            },
+            "performance": {
+              "LayoutDuration": 0.05775,
+              "RecalcStyleDuration": 0.013205,
+              "ScriptDuration": 0.057492,
+              "TaskDuration": 14.219355
+            }
+          },
+          {
+            "atMs": 29117,
+            "heap": {
+              "usedSize": 3522916,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2495880,
+              "backingStorageSize": 1229604
+            },
+            "performance": {
+              "LayoutDuration": 0.059417,
+              "RecalcStyleDuration": 0.013579,
+              "ScriptDuration": 0.058864,
+              "TaskDuration": 14.726913
+            }
+          },
+          {
+            "atMs": 30119,
+            "heap": {
+              "usedSize": 3836684,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2902392,
+              "backingStorageSize": 11149229
+            },
+            "performance": {
+              "LayoutDuration": 0.061733,
+              "RecalcStyleDuration": 0.014086,
+              "ScriptDuration": 0.061637,
+              "TaskDuration": 15.232973
+            }
+          },
+          {
+            "atMs": 31122,
+            "heap": {
+              "usedSize": 4129316,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3405600,
+              "backingStorageSize": 20985747
+            },
+            "performance": {
+              "LayoutDuration": 0.063459,
+              "RecalcStyleDuration": 0.014492,
+              "ScriptDuration": 0.063653,
+              "TaskDuration": 15.729041
+            }
+          },
+          {
+            "atMs": 32123,
+            "heap": {
+              "usedSize": 3577436,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 2671936,
+              "backingStorageSize": 2476857
+            },
+            "performance": {
+              "LayoutDuration": 0.06611,
+              "RecalcStyleDuration": 0.015022,
+              "ScriptDuration": 0.065531,
+              "TaskDuration": 16.255937
+            }
+          },
+          {
+            "atMs": 33127,
+            "heap": {
+              "usedSize": 3875224,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3089520,
+              "backingStorageSize": 12411679
+            },
+            "performance": {
+              "LayoutDuration": 0.067689,
+              "RecalcStyleDuration": 0.015384,
+              "ScriptDuration": 0.067258,
+              "TaskDuration": 16.765247
+            }
+          },
+          {
+            "atMs": 34131,
+            "heap": {
+              "usedSize": 4167084,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3405208,
+              "backingStorageSize": 22067827
+            },
+            "performance": {
+              "LayoutDuration": 0.070457,
+              "RecalcStyleDuration": 0.015887,
+              "ScriptDuration": 0.069063,
+              "TaskDuration": 17.251913
+            }
+          },
+          {
+            "atMs": 35134,
+            "heap": {
+              "usedSize": 3606512,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2790304,
+              "backingStorageSize": 3967342
+            },
+            "performance": {
+              "LayoutDuration": 0.072217,
+              "RecalcStyleDuration": 0.016293,
+              "ScriptDuration": 0.070984,
+              "TaskDuration": 17.781325
+            }
+          },
+          {
+            "atMs": 36136,
+            "heap": {
+              "usedSize": 3919192,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3084192,
+              "backingStorageSize": 13788824
+            },
+            "performance": {
+              "LayoutDuration": 0.074105,
+              "RecalcStyleDuration": 0.016715,
+              "ScriptDuration": 0.073785,
+              "TaskDuration": 18.275724
+            }
+          },
+          {
+            "atMs": 37141,
+            "heap": {
+              "usedSize": 4225088,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3599952,
+              "backingStorageSize": 24067871
+            },
+            "performance": {
+              "LayoutDuration": 0.076063,
+              "RecalcStyleDuration": 0.017191,
+              "ScriptDuration": 0.075909,
+              "TaskDuration": 18.788146
+            }
+          },
+          {
+            "atMs": 38145,
+            "heap": {
+              "usedSize": 3676876,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2677840,
+              "backingStorageSize": 5804825
+            },
+            "performance": {
+              "LayoutDuration": 0.078454,
+              "RecalcStyleDuration": 0.017725,
+              "ScriptDuration": 0.077547,
+              "TaskDuration": 19.307822
+            }
+          },
+          {
+            "atMs": 39148,
+            "heap": {
+              "usedSize": 3981120,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3109904,
+              "backingStorageSize": 15903663
+            },
+            "performance": {
+              "LayoutDuration": 0.080486,
+              "RecalcStyleDuration": 0.018202,
+              "ScriptDuration": 0.079644,
+              "TaskDuration": 19.806994
+            }
+          },
+          {
+            "atMs": 40152,
+            "heap": {
+              "usedSize": 4288140,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3579696,
+              "backingStorageSize": 26100790
+            },
+            "performance": {
+              "LayoutDuration": 0.082816,
+              "RecalcStyleDuration": 0.018674,
+              "ScriptDuration": 0.081559,
+              "TaskDuration": 20.312537
+            }
+          },
+          {
+            "atMs": 41157,
+            "heap": {
+              "usedSize": 3721028,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2875792,
+              "backingStorageSize": 7770845
+            },
+            "performance": {
+              "LayoutDuration": 0.084706,
+              "RecalcStyleDuration": 0.019155,
+              "ScriptDuration": 0.084067,
+              "TaskDuration": 20.814709
+            }
+          },
+          {
+            "atMs": 42160,
+            "heap": {
+              "usedSize": 4042584,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3405264,
+              "backingStorageSize": 17969320
+            },
+            "performance": {
+              "LayoutDuration": 0.086798,
+              "RecalcStyleDuration": 0.019592,
+              "ScriptDuration": 0.085983,
+              "TaskDuration": 21.323929
+            }
+          },
+          {
+            "atMs": 43173,
+            "heap": {
+              "usedSize": 3511028,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2408576,
+              "backingStorageSize": 704994
+            },
+            "performance": {
+              "LayoutDuration": 0.088566,
+              "RecalcStyleDuration": 0.020101,
+              "ScriptDuration": 0.088234,
+              "TaskDuration": 21.846897
+            }
+          },
+          {
+            "atMs": 44175,
+            "heap": {
+              "usedSize": 3882880,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2905648,
+              "backingStorageSize": 10821403
+            },
+            "performance": {
+              "LayoutDuration": 0.091221,
+              "RecalcStyleDuration": 0.020622,
+              "ScriptDuration": 0.090588,
+              "TaskDuration": 22.355143
+            }
+          },
+          {
+            "atMs": 45177,
+            "heap": {
+              "usedSize": 4243520,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3505928,
+              "backingStorageSize": 20952994
+            },
+            "performance": {
+              "LayoutDuration": 0.092969,
+              "RecalcStyleDuration": 0.021025,
+              "ScriptDuration": 0.092282,
+              "TaskDuration": 22.863786
+            }
+          },
+          {
+            "atMs": 46180,
+            "heap": {
+              "usedSize": 3747984,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2768016,
+              "backingStorageSize": 6837661
+            },
+            "performance": {
+              "LayoutDuration": 0.095549,
+              "RecalcStyleDuration": 0.02151,
+              "ScriptDuration": 0.094527,
+              "TaskDuration": 23.383072
+            }
+          },
+          {
+            "atMs": 47183,
+            "heap": {
+              "usedSize": 4110984,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3126152,
+              "backingStorageSize": 17198789
+            },
+            "performance": {
+              "LayoutDuration": 0.097229,
+              "RecalcStyleDuration": 0.021867,
+              "ScriptDuration": 0.096507,
+              "TaskDuration": 23.887886
+            }
+          },
+          {
+            "atMs": 48185,
+            "heap": {
+              "usedSize": 3616516,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2575688,
+              "backingStorageSize": 3001467
+            },
+            "performance": {
+              "LayoutDuration": 0.099698,
+              "RecalcStyleDuration": 0.022375,
+              "ScriptDuration": 0.098406,
+              "TaskDuration": 24.408261
+            }
+          },
+          {
+            "atMs": 49188,
+            "heap": {
+              "usedSize": 3975748,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3055792,
+              "backingStorageSize": 13198609
+            },
+            "performance": {
+              "LayoutDuration": 0.101851,
+              "RecalcStyleDuration": 0.022875,
+              "ScriptDuration": 0.100414,
+              "TaskDuration": 24.910469
+            }
+          },
+          {
+            "atMs": 50191,
+            "heap": {
+              "usedSize": 4326948,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3587384,
+              "backingStorageSize": 23231819
+            },
+            "performance": {
+              "LayoutDuration": 0.104197,
+              "RecalcStyleDuration": 0.023448,
+              "ScriptDuration": 0.102615,
+              "TaskDuration": 25.410283
+            }
+          },
+          {
+            "atMs": 51194,
+            "heap": {
+              "usedSize": 3815772,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2879072,
+              "backingStorageSize": 9115138
+            },
+            "performance": {
+              "LayoutDuration": 0.106031,
+              "RecalcStyleDuration": 0.023875,
+              "ScriptDuration": 0.104441,
+              "TaskDuration": 25.922643
+            }
+          },
+          {
+            "atMs": 52197,
+            "heap": {
+              "usedSize": 4181192,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3431744,
+              "backingStorageSize": 19231532
+            },
+            "performance": {
+              "LayoutDuration": 0.108147,
+              "RecalcStyleDuration": 0.02439,
+              "ScriptDuration": 0.10681,
+              "TaskDuration": 26.427013
+            }
+          },
+          {
+            "atMs": 53198,
+            "heap": {
+              "usedSize": 3664256,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 2712152,
+              "backingStorageSize": 4836338
+            },
+            "performance": {
+              "LayoutDuration": 0.10976,
+              "RecalcStyleDuration": 0.024791,
+              "ScriptDuration": 0.108559,
+              "TaskDuration": 26.939654
+            }
+          },
+          {
+            "atMs": 54200,
+            "heap": {
+              "usedSize": 4034776,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3120752,
+              "backingStorageSize": 14920140
+            },
+            "performance": {
+              "LayoutDuration": 0.112313,
+              "RecalcStyleDuration": 0.025356,
+              "ScriptDuration": 0.11057,
+              "TaskDuration": 27.44289
+            }
+          },
+          {
+            "atMs": 55201,
+            "heap": {
+              "usedSize": 3527756,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2466504,
+              "backingStorageSize": 885379
+            },
+            "performance": {
+              "LayoutDuration": 0.114382,
+              "RecalcStyleDuration": 0.025833,
+              "ScriptDuration": 0.112704,
+              "TaskDuration": 27.965748
+            }
+          },
+          {
+            "atMs": 56204,
+            "heap": {
+              "usedSize": 3895160,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2948248,
+              "backingStorageSize": 10919853
+            },
+            "performance": {
+              "LayoutDuration": 0.11664,
+              "RecalcStyleDuration": 0.026384,
+              "ScriptDuration": 0.114629,
+              "TaskDuration": 28.456567
+            }
+          },
+          {
+            "atMs": 57208,
+            "heap": {
+              "usedSize": 4238980,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3377568,
+              "backingStorageSize": 20854675
+            },
+            "performance": {
+              "LayoutDuration": 0.118185,
+              "RecalcStyleDuration": 0.026753,
+              "ScriptDuration": 0.116275,
+              "TaskDuration": 28.946942
+            }
+          },
+          {
+            "atMs": 58211,
+            "heap": {
+              "usedSize": 3744660,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2664896,
+              "backingStorageSize": 6673821
+            },
+            "performance": {
+              "LayoutDuration": 0.120452,
+              "RecalcStyleDuration": 0.027292,
+              "ScriptDuration": 0.118417,
+              "TaskDuration": 29.464322
+            }
+          },
+          {
+            "atMs": 59214,
+            "heap": {
+              "usedSize": 4103664,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3257296,
+              "backingStorageSize": 16936499
+            },
+            "performance": {
+              "LayoutDuration": 0.122155,
+              "RecalcStyleDuration": 0.027718,
+              "ScriptDuration": 0.12022,
+              "TaskDuration": 29.964484
+            }
+          },
+          {
+            "atMs": 60217,
+            "heap": {
+              "usedSize": 3604072,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2620512,
+              "backingStorageSize": 2624397
+            },
+            "performance": {
+              "LayoutDuration": 0.124474,
+              "RecalcStyleDuration": 0.028236,
+              "ScriptDuration": 0.122446,
+              "TaskDuration": 30.480654
+            }
+          },
+          {
+            "atMs": 61222,
+            "heap": {
+              "usedSize": 3955664,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3031176,
+              "backingStorageSize": 12575603
+            },
+            "performance": {
+              "LayoutDuration": 0.126382,
+              "RecalcStyleDuration": 0.028707,
+              "ScriptDuration": 0.124574,
+              "TaskDuration": 30.971057
+            }
+          },
+          {
+            "atMs": 62225,
+            "heap": {
+              "usedSize": 4309972,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3444736,
+              "backingStorageSize": 22674426
+            },
+            "performance": {
+              "LayoutDuration": 0.128434,
+              "RecalcStyleDuration": 0.029137,
+              "ScriptDuration": 0.126514,
+              "TaskDuration": 31.46783
+            }
+          },
+          {
+            "atMs": 63228,
+            "heap": {
+              "usedSize": 3799656,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2870768,
+              "backingStorageSize": 8705377
+            },
+            "performance": {
+              "LayoutDuration": 0.130246,
+              "RecalcStyleDuration": 0.029525,
+              "ScriptDuration": 0.128407,
+              "TaskDuration": 31.980493
+            }
+          },
+          {
+            "atMs": 64231,
+            "heap": {
+              "usedSize": 4165508,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3354960,
+              "backingStorageSize": 18690714
+            },
+            "performance": {
+              "LayoutDuration": 0.132813,
+              "RecalcStyleDuration": 0.03005,
+              "ScriptDuration": 0.130233,
+              "TaskDuration": 32.481485
+            }
+          },
+          {
+            "atMs": 65237,
+            "heap": {
+              "usedSize": 3655560,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2723360,
+              "backingStorageSize": 4541104
+            },
+            "performance": {
+              "LayoutDuration": 0.134995,
+              "RecalcStyleDuration": 0.030521,
+              "ScriptDuration": 0.132568,
+              "TaskDuration": 33.011031
+            }
+          },
+          {
+            "atMs": 66239,
+            "heap": {
+              "usedSize": 4022380,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3035888,
+              "backingStorageSize": 14559278
+            },
+            "performance": {
+              "LayoutDuration": 0.13714,
+              "RecalcStyleDuration": 0.030969,
+              "ScriptDuration": 0.1343,
+              "TaskDuration": 33.507734
+            }
+          },
+          {
+            "atMs": 67245,
+            "heap": {
+              "usedSize": 4373412,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3618048,
+              "backingStorageSize": 24739937
+            },
+            "performance": {
+              "LayoutDuration": 0.138385,
+              "RecalcStyleDuration": 0.031243,
+              "ScriptDuration": 0.135947,
+              "TaskDuration": 34.006867
+            }
+          },
+          {
+            "atMs": 68248,
+            "heap": {
+              "usedSize": 3886812,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3023808,
+              "backingStorageSize": 10592012
+            },
+            "performance": {
+              "LayoutDuration": 0.140858,
+              "RecalcStyleDuration": 0.031773,
+              "ScriptDuration": 0.137957,
+              "TaskDuration": 34.52621
+            }
+          },
+          {
+            "atMs": 69252,
+            "heap": {
+              "usedSize": 4242036,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3506088,
+              "backingStorageSize": 20871074
+            },
+            "performance": {
+              "LayoutDuration": 0.142728,
+              "RecalcStyleDuration": 0.032238,
+              "ScriptDuration": 0.139722,
+              "TaskDuration": 35.032585
+            }
+          },
+          {
+            "atMs": 70256,
+            "heap": {
+              "usedSize": 3751396,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2831200,
+              "backingStorageSize": 6821277
+            },
+            "performance": {
+              "LayoutDuration": 0.14513,
+              "RecalcStyleDuration": 0.032784,
+              "ScriptDuration": 0.141786,
+              "TaskDuration": 35.551846
+            }
+          },
+          {
+            "atMs": 71260,
+            "heap": {
+              "usedSize": 4101076,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3270712,
+              "backingStorageSize": 16805251
+            },
+            "performance": {
+              "LayoutDuration": 0.147272,
+              "RecalcStyleDuration": 0.033543,
+              "ScriptDuration": 0.144203,
+              "TaskDuration": 36.047311
+            }
+          },
+          {
+            "atMs": 72266,
+            "heap": {
+              "usedSize": 3598632,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2671368,
+              "backingStorageSize": 2868970
+            },
+            "performance": {
+              "LayoutDuration": 0.149629,
+              "RecalcStyleDuration": 0.034079,
+              "ScriptDuration": 0.146195,
+              "TaskDuration": 36.572864
+            }
+          },
+          {
+            "atMs": 73271,
+            "heap": {
+              "usedSize": 3959272,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2944792,
+              "backingStorageSize": 13098865
+            },
+            "performance": {
+              "LayoutDuration": 0.150903,
+              "RecalcStyleDuration": 0.034397,
+              "ScriptDuration": 0.147908,
+              "TaskDuration": 37.080686
+            }
+          },
+          {
+            "atMs": 74274,
+            "heap": {
+              "usedSize": 4324884,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3426736,
+              "backingStorageSize": 23231819
+            },
+            "performance": {
+              "LayoutDuration": 0.15288,
+              "RecalcStyleDuration": 0.034899,
+              "ScriptDuration": 0.150509,
+              "TaskDuration": 37.596157
+            }
+          },
+          {
+            "atMs": 75278,
+            "heap": {
+              "usedSize": 3823176,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 2851600,
+              "backingStorageSize": 9246210
+            },
+            "performance": {
+              "LayoutDuration": 0.154777,
+              "RecalcStyleDuration": 0.035346,
+              "ScriptDuration": 0.152764,
+              "TaskDuration": 38.110574
+            }
+          },
+          {
+            "atMs": 76281,
+            "heap": {
+              "usedSize": 4177496,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3380592,
+              "backingStorageSize": 19018463
+            },
+            "performance": {
+              "LayoutDuration": 0.157312,
+              "RecalcStyleDuration": 0.035886,
+              "ScriptDuration": 0.15446,
+              "TaskDuration": 38.596988
+            }
+          },
+          {
+            "atMs": 77285,
+            "heap": {
+              "usedSize": 3676272,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2697160,
+              "backingStorageSize": 5082259
+            },
+            "performance": {
+              "LayoutDuration": 0.159229,
+              "RecalcStyleDuration": 0.036363,
+              "ScriptDuration": 0.156088,
+              "TaskDuration": 39.118868
+            }
+          },
+          {
+            "atMs": 78290,
+            "heap": {
+              "usedSize": 4050496,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3099256,
+              "backingStorageSize": 15313502
+            },
+            "performance": {
+              "LayoutDuration": 0.161755,
+              "RecalcStyleDuration": 0.036869,
+              "ScriptDuration": 0.158426,
+              "TaskDuration": 39.627421
+            }
+          },
+          {
+            "atMs": 79292,
+            "heap": {
+              "usedSize": 3547608,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2699728,
+              "backingStorageSize": 1344376
+            },
+            "performance": {
+              "LayoutDuration": 0.163819,
+              "RecalcStyleDuration": 0.037342,
+              "ScriptDuration": 0.160405,
+              "TaskDuration": 40.146397
+            }
+          },
+          {
+            "atMs": 80297,
+            "heap": {
+              "usedSize": 3917772,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3007304,
+              "backingStorageSize": 11444463
+            },
+            "performance": {
+              "LayoutDuration": 0.165846,
+              "RecalcStyleDuration": 0.037783,
+              "ScriptDuration": 0.162455,
+              "TaskDuration": 40.644939
+            }
+          },
+          {
+            "atMs": 81303,
+            "heap": {
+              "usedSize": 4268576,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3359528,
+              "backingStorageSize": 21608822
+            },
+            "performance": {
+              "LayoutDuration": 0.167438,
+              "RecalcStyleDuration": 0.038132,
+              "ScriptDuration": 0.164282,
+              "TaskDuration": 41.146512
+            }
+          },
+          {
+            "atMs": 82310,
+            "heap": {
+              "usedSize": 3778408,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2817952,
+              "backingStorageSize": 7575424
+            },
+            "performance": {
+              "LayoutDuration": 0.16949,
+              "RecalcStyleDuration": 0.038657,
+              "ScriptDuration": 0.166132,
+              "TaskDuration": 41.673328
+            }
+          },
+          {
+            "atMs": 83314,
+            "heap": {
+              "usedSize": 4137676,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3372608,
+              "backingStorageSize": 17854471
+            },
+            "performance": {
+              "LayoutDuration": 0.171383,
+              "RecalcStyleDuration": 0.039183,
+              "ScriptDuration": 0.168168,
+              "TaskDuration": 42.183223
+            }
+          },
+          {
+            "atMs": 84318,
+            "heap": {
+              "usedSize": 3647620,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2703744,
+              "backingStorageSize": 3573980
+            },
+            "performance": {
+              "LayoutDuration": 0.173836,
+              "RecalcStyleDuration": 0.039684,
+              "ScriptDuration": 0.170165,
+              "TaskDuration": 42.706625
+            }
+          },
+          {
+            "atMs": 85321,
+            "heap": {
+              "usedSize": 3935352,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 3105128,
+              "backingStorageSize": 13508802
+            },
+            "performance": {
+              "LayoutDuration": 0.175703,
+              "RecalcStyleDuration": 0.040124,
+              "ScriptDuration": 0.172252,
+              "TaskDuration": 43.196012
+            }
+          },
+          {
+            "atMs": 86324,
+            "heap": {
+              "usedSize": 4234296,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3490384,
+              "backingStorageSize": 23576128
+            },
+            "performance": {
+              "LayoutDuration": 0.177572,
+              "RecalcStyleDuration": 0.040483,
+              "ScriptDuration": 0.174566,
+              "TaskDuration": 43.688585
+            }
+          },
+          {
+            "atMs": 87329,
+            "heap": {
+              "usedSize": 3646784,
+              "totalSize": 4771840,
+              "embedderHeapUsedSize": 2677040,
+              "backingStorageSize": 4901874
+            },
+            "performance": {
+              "LayoutDuration": 0.179451,
+              "RecalcStyleDuration": 0.040881,
+              "ScriptDuration": 0.176123,
+              "TaskDuration": 44.215793
+            }
+          },
+          {
+            "atMs": 88335,
+            "heap": {
+              "usedSize": 3959292,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3102096,
+              "backingStorageSize": 15280573
+            },
+            "performance": {
+              "LayoutDuration": 0.181595,
+              "RecalcStyleDuration": 0.041348,
+              "ScriptDuration": 0.177965,
+              "TaskDuration": 44.72449
+            }
+          },
+          {
+            "atMs": 89337,
+            "heap": {
+              "usedSize": 4242704,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3556440,
+              "backingStorageSize": 25264723
+            },
+            "performance": {
+              "LayoutDuration": 0.1835,
+              "RecalcStyleDuration": 0.041823,
+              "ScriptDuration": 0.179805,
+              "TaskDuration": 45.22334
+            }
+          },
+          {
+            "atMs": 90340,
+            "heap": {
+              "usedSize": 3747888,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2756448,
+              "backingStorageSize": 5526220
+            },
+            "performance": {
+              "LayoutDuration": 0.186066,
+              "RecalcStyleDuration": 0.042402,
+              "ScriptDuration": 0.183006,
+              "TaskDuration": 45.754188
+            }
+          },
+          {
+            "atMs": 91345,
+            "heap": {
+              "usedSize": 4038752,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3312856,
+              "backingStorageSize": 15690495
+            },
+            "performance": {
+              "LayoutDuration": 0.188475,
+              "RecalcStyleDuration": 0.042894,
+              "ScriptDuration": 0.185174,
+              "TaskDuration": 46.258746
+            }
+          },
+          {
+            "atMs": 92348,
+            "heap": {
+              "usedSize": 4326796,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3831608,
+              "backingStorageSize": 25723782
+            },
+            "performance": {
+              "LayoutDuration": 0.19048,
+              "RecalcStyleDuration": 0.043307,
+              "ScriptDuration": 0.187518,
+              "TaskDuration": 46.761114
+            }
+          },
+          {
+            "atMs": 93351,
+            "heap": {
+              "usedSize": 3758052,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2805632,
+              "backingStorageSize": 6475704
+            },
+            "performance": {
+              "LayoutDuration": 0.192221,
+              "RecalcStyleDuration": 0.043783,
+              "ScriptDuration": 0.189163,
+              "TaskDuration": 47.295653
+            }
+          },
+          {
+            "atMs": 94354,
+            "heap": {
+              "usedSize": 4059108,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 3282728,
+              "backingStorageSize": 16395505
+            },
+            "performance": {
+              "LayoutDuration": 0.194391,
+              "RecalcStyleDuration": 0.044435,
+              "ScriptDuration": 0.191081,
+              "TaskDuration": 47.786016
+            }
+          },
+          {
+            "atMs": 95359,
+            "heap": {
+              "usedSize": 4348504,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3728360,
+              "backingStorageSize": 26658168
+            },
+            "performance": {
+              "LayoutDuration": 0.19629,
+              "RecalcStyleDuration": 0.044906,
+              "ScriptDuration": 0.19264,
+              "TaskDuration": 48.303422
+            }
+          },
+          {
+            "atMs": 96361,
+            "heap": {
+              "usedSize": 3785424,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 2751136,
+              "backingStorageSize": 6854206
+            },
+            "performance": {
+              "LayoutDuration": 0.198331,
+              "RecalcStyleDuration": 0.04532,
+              "ScriptDuration": 0.194623,
+              "TaskDuration": 48.820506
+            }
+          },
+          {
+            "atMs": 97364,
+            "heap": {
+              "usedSize": 4075368,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3216664,
+              "backingStorageSize": 17018404
+            },
+            "performance": {
+              "LayoutDuration": 0.199736,
+              "RecalcStyleDuration": 0.045686,
+              "ScriptDuration": 0.196631,
+              "TaskDuration": 49.326455
+            }
+          },
+          {
+            "atMs": 98367,
+            "heap": {
+              "usedSize": 4369764,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3795016,
+              "backingStorageSize": 27182763
+            },
+            "performance": {
+              "LayoutDuration": 0.201713,
+              "RecalcStyleDuration": 0.046116,
+              "ScriptDuration": 0.198435,
+              "TaskDuration": 49.826592
+            }
+          },
+          {
+            "atMs": 99371,
+            "heap": {
+              "usedSize": 3789052,
+              "totalSize": 5033984,
+              "embedderHeapUsedSize": 2838376,
+              "backingStorageSize": 7606859
+            },
+            "performance": {
+              "LayoutDuration": 0.203788,
+              "RecalcStyleDuration": 0.046566,
+              "ScriptDuration": 0.200219,
+              "TaskDuration": 50.339843
+            }
+          },
+          {
+            "atMs": 100375,
+            "heap": {
+              "usedSize": 4098792,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3352096,
+              "backingStorageSize": 17870870
+            },
+            "performance": {
+              "LayoutDuration": 0.206208,
+              "RecalcStyleDuration": 0.047108,
+              "ScriptDuration": 0.202176,
+              "TaskDuration": 50.842726
+            }
+          },
+          {
+            "atMs": 101380,
+            "heap": {
+              "usedSize": 4387504,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3740688,
+              "backingStorageSize": 28100829
+            },
+            "performance": {
+              "LayoutDuration": 0.207941,
+              "RecalcStyleDuration": 0.047531,
+              "ScriptDuration": 0.204043,
+              "TaskDuration": 51.350909
+            }
+          },
+          {
+            "atMs": 102382,
+            "heap": {
+              "usedSize": 3826664,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2771144,
+              "backingStorageSize": 8346013
+            },
+            "performance": {
+              "LayoutDuration": 0.209928,
+              "RecalcStyleDuration": 0.047974,
+              "ScriptDuration": 0.205815,
+              "TaskDuration": 51.878836
+            }
+          },
+          {
+            "atMs": 103384,
+            "heap": {
+              "usedSize": 4114172,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3300928,
+              "backingStorageSize": 18330226
+            },
+            "performance": {
+              "LayoutDuration": 0.211968,
+              "RecalcStyleDuration": 0.048453,
+              "ScriptDuration": 0.207845,
+              "TaskDuration": 52.377185
+            }
+          },
+          {
+            "atMs": 104389,
+            "heap": {
+              "usedSize": 4404744,
+              "totalSize": 6082560,
+              "embedderHeapUsedSize": 3697344,
+              "backingStorageSize": 28428979
+            },
+            "performance": {
+              "LayoutDuration": 0.214143,
+              "RecalcStyleDuration": 0.048941,
+              "ScriptDuration": 0.210187,
+              "TaskDuration": 52.882257
+            }
+          },
+          {
+            "atMs": 105392,
+            "heap": {
+              "usedSize": 3829616,
+              "totalSize": 5296128,
+              "embedderHeapUsedSize": 2845520,
+              "backingStorageSize": 8967583
+            },
+            "performance": {
+              "LayoutDuration": 0.215947,
+              "RecalcStyleDuration": 0.049332,
+              "ScriptDuration": 0.212381,
+              "TaskDuration": 53.395299
+            }
+          },
+          {
+            "atMs": 106395,
+            "heap": {
+              "usedSize": 4093452,
+              "totalSize": 5558272,
+              "embedderHeapUsedSize": 3320024,
+              "backingStorageSize": 17526758
+            },
+            "performance": {
+              "LayoutDuration": 0.218291,
+              "RecalcStyleDuration": 0.049851,
+              "ScriptDuration": 0.214283,
+              "TaskDuration": 53.819962
+            }
+          },
+          {
+            "atMs": 107399,
+            "heap": {
+              "usedSize": 4384128,
+              "totalSize": 5820416,
+              "embedderHeapUsedSize": 3729096,
+              "backingStorageSize": 27855035
+            },
+            "performance": {
+              "LayoutDuration": 0.220173,
+              "RecalcStyleDuration": 0.050299,
+              "ScriptDuration": 0.216111,
+              "TaskDuration": 54.325843
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "receiver": {
+        "schema": 1,
+        "engine": "chromium",
+        "status": "sampled",
+        "supported": true,
+        "scope": "test-only Chromium target CDP observations; same-host workflow, not total browser RSS or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 108,
+          "count": 108,
+          "limitReached": false,
+          "elapsedMs": 108135
+        },
+        "availableFields": [
+          "heap.backingStorageSize",
+          "heap.embedderHeapUsedSize",
+          "heap.totalSize",
+          "heap.usedSize",
+          "performance.LayoutDuration",
+          "performance.RecalcStyleDuration",
+          "performance.ScriptDuration",
+          "performance.TaskDuration"
+        ],
+        "issues": {},
+        "summary": {
+          "heap": {
+            "usedSize": {
+              "first": 2765116,
+              "peak": 15614320,
+              "last": 14295552
+            },
+            "totalSize": {
+              "first": 5644288,
+              "peak": 31596544,
+              "last": 31596544
+            },
+            "embedderHeapUsedSize": {
+              "first": 2246984,
+              "peak": 6561384,
+              "last": 5841968
+            },
+            "backingStorageSize": {
+              "first": 94531916,
+              "peak": 94531916,
+              "last": 39704226
+            }
+          },
+          "performance": {
+            "TaskDuration": {
+              "first": 0.000056,
+              "peak": 38.663044,
+              "last": 38.663044,
+              "counterResetObserved": false,
+              "delta": 38.662988
+            },
+            "ScriptDuration": {
+              "first": 0,
+              "peak": 0.470759,
+              "last": 0.470759,
+              "counterResetObserved": false,
+              "delta": 0.470759
+            },
+            "LayoutDuration": {
+              "first": 0,
+              "peak": 0.22799,
+              "last": 0.22799,
+              "counterResetObserved": false,
+              "delta": 0.22799
+            },
+            "RecalcStyleDuration": {
+              "first": 0,
+              "peak": 0.052216,
+              "last": 0.052216,
+              "counterResetObserved": false,
+              "delta": 0.052216
+            }
+          }
+        },
+        "samples": [
+          {
+            "atMs": 4,
+            "heap": {
+              "usedSize": 2765116,
+              "totalSize": 5644288,
+              "embedderHeapUsedSize": 2246984,
+              "backingStorageSize": 94531916
+            },
+            "performance": {
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000056
+            }
+          },
+          {
+            "atMs": 1007,
+            "heap": {
+              "usedSize": 2847112,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2119544,
+              "backingStorageSize": 389615
+            },
+            "performance": {
+              "LayoutDuration": 0.002893,
+              "RecalcStyleDuration": 0.001298,
+              "ScriptDuration": 0.005664,
+              "TaskDuration": 0.351176
+            }
+          },
+          {
+            "atMs": 2011,
+            "heap": {
+              "usedSize": 4078620,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2414728,
+              "backingStorageSize": 4504386
+            },
+            "performance": {
+              "LayoutDuration": 0.00467,
+              "RecalcStyleDuration": 0.001732,
+              "ScriptDuration": 0.010072,
+              "TaskDuration": 0.708502
+            }
+          },
+          {
+            "atMs": 3014,
+            "heap": {
+              "usedSize": 3696656,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2423088,
+              "backingStorageSize": 3209414
+            },
+            "performance": {
+              "LayoutDuration": 0.006588,
+              "RecalcStyleDuration": 0.002352,
+              "ScriptDuration": 0.014929,
+              "TaskDuration": 1.081665
+            }
+          },
+          {
+            "atMs": 4018,
+            "heap": {
+              "usedSize": 3342368,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2311872,
+              "backingStorageSize": 2012685
+            },
+            "performance": {
+              "LayoutDuration": 0.008425,
+              "RecalcStyleDuration": 0.002698,
+              "ScriptDuration": 0.019951,
+              "TaskDuration": 1.453037
+            }
+          },
+          {
+            "atMs": 5024,
+            "heap": {
+              "usedSize": 2893824,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2076392,
+              "backingStorageSize": 520689
+            },
+            "performance": {
+              "LayoutDuration": 0.010692,
+              "RecalcStyleDuration": 0.003157,
+              "ScriptDuration": 0.024816,
+              "TaskDuration": 1.823137
+            }
+          },
+          {
+            "atMs": 6027,
+            "heap": {
+              "usedSize": 4224820,
+              "totalSize": 6430720,
+              "embedderHeapUsedSize": 2423336,
+              "backingStorageSize": 4979999
+            },
+            "performance": {
+              "LayoutDuration": 0.012728,
+              "RecalcStyleDuration": 0.003644,
+              "ScriptDuration": 0.02953,
+              "TaskDuration": 2.185203
+            }
+          },
+          {
+            "atMs": 7030,
+            "heap": {
+              "usedSize": 5320240,
+              "totalSize": 7217152,
+              "embedderHeapUsedSize": 2890264,
+              "backingStorageSize": 8668466
+            },
+            "performance": {
+              "LayoutDuration": 0.014802,
+              "RecalcStyleDuration": 0.004112,
+              "ScriptDuration": 0.034024,
+              "TaskDuration": 2.526701
+            }
+          },
+          {
+            "atMs": 8034,
+            "heap": {
+              "usedSize": 5615612,
+              "totalSize": 9838592,
+              "embedderHeapUsedSize": 2893216,
+              "backingStorageSize": 9684910
+            },
+            "performance": {
+              "LayoutDuration": 0.016691,
+              "RecalcStyleDuration": 0.004507,
+              "ScriptDuration": 0.03928,
+              "TaskDuration": 2.893207
+            }
+          },
+          {
+            "atMs": 9039,
+            "heap": {
+              "usedSize": 5273916,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2829576,
+              "backingStorageSize": 8537409
+            },
+            "performance": {
+              "LayoutDuration": 0.019276,
+              "RecalcStyleDuration": 0.004961,
+              "ScriptDuration": 0.044123,
+              "TaskDuration": 3.258629
+            }
+          },
+          {
+            "atMs": 10044,
+            "heap": {
+              "usedSize": 4828360,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2651648,
+              "backingStorageSize": 7012728
+            },
+            "performance": {
+              "LayoutDuration": 0.021046,
+              "RecalcStyleDuration": 0.005361,
+              "ScriptDuration": 0.048511,
+              "TaskDuration": 3.620246
+            }
+          },
+          {
+            "atMs": 11047,
+            "heap": {
+              "usedSize": 4446888,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2545096,
+              "backingStorageSize": 5734023
+            },
+            "performance": {
+              "LayoutDuration": 0.023261,
+              "RecalcStyleDuration": 0.005847,
+              "ScriptDuration": 0.053154,
+              "TaskDuration": 3.98438
+            }
+          },
+          {
+            "atMs": 12051,
+            "heap": {
+              "usedSize": 3972084,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2370432,
+              "backingStorageSize": 4143809
+            },
+            "performance": {
+              "LayoutDuration": 0.025351,
+              "RecalcStyleDuration": 0.006331,
+              "ScriptDuration": 0.057686,
+              "TaskDuration": 4.34415
+            }
+          },
+          {
+            "atMs": 13056,
+            "heap": {
+              "usedSize": 3482604,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2362696,
+              "backingStorageSize": 2438907
+            },
+            "performance": {
+              "LayoutDuration": 0.028192,
+              "RecalcStyleDuration": 0.006808,
+              "ScriptDuration": 0.062864,
+              "TaskDuration": 4.703901
+            }
+          },
+          {
+            "atMs": 14059,
+            "heap": {
+              "usedSize": 3110720,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2073280,
+              "backingStorageSize": 1160165
+            },
+            "performance": {
+              "LayoutDuration": 0.030223,
+              "RecalcStyleDuration": 0.007231,
+              "ScriptDuration": 0.067586,
+              "TaskDuration": 5.076446
+            }
+          },
+          {
+            "atMs": 15063,
+            "heap": {
+              "usedSize": 6135824,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 3063440,
+              "backingStorageSize": 11522440
+            },
+            "performance": {
+              "LayoutDuration": 0.032312,
+              "RecalcStyleDuration": 0.007639,
+              "ScriptDuration": 0.072553,
+              "TaskDuration": 5.445297
+            }
+          },
+          {
+            "atMs": 16068,
+            "heap": {
+              "usedSize": 5630604,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2921032,
+              "backingStorageSize": 9832599
+            },
+            "performance": {
+              "LayoutDuration": 0.034466,
+              "RecalcStyleDuration": 0.008097,
+              "ScriptDuration": 0.076863,
+              "TaskDuration": 5.81094
+            }
+          },
+          {
+            "atMs": 17072,
+            "heap": {
+              "usedSize": 5242312,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2836672,
+              "backingStorageSize": 8537458
+            },
+            "performance": {
+              "LayoutDuration": 0.037012,
+              "RecalcStyleDuration": 0.008607,
+              "ScriptDuration": 0.081403,
+              "TaskDuration": 6.181099
+            }
+          },
+          {
+            "atMs": 18075,
+            "heap": {
+              "usedSize": 4752340,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2645880,
+              "backingStorageSize": 6848779
+            },
+            "performance": {
+              "LayoutDuration": 0.038938,
+              "RecalcStyleDuration": 0.009076,
+              "ScriptDuration": 0.085777,
+              "TaskDuration": 6.547404
+            }
+          },
+          {
+            "atMs": 19078,
+            "heap": {
+              "usedSize": 4322776,
+              "totalSize": 10362880,
+              "embedderHeapUsedSize": 2529360,
+              "backingStorageSize": 5340661
+            },
+            "performance": {
+              "LayoutDuration": 0.041283,
+              "RecalcStyleDuration": 0.009588,
+              "ScriptDuration": 0.090382,
+              "TaskDuration": 6.916486
+            }
+          },
+          {
+            "atMs": 20083,
+            "heap": {
+              "usedSize": 2951612,
+              "totalSize": 11411456,
+              "embedderHeapUsedSize": 2031776,
+              "backingStorageSize": 602772
+            },
+            "performance": {
+              "LayoutDuration": 0.043369,
+              "RecalcStyleDuration": 0.01005,
+              "ScriptDuration": 0.094873,
+              "TaskDuration": 7.292138
+            }
+          },
+          {
+            "atMs": 21085,
+            "heap": {
+              "usedSize": 5816716,
+              "totalSize": 11673600,
+              "embedderHeapUsedSize": 2949240,
+              "backingStorageSize": 10473205
+            },
+            "performance": {
+              "LayoutDuration": 0.045654,
+              "RecalcStyleDuration": 0.010521,
+              "ScriptDuration": 0.099187,
+              "TaskDuration": 7.638655
+            }
+          },
+          {
+            "atMs": 22090,
+            "heap": {
+              "usedSize": 3438600,
+              "totalSize": 14032896,
+              "embedderHeapUsedSize": 2285616,
+              "backingStorageSize": 2307674
+            },
+            "performance": {
+              "LayoutDuration": 0.04749,
+              "RecalcStyleDuration": 0.010908,
+              "ScriptDuration": 0.103973,
+              "TaskDuration": 8.011951
+            }
+          },
+          {
+            "atMs": 23094,
+            "heap": {
+              "usedSize": 6422644,
+              "totalSize": 14032896,
+              "embedderHeapUsedSize": 3226736,
+              "backingStorageSize": 12571645
+            },
+            "performance": {
+              "LayoutDuration": 0.050098,
+              "RecalcStyleDuration": 0.011524,
+              "ScriptDuration": 0.108446,
+              "TaskDuration": 8.370255
+            }
+          },
+          {
+            "atMs": 24098,
+            "heap": {
+              "usedSize": 2994508,
+              "totalSize": 15867904,
+              "embedderHeapUsedSize": 2223632,
+              "backingStorageSize": 718768
+            },
+            "performance": {
+              "LayoutDuration": 0.052201,
+              "RecalcStyleDuration": 0.012031,
+              "ScriptDuration": 0.113123,
+              "TaskDuration": 8.728621
+            }
+          },
+          {
+            "atMs": 25102,
+            "heap": {
+              "usedSize": 5906500,
+              "totalSize": 15867904,
+              "embedderHeapUsedSize": 3048592,
+              "backingStorageSize": 10768439
+            },
+            "performance": {
+              "LayoutDuration": 0.054179,
+              "RecalcStyleDuration": 0.012547,
+              "ScriptDuration": 0.117092,
+              "TaskDuration": 9.075965
+            }
+          },
+          {
+            "atMs": 26107,
+            "heap": {
+              "usedSize": 8765764,
+              "totalSize": 16392192,
+              "embedderHeapUsedSize": 3985984,
+              "backingStorageSize": 20686716
+            },
+            "performance": {
+              "LayoutDuration": 0.056364,
+              "RecalcStyleDuration": 0.013076,
+              "ScriptDuration": 0.121306,
+              "TaskDuration": 9.427391
+            }
+          },
+          {
+            "atMs": 27110,
+            "heap": {
+              "usedSize": 4842096,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2709856,
+              "backingStorageSize": 7143852
+            },
+            "performance": {
+              "LayoutDuration": 0.058824,
+              "RecalcStyleDuration": 0.013512,
+              "ScriptDuration": 0.125409,
+              "TaskDuration": 9.791026
+            }
+          },
+          {
+            "atMs": 28113,
+            "heap": {
+              "usedSize": 7742292,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3552024,
+              "backingStorageSize": 17129134
+            },
+            "performance": {
+              "LayoutDuration": 0.060998,
+              "RecalcStyleDuration": 0.014015,
+              "ScriptDuration": 0.129566,
+              "TaskDuration": 10.146345
+            }
+          },
+          {
+            "atMs": 29113,
+            "heap": {
+              "usedSize": 3829904,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2428600,
+              "backingStorageSize": 3635759
+            },
+            "performance": {
+              "LayoutDuration": 0.062671,
+              "RecalcStyleDuration": 0.014431,
+              "ScriptDuration": 0.133779,
+              "TaskDuration": 10.511674
+            }
+          },
+          {
+            "atMs": 30116,
+            "heap": {
+              "usedSize": 6703304,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3283936,
+              "backingStorageSize": 13555344
+            },
+            "performance": {
+              "LayoutDuration": 0.064637,
+              "RecalcStyleDuration": 0.014877,
+              "ScriptDuration": 0.137974,
+              "TaskDuration": 10.864793
+            }
+          },
+          {
+            "atMs": 31119,
+            "heap": {
+              "usedSize": 9549360,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 4163248,
+              "backingStorageSize": 23375478
+            },
+            "performance": {
+              "LayoutDuration": 0.067038,
+              "RecalcStyleDuration": 0.015322,
+              "ScriptDuration": 0.142062,
+              "TaskDuration": 11.21364
+            }
+          },
+          {
+            "atMs": 32122,
+            "heap": {
+              "usedSize": 5601344,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3040200,
+              "backingStorageSize": 9719058
+            },
+            "performance": {
+              "LayoutDuration": 0.069487,
+              "RecalcStyleDuration": 0.01583,
+              "ScriptDuration": 0.146724,
+              "TaskDuration": 11.576685
+            }
+          },
+          {
+            "atMs": 33128,
+            "heap": {
+              "usedSize": 8474672,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3806488,
+              "backingStorageSize": 19686648
+            },
+            "performance": {
+              "LayoutDuration": 0.07139,
+              "RecalcStyleDuration": 0.016242,
+              "ScriptDuration": 0.151435,
+              "TaskDuration": 11.926971
+            }
+          },
+          {
+            "atMs": 34131,
+            "heap": {
+              "usedSize": 4557068,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2721624,
+              "backingStorageSize": 6096116
+            },
+            "performance": {
+              "LayoutDuration": 0.073817,
+              "RecalcStyleDuration": 0.016851,
+              "ScriptDuration": 0.155617,
+              "TaskDuration": 12.285607
+            }
+          },
+          {
+            "atMs": 35134,
+            "heap": {
+              "usedSize": 7377964,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3529056,
+              "backingStorageSize": 15850553
+            },
+            "performance": {
+              "LayoutDuration": 0.075604,
+              "RecalcStyleDuration": 0.017263,
+              "ScriptDuration": 0.159529,
+              "TaskDuration": 12.640502
+            }
+          },
+          {
+            "atMs": 36137,
+            "heap": {
+              "usedSize": 3494220,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2383680,
+              "backingStorageSize": 2423831
+            },
+            "performance": {
+              "LayoutDuration": 0.07817,
+              "RecalcStyleDuration": 0.017821,
+              "ScriptDuration": 0.164242,
+              "TaskDuration": 13.006695
+            }
+          },
+          {
+            "atMs": 37141,
+            "heap": {
+              "usedSize": 6464760,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3209480,
+              "backingStorageSize": 12702878
+            },
+            "performance": {
+              "LayoutDuration": 0.079955,
+              "RecalcStyleDuration": 0.018264,
+              "ScriptDuration": 0.168358,
+              "TaskDuration": 13.37356
+            }
+          },
+          {
+            "atMs": 38145,
+            "heap": {
+              "usedSize": 9298628,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 4054032,
+              "backingStorageSize": 22506467
+            },
+            "performance": {
+              "LayoutDuration": 0.082328,
+              "RecalcStyleDuration": 0.018829,
+              "ScriptDuration": 0.172696,
+              "TaskDuration": 13.717279
+            }
+          },
+          {
+            "atMs": 39148,
+            "heap": {
+              "usedSize": 5491732,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2970352,
+              "backingStorageSize": 9373540
+            },
+            "performance": {
+              "LayoutDuration": 0.083967,
+              "RecalcStyleDuration": 0.019235,
+              "ScriptDuration": 0.176805,
+              "TaskDuration": 14.095519
+            }
+          },
+          {
+            "atMs": 40152,
+            "heap": {
+              "usedSize": 8459108,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3861008,
+              "backingStorageSize": 19588359
+            },
+            "performance": {
+              "LayoutDuration": 0.086119,
+              "RecalcStyleDuration": 0.019741,
+              "ScriptDuration": 0.180989,
+              "TaskDuration": 14.452012
+            }
+          },
+          {
+            "atMs": 41157,
+            "heap": {
+              "usedSize": 4499076,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2683552,
+              "backingStorageSize": 5947176
+            },
+            "performance": {
+              "LayoutDuration": 0.088201,
+              "RecalcStyleDuration": 0.020203,
+              "ScriptDuration": 0.185056,
+              "TaskDuration": 14.807966
+            }
+          },
+          {
+            "atMs": 42161,
+            "heap": {
+              "usedSize": 7462264,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3508552,
+              "backingStorageSize": 16145611
+            },
+            "performance": {
+              "LayoutDuration": 0.090545,
+              "RecalcStyleDuration": 0.020813,
+              "ScriptDuration": 0.189395,
+              "TaskDuration": 15.17028
+            }
+          },
+          {
+            "atMs": 43162,
+            "heap": {
+              "usedSize": 3578528,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2468432,
+              "backingStorageSize": 2766748
+            },
+            "performance": {
+              "LayoutDuration": 0.092633,
+              "RecalcStyleDuration": 0.021311,
+              "ScriptDuration": 0.193685,
+              "TaskDuration": 15.543258
+            }
+          },
+          {
+            "atMs": 44165,
+            "heap": {
+              "usedSize": 6488868,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3211520,
+              "backingStorageSize": 12784813
+            },
+            "performance": {
+              "LayoutDuration": 0.094713,
+              "RecalcStyleDuration": 0.021742,
+              "ScriptDuration": 0.198085,
+              "TaskDuration": 15.902268
+            }
+          },
+          {
+            "atMs": 45167,
+            "heap": {
+              "usedSize": 9417592,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 4121584,
+              "backingStorageSize": 22916327
+            },
+            "performance": {
+              "LayoutDuration": 0.09649,
+              "RecalcStyleDuration": 0.022132,
+              "ScriptDuration": 0.202091,
+              "TaskDuration": 16.264718
+            }
+          },
+          {
+            "atMs": 46171,
+            "heap": {
+              "usedSize": 5525924,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3014672,
+              "backingStorageSize": 9456914
+            },
+            "performance": {
+              "LayoutDuration": 0.098835,
+              "RecalcStyleDuration": 0.022645,
+              "ScriptDuration": 0.206252,
+              "TaskDuration": 16.626843
+            }
+          },
+          {
+            "atMs": 47174,
+            "heap": {
+              "usedSize": 8525480,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3812976,
+              "backingStorageSize": 19817881
+            },
+            "performance": {
+              "LayoutDuration": 0.100934,
+              "RecalcStyleDuration": 0.023179,
+              "ScriptDuration": 0.210551,
+              "TaskDuration": 16.998365
+            }
+          },
+          {
+            "atMs": 48180,
+            "heap": {
+              "usedSize": 4661812,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 2730424,
+              "backingStorageSize": 6489478
+            },
+            "performance": {
+              "LayoutDuration": 0.103332,
+              "RecalcStyleDuration": 0.023717,
+              "ScriptDuration": 0.214875,
+              "TaskDuration": 17.369111
+            }
+          },
+          {
+            "atMs": 49182,
+            "heap": {
+              "usedSize": 7627424,
+              "totalSize": 17178624,
+              "embedderHeapUsedSize": 3576504,
+              "backingStorageSize": 16719388
+            },
+            "performance": {
+              "LayoutDuration": 0.105286,
+              "RecalcStyleDuration": 0.024146,
+              "ScriptDuration": 0.219268,
+              "TaskDuration": 17.73262
+            }
+          },
+          {
+            "atMs": 50186,
+            "heap": {
+              "usedSize": 2962292,
+              "totalSize": 17965056,
+              "embedderHeapUsedSize": 2269056,
+              "backingStorageSize": 635540
+            },
+            "performance": {
+              "LayoutDuration": 0.107317,
+              "RecalcStyleDuration": 0.024572,
+              "ScriptDuration": 0.224051,
+              "TaskDuration": 18.107203
+            }
+          },
+          {
+            "atMs": 51188,
+            "heap": {
+              "usedSize": 5787100,
+              "totalSize": 17965056,
+              "embedderHeapUsedSize": 3167792,
+              "backingStorageSize": 10406361
+            },
+            "performance": {
+              "LayoutDuration": 0.109465,
+              "RecalcStyleDuration": 0.02499,
+              "ScriptDuration": 0.228102,
+              "TaskDuration": 18.449876
+            }
+          },
+          {
+            "atMs": 52191,
+            "heap": {
+              "usedSize": 8724132,
+              "totalSize": 17965056,
+              "embedderHeapUsedSize": 3910328,
+              "backingStorageSize": 20506492
+            },
+            "performance": {
+              "LayoutDuration": 0.111618,
+              "RecalcStyleDuration": 0.02546,
+              "ScriptDuration": 0.232873,
+              "TaskDuration": 18.808652
+            }
+          },
+          {
+            "atMs": 53194,
+            "heap": {
+              "usedSize": 3165528,
+              "totalSize": 20062208,
+              "embedderHeapUsedSize": 2398088,
+              "backingStorageSize": 1324151
+            },
+            "performance": {
+              "LayoutDuration": 0.113646,
+              "RecalcStyleDuration": 0.025924,
+              "ScriptDuration": 0.237294,
+              "TaskDuration": 19.180278
+            }
+          },
+          {
+            "atMs": 54197,
+            "heap": {
+              "usedSize": 6104608,
+              "totalSize": 20062208,
+              "embedderHeapUsedSize": 3127976,
+              "backingStorageSize": 11440520
+            },
+            "performance": {
+              "LayoutDuration": 0.115866,
+              "RecalcStyleDuration": 0.026483,
+              "ScriptDuration": 0.241767,
+              "TaskDuration": 19.537521
+            }
+          },
+          {
+            "atMs": 55200,
+            "heap": {
+              "usedSize": 8992092,
+              "totalSize": 20062208,
+              "embedderHeapUsedSize": 3954408,
+              "backingStorageSize": 21424655
+            },
+            "performance": {
+              "LayoutDuration": 0.117913,
+              "RecalcStyleDuration": 0.026892,
+              "ScriptDuration": 0.245981,
+              "TaskDuration": 19.896776
+            }
+          },
+          {
+            "atMs": 56204,
+            "heap": {
+              "usedSize": 11888936,
+              "totalSize": 21635072,
+              "embedderHeapUsedSize": 4931536,
+              "backingStorageSize": 31425013
+            },
+            "performance": {
+              "LayoutDuration": 0.12012,
+              "RecalcStyleDuration": 0.0274,
+              "ScriptDuration": 0.250341,
+              "TaskDuration": 20.244533
+            }
+          },
+          {
+            "atMs": 57207,
+            "heap": {
+              "usedSize": 5645580,
+              "totalSize": 21635072,
+              "embedderHeapUsedSize": 3070848,
+              "backingStorageSize": 9898296
+            },
+            "performance": {
+              "LayoutDuration": 0.12224,
+              "RecalcStyleDuration": 0.027882,
+              "ScriptDuration": 0.254397,
+              "TaskDuration": 20.613634
+            }
+          },
+          {
+            "atMs": 58210,
+            "heap": {
+              "usedSize": 8520608,
+              "totalSize": 21635072,
+              "embedderHeapUsedSize": 3904640,
+              "backingStorageSize": 19817881
+            },
+            "performance": {
+              "LayoutDuration": 0.124748,
+              "RecalcStyleDuration": 0.028435,
+              "ScriptDuration": 0.2586,
+              "TaskDuration": 20.964907
+            }
+          },
+          {
+            "atMs": 59213,
+            "heap": {
+              "usedSize": 11481768,
+              "totalSize": 21897216,
+              "embedderHeapUsedSize": 4831792,
+              "backingStorageSize": 30064175
+            },
+            "performance": {
+              "LayoutDuration": 0.126632,
+              "RecalcStyleDuration": 0.02888,
+              "ScriptDuration": 0.263164,
+              "TaskDuration": 21.330416
+            }
+          },
+          {
+            "atMs": 60217,
+            "heap": {
+              "usedSize": 4475168,
+              "totalSize": 23207936,
+              "embedderHeapUsedSize": 2737576,
+              "backingStorageSize": 5817251
+            },
+            "performance": {
+              "LayoutDuration": 0.12901,
+              "RecalcStyleDuration": 0.029403,
+              "ScriptDuration": 0.268125,
+              "TaskDuration": 21.699128
+            }
+          },
+          {
+            "atMs": 61221,
+            "heap": {
+              "usedSize": 7354772,
+              "totalSize": 23207936,
+              "embedderHeapUsedSize": 3593600,
+              "backingStorageSize": 15752073
+            },
+            "performance": {
+              "LayoutDuration": 0.130876,
+              "RecalcStyleDuration": 0.029775,
+              "ScriptDuration": 0.272247,
+              "TaskDuration": 22.053289
+            }
+          },
+          {
+            "atMs": 62225,
+            "heap": {
+              "usedSize": 10280776,
+              "totalSize": 23207936,
+              "embedderHeapUsedSize": 4395952,
+              "backingStorageSize": 25867280
+            },
+            "performance": {
+              "LayoutDuration": 0.133395,
+              "RecalcStyleDuration": 0.030407,
+              "ScriptDuration": 0.276676,
+              "TaskDuration": 22.414088
+            }
+          },
+          {
+            "atMs": 63228,
+            "heap": {
+              "usedSize": 13160024,
+              "totalSize": 24518656,
+              "embedderHeapUsedSize": 5320160,
+              "backingStorageSize": 35802102
+            },
+            "performance": {
+              "LayoutDuration": 0.135415,
+              "RecalcStyleDuration": 0.030897,
+              "ScriptDuration": 0.28088,
+              "TaskDuration": 22.764398
+            }
+          },
+          {
+            "atMs": 64230,
+            "heap": {
+              "usedSize": 5538348,
+              "totalSize": 24780800,
+              "embedderHeapUsedSize": 3070528,
+              "backingStorageSize": 9506081
+            },
+            "performance": {
+              "LayoutDuration": 0.13789,
+              "RecalcStyleDuration": 0.031436,
+              "ScriptDuration": 0.285356,
+              "TaskDuration": 23.145986
+            }
+          },
+          {
+            "atMs": 65236,
+            "heap": {
+              "usedSize": 8377276,
+              "totalSize": 24780800,
+              "embedderHeapUsedSize": 3898424,
+              "backingStorageSize": 19326054
+            },
+            "performance": {
+              "LayoutDuration": 0.139836,
+              "RecalcStyleDuration": 0.031921,
+              "ScriptDuration": 0.289467,
+              "TaskDuration": 23.492507
+            }
+          },
+          {
+            "atMs": 66239,
+            "heap": {
+              "usedSize": 11296644,
+              "totalSize": 24780800,
+              "embedderHeapUsedSize": 4751072,
+              "backingStorageSize": 29392032
+            },
+            "performance": {
+              "LayoutDuration": 0.14219,
+              "RecalcStyleDuration": 0.032421,
+              "ScriptDuration": 0.294204,
+              "TaskDuration": 23.856336
+            }
+          },
+          {
+            "atMs": 67245,
+            "heap": {
+              "usedSize": 3064360,
+              "totalSize": 26091520,
+              "embedderHeapUsedSize": 2447152,
+              "backingStorageSize": 996149
+            },
+            "performance": {
+              "LayoutDuration": 0.144245,
+              "RecalcStyleDuration": 0.032919,
+              "ScriptDuration": 0.298437,
+              "TaskDuration": 24.234847
+            }
+          },
+          {
+            "atMs": 68248,
+            "heap": {
+              "usedSize": 5937576,
+              "totalSize": 26091520,
+              "embedderHeapUsedSize": 3180640,
+              "backingStorageSize": 10915895
+            },
+            "performance": {
+              "LayoutDuration": 0.146361,
+              "RecalcStyleDuration": 0.033409,
+              "ScriptDuration": 0.302728,
+              "TaskDuration": 24.588943
+            }
+          },
+          {
+            "atMs": 69252,
+            "heap": {
+              "usedSize": 8912716,
+              "totalSize": 26091520,
+              "embedderHeapUsedSize": 3990728,
+              "backingStorageSize": 21227725
+            },
+            "performance": {
+              "LayoutDuration": 0.148254,
+              "RecalcStyleDuration": 0.033825,
+              "ScriptDuration": 0.306957,
+              "TaskDuration": 24.953417
+            }
+          },
+          {
+            "atMs": 70256,
+            "heap": {
+              "usedSize": 11756832,
+              "totalSize": 26091520,
+              "embedderHeapUsedSize": 4901208,
+              "backingStorageSize": 31146163
+            },
+            "performance": {
+              "LayoutDuration": 0.15045,
+              "RecalcStyleDuration": 0.034356,
+              "ScriptDuration": 0.311183,
+              "TaskDuration": 25.298225
+            }
+          },
+          {
+            "atMs": 71261,
+            "heap": {
+              "usedSize": 2902684,
+              "totalSize": 27402240,
+              "embedderHeapUsedSize": 2819920,
+              "backingStorageSize": 406003
+            },
+            "performance": {
+              "LayoutDuration": 0.152183,
+              "RecalcStyleDuration": 0.034708,
+              "ScriptDuration": 0.315371,
+              "TaskDuration": 25.67316
+            }
+          },
+          {
+            "atMs": 72266,
+            "heap": {
+              "usedSize": 5775752,
+              "totalSize": 27402240,
+              "embedderHeapUsedSize": 3440832,
+              "backingStorageSize": 10342133
+            },
+            "performance": {
+              "LayoutDuration": 0.154345,
+              "RecalcStyleDuration": 0.035188,
+              "ScriptDuration": 0.319703,
+              "TaskDuration": 26.02043
+            }
+          },
+          {
+            "atMs": 73270,
+            "heap": {
+              "usedSize": 8718084,
+              "totalSize": 27402240,
+              "embedderHeapUsedSize": 4275784,
+              "backingStorageSize": 20572028
+            },
+            "performance": {
+              "LayoutDuration": 0.156143,
+              "RecalcStyleDuration": 0.035603,
+              "ScriptDuration": 0.323758,
+              "TaskDuration": 26.377714
+            }
+          },
+          {
+            "atMs": 74274,
+            "heap": {
+              "usedSize": 11647128,
+              "totalSize": 27402240,
+              "embedderHeapUsedSize": 5123264,
+              "backingStorageSize": 30687250
+            },
+            "performance": {
+              "LayoutDuration": 0.158543,
+              "RecalcStyleDuration": 0.036143,
+              "ScriptDuration": 0.328024,
+              "TaskDuration": 26.739118
+            }
+          },
+          {
+            "atMs": 75277,
+            "heap": {
+              "usedSize": 14547280,
+              "totalSize": 27926528,
+              "embedderHeapUsedSize": 6266744,
+              "backingStorageSize": 40785912
+            },
+            "performance": {
+              "LayoutDuration": 0.160506,
+              "RecalcStyleDuration": 0.036632,
+              "ScriptDuration": 0.331985,
+              "TaskDuration": 27.096596
+            }
+          },
+          {
+            "atMs": 76280,
+            "heap": {
+              "usedSize": 5033332,
+              "totalSize": 28712960,
+              "embedderHeapUsedSize": 3070672,
+              "backingStorageSize": 7768158
+            },
+            "performance": {
+              "LayoutDuration": 0.16271,
+              "RecalcStyleDuration": 0.037119,
+              "ScriptDuration": 0.336261,
+              "TaskDuration": 27.476482
+            }
+          },
+          {
+            "atMs": 77285,
+            "heap": {
+              "usedSize": 7929180,
+              "totalSize": 28712960,
+              "embedderHeapUsedSize": 3939968,
+              "backingStorageSize": 17817745
+            },
+            "performance": {
+              "LayoutDuration": 0.164532,
+              "RecalcStyleDuration": 0.037551,
+              "ScriptDuration": 0.340292,
+              "TaskDuration": 27.829175
+            }
+          },
+          {
+            "atMs": 78289,
+            "heap": {
+              "usedSize": 10891664,
+              "totalSize": 28712960,
+              "embedderHeapUsedSize": 4818888,
+              "backingStorageSize": 28080408
+            },
+            "performance": {
+              "LayoutDuration": 0.166661,
+              "RecalcStyleDuration": 0.038056,
+              "ScriptDuration": 0.344576,
+              "TaskDuration": 28.189465
+            }
+          },
+          {
+            "atMs": 79292,
+            "heap": {
+              "usedSize": 13806860,
+              "totalSize": 28712960,
+              "embedderHeapUsedSize": 5863712,
+              "backingStorageSize": 38195553
+            },
+            "performance": {
+              "LayoutDuration": 0.16832,
+              "RecalcStyleDuration": 0.038413,
+              "ScriptDuration": 0.348829,
+              "TaskDuration": 28.546017
+            }
+          },
+          {
+            "atMs": 80297,
+            "heap": {
+              "usedSize": 3745748,
+              "totalSize": 30023680,
+              "embedderHeapUsedSize": 2653840,
+              "backingStorageSize": 3325434
+            },
+            "performance": {
+              "LayoutDuration": 0.170536,
+              "RecalcStyleDuration": 0.038878,
+              "ScriptDuration": 0.353271,
+              "TaskDuration": 28.929151
+            }
+          },
+          {
+            "atMs": 81303,
+            "heap": {
+              "usedSize": 6679572,
+              "totalSize": 30023680,
+              "embedderHeapUsedSize": 3631648,
+              "backingStorageSize": 13489793
+            },
+            "performance": {
+              "LayoutDuration": 0.172769,
+              "RecalcStyleDuration": 0.039394,
+              "ScriptDuration": 0.357495,
+              "TaskDuration": 29.292552
+            }
+          },
+          {
+            "atMs": 82310,
+            "heap": {
+              "usedSize": 9573100,
+              "totalSize": 30023680,
+              "embedderHeapUsedSize": 4411680,
+              "backingStorageSize": 23490151
+            },
+            "performance": {
+              "LayoutDuration": 0.175023,
+              "RecalcStyleDuration": 0.040004,
+              "ScriptDuration": 0.361666,
+              "TaskDuration": 29.645307
+            }
+          },
+          {
+            "atMs": 83315,
+            "heap": {
+              "usedSize": 12526224,
+              "totalSize": 30023680,
+              "embedderHeapUsedSize": 5372832,
+              "backingStorageSize": 33736430
+            },
+            "performance": {
+              "LayoutDuration": 0.176714,
+              "RecalcStyleDuration": 0.040484,
+              "ScriptDuration": 0.365871,
+              "TaskDuration": 30.004456
+            }
+          },
+          {
+            "atMs": 84318,
+            "heap": {
+              "usedSize": 15347168,
+              "totalSize": 30023680,
+              "embedderHeapUsedSize": 6234880,
+              "backingStorageSize": 43507266
+            },
+            "performance": {
+              "LayoutDuration": 0.179035,
+              "RecalcStyleDuration": 0.041133,
+              "ScriptDuration": 0.370747,
+              "TaskDuration": 30.359302
+            }
+          },
+          {
+            "atMs": 85321,
+            "heap": {
+              "usedSize": 4752724,
+              "totalSize": 31072256,
+              "embedderHeapUsedSize": 3019560,
+              "backingStorageSize": 6848779
+            },
+            "performance": {
+              "LayoutDuration": 0.1807,
+              "RecalcStyleDuration": 0.041533,
+              "ScriptDuration": 0.375005,
+              "TaskDuration": 30.748224
+            }
+          },
+          {
+            "atMs": 86324,
+            "heap": {
+              "usedSize": 7693352,
+              "totalSize": 31072256,
+              "embedderHeapUsedSize": 3884360,
+              "backingStorageSize": 16932526
+            },
+            "performance": {
+              "LayoutDuration": 0.182679,
+              "RecalcStyleDuration": 0.042003,
+              "ScriptDuration": 0.37932,
+              "TaskDuration": 31.10315
+            }
+          },
+          {
+            "atMs": 87329,
+            "heap": {
+              "usedSize": 10624204,
+              "totalSize": 31072256,
+              "embedderHeapUsedSize": 4662760,
+              "backingStorageSize": 26965652
+            },
+            "performance": {
+              "LayoutDuration": 0.184647,
+              "RecalcStyleDuration": 0.042467,
+              "ScriptDuration": 0.383614,
+              "TaskDuration": 31.453924
+            }
+          },
+          {
+            "atMs": 88335,
+            "heap": {
+              "usedSize": 13617864,
+              "totalSize": 31072256,
+              "embedderHeapUsedSize": 5705240,
+              "backingStorageSize": 37310235
+            },
+            "performance": {
+              "LayoutDuration": 0.18686,
+              "RecalcStyleDuration": 0.042988,
+              "ScriptDuration": 0.388471,
+              "TaskDuration": 31.829847
+            }
+          },
+          {
+            "atMs": 89337,
+            "heap": {
+              "usedSize": 3065472,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 2275232,
+              "backingStorageSize": 750389
+            },
+            "performance": {
+              "LayoutDuration": 0.189064,
+              "RecalcStyleDuration": 0.043378,
+              "ScriptDuration": 0.392508,
+              "TaskDuration": 32.21828
+            }
+          },
+          {
+            "atMs": 90340,
+            "heap": {
+              "usedSize": 5867816,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 3319120,
+              "backingStorageSize": 10440437
+            },
+            "performance": {
+              "LayoutDuration": 0.191615,
+              "RecalcStyleDuration": 0.043891,
+              "ScriptDuration": 0.397227,
+              "TaskDuration": 32.561415
+            }
+          },
+          {
+            "atMs": 91347,
+            "heap": {
+              "usedSize": 8793224,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 4079912,
+              "backingStorageSize": 20604796
+            },
+            "performance": {
+              "LayoutDuration": 0.193658,
+              "RecalcStyleDuration": 0.044358,
+              "ScriptDuration": 0.401519,
+              "TaskDuration": 32.920482
+            }
+          },
+          {
+            "atMs": 92348,
+            "heap": {
+              "usedSize": 11701544,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 4977464,
+              "backingStorageSize": 30654467
+            },
+            "performance": {
+              "LayoutDuration": 0.195908,
+              "RecalcStyleDuration": 0.04487,
+              "ScriptDuration": 0.40572,
+              "TaskDuration": 33.271678
+            }
+          },
+          {
+            "atMs": 93352,
+            "heap": {
+              "usedSize": 14588468,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 6094968,
+              "backingStorageSize": 40671209
+            },
+            "performance": {
+              "LayoutDuration": 0.197895,
+              "RecalcStyleDuration": 0.045375,
+              "ScriptDuration": 0.409653,
+              "TaskDuration": 33.625286
+            }
+          },
+          {
+            "atMs": 94355,
+            "heap": {
+              "usedSize": 4007040,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 2969456,
+              "backingStorageSize": 3964908
+            },
+            "performance": {
+              "LayoutDuration": 0.20024,
+              "RecalcStyleDuration": 0.045882,
+              "ScriptDuration": 0.414103,
+              "TaskDuration": 34.003367
+            }
+          },
+          {
+            "atMs": 95359,
+            "heap": {
+              "usedSize": 6965292,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 3833672,
+              "backingStorageSize": 14227571
+            },
+            "performance": {
+              "LayoutDuration": 0.202037,
+              "RecalcStyleDuration": 0.046295,
+              "ScriptDuration": 0.418077,
+              "TaskDuration": 34.363209
+            }
+          },
+          {
+            "atMs": 96361,
+            "heap": {
+              "usedSize": 9757604,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 4608832,
+              "backingStorageSize": 23900088
+            },
+            "performance": {
+              "LayoutDuration": 0.204181,
+              "RecalcStyleDuration": 0.046781,
+              "ScriptDuration": 0.422149,
+              "TaskDuration": 34.705125
+            }
+          },
+          {
+            "atMs": 97364,
+            "heap": {
+              "usedSize": 12680036,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 5658712,
+              "backingStorageSize": 34047902
+            },
+            "performance": {
+              "LayoutDuration": 0.206024,
+              "RecalcStyleDuration": 0.047215,
+              "ScriptDuration": 0.426311,
+              "TaskDuration": 35.064826
+            }
+          },
+          {
+            "atMs": 98367,
+            "heap": {
+              "usedSize": 15614320,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 6561384,
+              "backingStorageSize": 44212261
+            },
+            "performance": {
+              "LayoutDuration": 0.20882,
+              "RecalcStyleDuration": 0.047723,
+              "ScriptDuration": 0.430551,
+              "TaskDuration": 35.423185
+            }
+          },
+          {
+            "atMs": 99372,
+            "heap": {
+              "usedSize": 4963004,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 3065128,
+              "backingStorageSize": 7340636
+            },
+            "performance": {
+              "LayoutDuration": 0.210815,
+              "RecalcStyleDuration": 0.048185,
+              "ScriptDuration": 0.434553,
+              "TaskDuration": 35.804844
+            }
+          },
+          {
+            "atMs": 100377,
+            "heap": {
+              "usedSize": 7932828,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 3900424,
+              "backingStorageSize": 17604607
+            },
+            "performance": {
+              "LayoutDuration": 0.213092,
+              "RecalcStyleDuration": 0.048732,
+              "ScriptDuration": 0.43934,
+              "TaskDuration": 36.169718
+            }
+          },
+          {
+            "atMs": 101379,
+            "heap": {
+              "usedSize": 10872084,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 4768992,
+              "backingStorageSize": 27785414
+            },
+            "performance": {
+              "LayoutDuration": 0.21517,
+              "RecalcStyleDuration": 0.049166,
+              "ScriptDuration": 0.444163,
+              "TaskDuration": 36.534982
+            }
+          },
+          {
+            "atMs": 102381,
+            "heap": {
+              "usedSize": 13695288,
+              "totalSize": 31334400,
+              "embedderHeapUsedSize": 5723800,
+              "backingStorageSize": 37572693
+            },
+            "performance": {
+              "LayoutDuration": 0.217813,
+              "RecalcStyleDuration": 0.049846,
+              "ScriptDuration": 0.448703,
+              "TaskDuration": 36.890182
+            }
+          },
+          {
+            "atMs": 103384,
+            "heap": {
+              "usedSize": 3134740,
+              "totalSize": 31596544,
+              "embedderHeapUsedSize": 2275088,
+              "backingStorageSize": 979934
+            },
+            "performance": {
+              "LayoutDuration": 0.219554,
+              "RecalcStyleDuration": 0.050278,
+              "ScriptDuration": 0.453165,
+              "TaskDuration": 37.281449
+            }
+          },
+          {
+            "atMs": 104388,
+            "heap": {
+              "usedSize": 6048436,
+              "totalSize": 31596544,
+              "embedderHeapUsedSize": 3325384,
+              "backingStorageSize": 11047227
+            },
+            "performance": {
+              "LayoutDuration": 0.221678,
+              "RecalcStyleDuration": 0.05075,
+              "ScriptDuration": 0.457592,
+              "TaskDuration": 37.640394
+            }
+          },
+          {
+            "atMs": 105392,
+            "heap": {
+              "usedSize": 8858056,
+              "totalSize": 31596544,
+              "embedderHeapUsedSize": 4204832,
+              "backingStorageSize": 20818122
+            },
+            "performance": {
+              "LayoutDuration": 0.223756,
+              "RecalcStyleDuration": 0.051286,
+              "ScriptDuration": 0.462651,
+              "TaskDuration": 37.997906
+            }
+          },
+          {
+            "atMs": 106395,
+            "heap": {
+              "usedSize": 11332748,
+              "totalSize": 31596544,
+              "embedderHeapUsedSize": 4915704,
+              "backingStorageSize": 29375949
+            },
+            "performance": {
+              "LayoutDuration": 0.226021,
+              "RecalcStyleDuration": 0.05178,
+              "ScriptDuration": 0.466437,
+              "TaskDuration": 38.303075
+            }
+          },
+          {
+            "atMs": 107398,
+            "heap": {
+              "usedSize": 14295552,
+              "totalSize": 31596544,
+              "embedderHeapUsedSize": 5841968,
+              "backingStorageSize": 39704226
+            },
+            "performance": {
+              "LayoutDuration": 0.22799,
+              "RecalcStyleDuration": 0.052216,
+              "ScriptDuration": 0.470759,
+              "TaskDuration": 38.663044
+            }
+          }
+        ],
+        "limitations": [
+          "Samples observe the target Chromium page/isolate and renderer duration counters, not browser total RSS, workers, GPU or every process.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "window": "before automated file selection/consent until verified complete; excludes subsequent independent disk rehash"
+    }
+  },
+  "stream0": {
+    "ms": 100,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 12816,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "stream1073741824": {
+    "ms": 126721,
+    "sha256": "49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14"
+  },
+  "resume": {
+    "name": "恢复文件 & 空 格",
+    "size": 8388608,
+    "writtenAtBreak": 131072,
+    "dataChannelBytes": 8503296,
+    "sha256": "6b59425c5bf6585e132f7e6b520623ea2ac76484f1a4bde550313c5a05c08140"
+  },
+  "peakReceiveQueues": [
+    156,
+    147537
+  ],
+  "signaling": {
+    "messages": 60,
+    "bytes": 1732,
+    "fileBodyObserved": false
+  },
+  "delayedEarlySignals": [
+    0,
+    2
+  ],
+  "passed": true
+}

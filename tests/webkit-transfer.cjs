@@ -1,0 +1,174 @@
+'use strict';
+// Two distinct browser engines must exchange files directly in both directions.
+// Same CI host, STUN disabled: WebKit Linux is NOT iOS/macOS Safari hardware,
+// nor is it evidence of cross-provider NAT success.
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const crypto = require('node:crypto');
+const { chromium, firefox, webkit } = require('playwright');
+const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
+const { startDev } = require('../scripts/dev.cjs');
+
+// A readiness timeout is not necessarily an ICE failure. In particular, an
+// open, selected direct channel can still be waiting for the protocol hello.
+// Classify only the existing sanitized snapshot, never raw stats/SDP/errors.
+function classifyConnectionTimeout(endpoints) {
+    if (!Array.isArray(endpoints) || endpoints.length !== 2 || endpoints.some(endpoint => !endpoint))
+        return 'connection-snapshot-unavailable';
+    if (endpoints.some(endpoint => endpoint.helloHandshakeTimedOut === true)) return 'protocol-hello-not-ready';
+    if (endpoints.some(endpoint => endpoint.appDirect !== true)) return 'selected-route-unavailable';
+    if (endpoints.some(endpoint => endpoint.channelState !== 'open')) return 'channel-not-open';
+    if (endpoints.some(endpoint => endpoint.remoteHello !== true || endpoint.protocolReady === false)) return 'protocol-hello-not-ready';
+    if (endpoints.some(endpoint => endpoint.codeAvailable !== true)) return 'security-code-not-ready';
+    // Readiness may change between the browser deadline and this later sample.
+    // Retain the timeout as a failure; a late snapshot never grants a pass.
+    return 'connection-readiness-timeout';
+}
+
+async function runPair(names) {
+    const report={engines:names,passed:false,fileTransferExecuted:false,network:'same host; STUN disabled',results:[]};
+    const server = await startDev(0);
+    // Inspect candidate *shapes*, never candidate strings, SDP or addresses.
+    const signalTrace = {incomingIce:0,forwardedIce:0,missingMid:0,missingIndex:0,
+        missingCandidate:0,types:{host:0,srflx:0,prflx:0,relay:0,other:0}};
+    const origMessage=server.signaling.message.bind(server.signaling);
+    server.signaling.message=(peer,raw)=>{
+        try{
+            const value=JSON.parse(raw);
+            if(value?.type==='signal' && value.ice){
+                const ice=value.ice;signalTrace.incomingIce++;
+                if(!Object.hasOwn(ice,'sdpMid'))signalTrace.missingMid++;
+                if(!Object.hasOwn(ice,'sdpMLineIndex'))signalTrace.missingIndex++;
+                if(typeof ice.candidate!=='string')signalTrace.missingCandidate++;
+                const type=String(ice.candidate||'').match(/ typ (\w+)/)?.[1];
+                signalTrace.types[Object.hasOwn(signalTrace.types,type) ? type : 'other']++;
+            }
+        }catch{}
+        return origMessage(peer,raw);
+    };
+    const origSend=server.signaling.send.bind(server.signaling);
+    server.signaling.send=(peer,msg)=>{
+        if(msg?.type==='signal' && msg.ice)signalTrace.forwardedIce++;
+        return origSend(peer,msg);
+    };
+    const contexts = [], browsers = [], pages = [], errors = [];
+    try {
+        for (const name of names) {
+            const engine={chromium,firefox,webkit}[name];
+            const browser = await engine.launch({ headless: true });
+            browsers.push(browser);
+            (report.browserVersions ||= []).push(browser.version());
+            const context = await browser.newContext({ acceptDownloads: true });
+            contexts.push(context);
+            const page = await context.newPage();
+            pages.push(page);
+            page.on('pageerror', () => errors.push('pageerror'));
+            await page.addInitScript(installRtcTrace);
+            await page.route('**/config.js?*', route => route.fulfill({
+                contentType: 'text/javascript',
+                body: 'window.ZEYDROP_CONFIG={enableStun:false,memoryLimit:67108864};'
+            }));
+            await page.addInitScript(() => { window.showSaveFilePicker = undefined; });
+        }
+        const [chrome, fox] = pages;
+        await chrome.goto(server.origin);
+        await chrome.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
+        await chrome.locator('#createRoomBtn').click();
+        await chrome.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
+        await fox.goto(await chrome.locator('#inviteUrl').inputValue());
+        try {
+            for (const page of pages) await page.waitForFunction(() => {
+                const peer = [...zeydrop.peers.peers.values()][0];
+                return peer?._path?.direct && peer?._protocolReady() && peer?._code;
+            }, null, { timeout: 30000 });
+        } catch {
+            report.endpoints=await Promise.all(pages.map((page,index)=>page.evaluate(rtcEndpointSnapshot,names[index])));
+            report.signaling=signalTrace;
+            report.failureKind=classifyConnectionTimeout(report.endpoints);
+            throw Error('Browser connection readiness deadline exceeded');
+        }
+        const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
+        assert.equal(codes[0], codes[1], 'cross-engine DTLS identity code must match');
+        for (const page of pages) {
+            await page.locator('.verify-peer').click();
+            await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._verified === true);
+            const path = await page.evaluate(() => [...zeydrop.peers.peers.values()][0]._path);
+            assert.equal(path.direct, true);
+            assert.ok(['udp','tcp'].includes(path.protocol));
+            assert.notEqual(path.localType, 'relay');
+            assert.notEqual(path.remoteType, 'relay');
+        }
+        const signaling = [];
+        for (const peer of server.signaling.connections.values()) {
+            peer.socket.on('message', (bytes, binary) => signaling.push({
+                binary, raw: bytes.toString(), length: bytes.length
+            }));
+        }
+        async function transfer(sender, receiver, from) {
+            const sentinel = 'ZEYDROP_NO_WS_BODY_' + from;
+            const bytes = Buffer.concat([
+                Buffer.from(sentinel),
+                crypto.randomBytes(1024 * 1024 + 133),
+                Buffer.from(sentinel)
+            ]);
+            const name = 'interoperability-' + from + '.bin';
+            await sender.locator('x-peer input[type=file]').setInputFiles({
+                name, mimeType: 'application/octet-stream', buffer: bytes
+            });
+            await receiver.locator('#fileOfferDialog[show]').waitFor();
+            const before = await receiver.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset);
+            assert.equal(before, 0, 'no file bytes may arrive before receiver click');
+            await receiver.locator('#acceptFileOffer').click();
+            await receiver.locator('#receiveDialog[show]').waitFor({ timeout: 60000 });
+            const expected = crypto.createHash('sha256').update(bytes).digest('hex');
+            assert.ok((await receiver.locator('#fileSize').innerText()).includes(expected));
+            const downloaded = receiver.waitForEvent('download');
+            await receiver.locator('#download').click();
+            const result = await downloaded;
+            const actual = await fs.readFile(await result.path());
+            assert.equal(actual.length, bytes.length);
+            assert.equal(crypto.createHash('sha256').update(actual).digest('hex'), expected,
+                'downloaded file must match independent local SHA-256');
+            await sender.waitForFunction(() => [...zeydrop.peers.peers.values()][0]._outgoing === null);
+            assert.ok(signaling.every(f => !f.binary && !f.raw.includes(sentinel)
+                && !f.raw.includes(name) && !f.raw.includes(expected)),
+                'file name, body and SHA-256 must not leak into signaling');
+            return { from, bytes: bytes.length, sha256: expected };
+        }
+        const results = report.results;
+        report.fileTransferExecuted=true;
+        results.push(await transfer(chrome, fox, names[0]+'-to-'+names[1]));
+        results.push(await transfer(fox, chrome, names[1]+'-to-'+names[0]));
+        assert.deepEqual(errors, []);
+        report.results=results;
+        report.passed=true;report.fileTransferExecuted=true;
+        report.endpoints=await Promise.all(pages.map((page,index)=>page.evaluate(rtcEndpointSnapshot,names[index])));
+        return report;
+    } catch(error) {
+        report.failureKind ||= 'assertion-or-runtime-failure';
+        report.errorType=['TimeoutError','AssertionError','TypeError'].includes(error?.name)?error.name:'Error';
+        report.signaling=signalTrace;
+        return report;
+    } finally {
+        await fs.mkdir('test-results',{recursive:true});
+        await fs.writeFile('test-results/transport-'+names.join('-')+'.json',JSON.stringify(report,null,2)+'\n');
+        await Promise.all(contexts.map(ctx => ctx.close().catch(() => {})));
+        await Promise.all(browsers.map(browser => browser.close().catch(() => {})));
+        await server.close();
+    }
+}
+async function main() {
+    const pairs=(process.env.BROWSER_PAIRS || 'chromium-webkit,firefox-webkit,webkit-webkit').split(',').map(pair=>pair.split('-'));
+    if(pairs.some(pair=>pair.length!==2||pair.some(engine=>!['chromium','firefox','webkit'].includes(engine))))throw Error('Invalid browser matrix');
+    const results=[];
+    for(const pair of pairs)results.push(await runPair(pair));
+    const report={schema:1,playwright:require('playwright/package.json').version,platform:process.platform,
+        requestedTestEnvironment:['browser-default','linux-avahi-nss'].includes(process.env.RTC_PROBE_ENVIRONMENT)?process.env.RTC_PROBE_ENVIRONMENT:'browser-default',results,
+        scope:'Zeydrop browser compatibility matrix, same host, STUN off; not macOS/iOS Safari or WAN evidence'};
+    await fs.mkdir('test-results',{recursive:true});
+    await fs.writeFile('test-results/webkit-transfer-matrix.json',JSON.stringify(report,null,2)+'\n');
+    console.log('Sanitized strict browser file matrix:',JSON.stringify(report));
+    if(results.some(result=>!result.passed))process.exitCode=1;
+}
+module.exports = { classifyConnectionTimeout };
+if (require.main === module) main().catch(error => { console.error('Browser compatibility infrastructure error:',error?.name||'Error');process.exitCode = 1; });

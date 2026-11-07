@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:18:34.730145+00:00",
+  "baseCommit": "1d85aa303e1bdb9b613d7bb0e25567de19006d91",
+  "revision": "8283668696e877e0",
+  "scope": "Local Node and deterministic build checks only; cloud native-browser results pending on new commit",
+  "nodeVersion": "v24.22.1",
+  "nodeTests": {
+    "passed": 324,
+    "failed": 0,
+    "skipped": 0
+  },
+  "audit": {
+    "rootVulnerabilities": 0,
+    "serverVulnerabilities": 0
+  },
+  "checks": [
+    "npm test",
+    "npm run build",
+    "node scripts/check-build.mjs",
+    "bash -n build.sh deploy.sh scripts/rollback.sh",
+    "git diff --check"
+  ],
+  "localBrowser": {
+    "bundledExecutableAvailable": false,
+    "systemChromiumAttempted": true,
+    "passed": false,
+    "failureCode": "runtime-operation-denied",
+    "boundary": "socket() EPERM at process_singleton; native browser not executed"
+  },
+  "externalReleaseGates": "WAN/NAT/IPv6/mobile/real Safari/storage/real deployment and rollback remain unverified"
+}

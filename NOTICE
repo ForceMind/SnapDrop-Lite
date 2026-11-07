@@ -1,0 +1,23 @@
+Zeydrop (闪投)
+
+This application derives from Snapdrop by Robin Linus and contributors:
+https://github.com/RobinLinus/snapdrop (now https://github.com/SnapDrop/snapdrop).
+Snapdrop is distributed under GNU GPL version 3. Its retained HTML/CSS layout
+primitives and icon definitions remain subject to those terms. Zeydrop's
+combined application is distributed under GPL-3.0-only; see LICENSE.
+
+The imported Zeydrop repository previously contained an Apache-2.0 LICENSE
+while its README incorrectly called it ISC. The former license text is retained
+at licenses/Apache-2.0-existing.txt as provenance, not as a replacement for the
+upstream GPL. Earlier Git history is retained unchanged. Provenance validation
+and corrections are recorded in docs/LICENSE_PROVENANCE.md.
+
+New Zeydrop networking/transfer implementations and original Zeydrop mark:
+Copyright 2026 Zeydrop contributors. Distributed as part of this GPL-3.0 work.
+
+Runtime dependencies:
+- ws: MIT, Einar Otto Stangvik and contributors.
+- @noble/hashes: MIT, Paul Miller and contributors.
+- qrcode: MIT, Ryan Day and contributors.
+Bundled dependency notices are retained by the build in vendor.js and
+THIRD_PARTY_LICENSES.txt. See the installed packages for complete notices.

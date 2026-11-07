@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T16:00:25.819819+00:00",
+  "scope": "actual CI65 source artifact compared to independent twice-packaged, reinstalled, 369-tested and Git-free rebuilt local clean-HEAD archive; no native browser/WAN/device/deployment certification",
+  "workflow": {
+    "runId": 42388784628,
+    "runNumber": 65,
+    "artifactId": 13580781957,
+    "headCommit": "e8ac72c4e670cc5d5b57e2d860db30c7a952589e",
+    "manifestMergeCommit": "932803071af62139e172939e232b1d2a29abee3f",
+    "gitObjectParents": [
+      "2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+      "e8ac72c4e670cc5d5b57e2d860db30c7a952589e"
+    ],
+    "gitObjectMessage": "Merge e8ac72c4e670cc5d5b57e2d860db30c7a952589e into 2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "gitObjectParentsMessageAndTreeVerified": true,
+    "mergeTreeEqualsHeadTree": true
+  },
+  "outerZip": {
+    "path": "/workspace/scratch/322a85615223/zeydrop-ci65-source.zip",
+    "bytes": 851747,
+    "sha256": "45fb7682dfdceaf2ace7757b6ffb512e9e98e7742f7706ecfc10701a59b515af",
+    "exactThreeRegularMembers": true,
+    "crcPassed": true,
+    "encryptedMembers": false
+  },
+  "archive": {
+    "bytes": 834496,
+    "sha256": "a76db517fff94ca2c8160c1887fb2f7c835e80d2f288bc4c6d5847d89f4428f6",
+    "regularFiles": 341,
+    "sourceFiles": 312,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 4855971,
+    "allMemberModesSizesShaMatchManifest": true,
+    "exactGitWhitelistsSourceBytesModesForHeadAndMerge": true,
+    "exactClientDerivedBuildWhitelist": true,
+    "noDuplicateLinkSpecialOrUnsafePathMembers": true,
+    "normalizedOwnerMtime": true,
+    "byteIdenticalToIndependentlyVerifiedLocalArchive": true,
+    "allExtractedRebuiltSourceAndDistBytesModesMatchActualCiArchive": true
+  },
+  "manifestDifferences": {
+    "commit": {
+      "local": "e8ac72c4e670cc5d5b57e2d860db30c7a952589e",
+      "ci": "932803071af62139e172939e232b1d2a29abee3f"
+    }
+  },
+  "revision": "06d9143aa3bbb8fe",
+  "independentVerification": {
+    "report": "/workspace/scratch/322a85615223/process-recovery-runtime-extraction.json",
+    "reportSha256": "788fcc5c9c0bcab14fe1cdaa07e04122adc410d6501ed9a17e7816e459bdc0ef",
+    "root": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c/zeydrop-candidate",
+    "savedPackage": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/verified-local-package",
+    "nodeVersion": "v24.22.1",
+    "checks": {
+      "sourceBuild": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/source-build.log",
+        "logSha256": "d3541d543a823e47a3646d9942876c5a67f459799f662d41dc1e3eb86aa28192"
+      },
+      "package1": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/package-1.log",
+        "logSha256": "cf1d450f5e1e3fda708384a5bd2abbaf7023f4aa0ebac6269b77f961c1f5f11e"
+      },
+      "package2": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/package-2.log",
+        "logSha256": "cf1d450f5e1e3fda708384a5bd2abbaf7023f4aa0ebac6269b77f961c1f5f11e"
+      },
+      "rootNpmCiIgnoreScripts": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/npm-root.log",
+        "logSha256": "e578fd526025aa6c3f9d87fd8fe684718504260926ba81244bb9c04116e2b741"
+      },
+      "serverNpmCiIgnoreScripts": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/npm-server.log",
+        "logSha256": "292f3c5b98e9b017be8c75810f3482af4af57a91c80aea974376f2fc5a7320ae"
+      },
+      "nodeTestCommand": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/node-tests.log",
+        "logSha256": "9fb6820b2d3335add83f515e2dd09ec7a1815b12d4660df7aa6bccc5ae412617"
+      },
+      "nodeTests": {
+        "passed": 369,
+        "failed": 0,
+        "skipped": 0,
+        "exitCode": 0
+      },
+      "gitFreeBuild": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/git-free-build.log",
+        "logSha256": "d3541d543a823e47a3646d9942876c5a67f459799f662d41dc1e3eb86aa28192"
+      },
+      "repeatBuildAndLocalReferences": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/repeat-build.log",
+        "logSha256": "1ce50cd69a43581acd5bfb18a32021c7357ad80e9dd865383e28105b9f8bbafb"
+      },
+      "shellSyntax": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-process-recovery-runtime-e8ac72c-logs/shell-syntax.log",
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "allRebuiltDistFilesByteMatchArchive": {
+        "count": 29,
+        "passed": true
+      },
+      "allSourceAndBuildBytesModesStillMatchManifest": {
+        "count": 341,
+        "passed": true
+      }
+    }
+  },
+  "repeatedNpmTests": false,
+  "passed": true,
+  "limitation": "Content verification only. Overall CI/browser result is recorded separately; no evidence of real WAN/NAT, mobile/Safari hardware, actual physical storage faults or production deployment."
+}

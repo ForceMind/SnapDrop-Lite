@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "ciOnly": true,
+  "dbusActive": true,
+  "avahiActive": true,
+  "avahiDbusReachable": true,
+  "ipv4Available": true,
+  "publisherStarted": true,
+  "lookupSucceeded": true,
+  "publisherStopped": true,
+  "aborted": false,
+  "passed": true
+}

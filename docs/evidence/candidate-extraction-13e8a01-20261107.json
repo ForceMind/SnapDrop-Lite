@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "sourceCommit": "13e8a01971caebc964f229dfa72bacd9fca0c9e6",
+  "revision": "52589dec23a4452d",
+  "archiveSha256": "3b6ac8067ebc0680312160333cf5b16d6975870465d5aeed164a649582fee7b2",
+  "archiveBytes": 428843,
+  "filesVerifiedBeforeAndAfterRebuild": 188,
+  "modeVerificationBeforeRebuild": true,
+  "gitMetadataPresent": false,
+  "node": "v24.22.1",
+  "actualCommands": [
+    "npm ci --ignore-scripts",
+    "npm --prefix server ci --ignore-scripts",
+    "npm test",
+    "npm run build",
+    "node scripts/check-build.mjs"
+  ],
+  "nodeTests": {
+    "passed": 177,
+    "failed": 0
+  },
+  "postBuildAllFileHashesMatchManifest": true,
+  "recordedAtUTC": "2026-11-07T06:28:03.830221+00:00",
+  "limitation": "Independent extracted-source installation/tests/rebuild only; browser, WAN, hardware and production deployment are separate gates.",
+  "ciArtifactComparison": {
+    "runId": 42346993080,
+    "artifactId": 13563933117,
+    "ciMergeCommit": "a10241ed6d82aefff7adc563a72e01b611d9a140",
+    "zipSha256": "67d0658ab493a8bca8ed248b224cad40a576ba32e2a0fa0aaa97f7601b842c11",
+    "allFileManifestEntriesIdentical": true,
+    "archiveBytesIdenticalToLocalCandidate": true
+  }
+}

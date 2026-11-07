@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T16:07:52.018462+00:00",
+  "runtimeCommit": "26aed4136ee849a84689c1915e59feb891f00ca7",
+  "validatedHead": "e8ac72c4e670cc5d5b57e2d860db30c7a952589e",
+  "revision": "06d9143aa3bbb8fe",
+  "workflow": {
+    "runNumber": 65,
+    "runId": 42388784628,
+    "jobId": 128451749732,
+    "status": "completed",
+    "conclusion": "success",
+    "finalLogsRead": true,
+    "node": {
+      "tests": 369,
+      "pass": 369,
+      "fail": 0,
+      "skip": 0
+    },
+    "supersededRun64": "cancelled by newer documentation head; not counted as passed"
+  },
+  "rawEvidence": {
+    "artifactId": 13580608715,
+    "bytes": 2070145,
+    "sha256": "05cc09582364842f63df9430864ea19c3cc269f21167dd80aa3c292db397ebd8",
+    "crcPassed": true,
+    "unsafeMembers": false,
+    "permanentJsonCopies": 30
+  },
+  "newNativeChecks": {
+    "opfsCollision": {
+      "passed": true,
+      "phases": [
+        "partial",
+        "complete",
+        "corrupt"
+      ],
+      "preservedBytesEach": 16384,
+      "noErase": true,
+      "immediateNativeReacquire": true
+    },
+    "ownedBrowserProcessCrash": {
+      "passed": true,
+      "observedCoreProcesses": 10,
+      "observedGroupMembers": 12,
+      "signal": "SIGKILL",
+      "oldLiveMembers": 0,
+      "oldZombieMembers": 0,
+      "metadataUnchanged": true,
+      "committedBytes": 1048576,
+      "observedPhysicalBytesAfterCrash": 1064960,
+      "freshIdentityAndManualConsent": true,
+      "sentTailBytes": 3145728,
+      "finalBytes": 4194304,
+      "finalSha256": "527d8c881d61fef9087b26a2ca5ba33cb2a7a6224b7099388ec075abe4ce3d6f",
+      "uploadAttempts": 0,
+      "externalApplicationRequests": 0,
+      "signalingMessages": 18,
+      "signalingBytes": 3804,
+      "signalingFileDataObserved": false
+    }
+  },
+  "largeFiles": {
+    "chromium": {
+      "ms": 144564,
+      "sha256": "49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14"
+    },
+    "firefox": {
+      "ms": 13070,
+      "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+    }
+  },
+  "strictPairs": [
+    {
+      "engines": [
+        "chromium",
+        "chromium"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "firefox"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "firefox"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "webkit",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    }
+  ],
+  "passed": true,
+  "scope": "Linux same-host controlled native tests with STUN disabled; not WAN/NAT success rates, Safari/mobile hardware, disk/power-loss guarantees or independent production deployment."
+}

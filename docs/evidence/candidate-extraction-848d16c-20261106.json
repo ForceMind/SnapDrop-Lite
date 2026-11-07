@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "848d16c1bd1e419ab30c543f8afa0eb0c0c2ff1e",
+  "revision": "dd492385685e4a1f",
+  "archiveSHA256": "71ee5a318084206013aac2865653eb2a4c21adf998c3565427ad2ffece0d82e2",
+  "filesVerified": 167,
+  "nodeTests": 139,
+  "gitFreeFreshDependenciesAndRebuild": true,
+  "passed": true,
+  "limitation": "This record proves local Git-free extraction/reinstallation/build; native HTTPS/browser results are separately in CI47."
+}

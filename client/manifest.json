@@ -1,40 +1,46 @@
 {
-    "name": "闪投",
-    "short_name": "闪投",
-    "icons": [{
-        "src": "images/android-chrome-192x192.png?v=2.0.5",
-        "sizes": "192x192",
-        "type": "image/png"
-    },{
-        "src": "images/android-chrome-512x512.png?v=2.0.5",
-        "sizes": "512x512",
-        "type": "image/png"
-    },{
-        "src": "images/android-chrome-192x192-maskable.png?v=2.0.5",
-        "sizes": "192x192",
-        "type": "image/png",
-        "purpose": "maskable"
-    },{
-        "src": "images/android-chrome-512x512-maskable.png?v=2.0.5",
-        "sizes": "512x512",
-        "type": "image/png",
-        "purpose": "maskable"
-    },{
-        "src": "images/favicon-96x96.png?v=2.0.5",
-        "sizes": "96x96",
-        "type": "image/png"
-    }],
-    "background_color": "#efefef",
-    "display": "minimal-ui",
-    "theme_color": "#3367d6",
-    "share_target": {
-        "method":"GET",
-        "enctype": "application/x-www-form-urlencoded",
-        "action": "/?share_target",
-        "params": {
-            "title": "title",
-            "text": "text",
-            "url": "url"
-        }
+  "name": "Zeydrop · 闪投",
+  "short_name": "Zeydrop",
+  "icons": [
+    {
+      "src": "images/zeydrop-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "images/android-chrome-192x192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "images/android-chrome-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "images/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
     }
+  ],
+  "background_color": "#f7f9f6",
+  "display": "standalone",
+  "theme_color": "#236b53",
+  "description": "端到端直连的跨设备文件传输；服务器仅处理配对和信令。",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/"
 }

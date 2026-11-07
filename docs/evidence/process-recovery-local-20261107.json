@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "product": "Zeydrop",
+  "recordedAt": "2026-11-07T15:54:18.967089+00:00",
+  "baseline": "af9004756bb2515351539ff0aa3ad4789c81f659",
+  "revision": "06d9143aa3bbb8fe",
+  "node": {
+    "tests": 369,
+    "pass": 369,
+    "fail": 0,
+    "skip": 0,
+    "version": "v24.22.1",
+    "logSummary": "Full npm test including 27 new regressions passed locally."
+  },
+  "build": {
+    "npmRunBuild": true,
+    "checkBuild": true
+  },
+  "audit": {
+    "root": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "server": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "shellSyntax": true,
+  "diffCheck": true,
+  "serverIndexSha256": "b3aa2d2f4a3f6a547f3e6bb7661f010bcbf326702461c425657fddadd850e52f",
+  "nativeBrowser": {
+    "passed": false,
+    "status": "runtime-operation-denied",
+    "method": "Actual system Chromium startup attempts fail process_singleton socket EPERM; no native browser pass is claimed. New GitHub CI is pending."
+  },
+  "scope": "Linux local Node/filesystem-boundary regressions and deterministic build; not native OPFS/browser crash, WAN, real Safari/mobile or deployment proof."
+}

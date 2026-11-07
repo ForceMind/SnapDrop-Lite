@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "ephemeral self-signed TLS proxy",
+  "checks": [
+    "real Nginx HTTPS static and security headers",
+    "HTTP redirect",
+    "private dotfiles rejected even when present",
+    "well-known challenge path remains available",
+    "upload rejection",
+    "Origin ACL on WebSocket upgrade",
+    "two-client WSS pairing",
+    "no file proxy"
+  ]
+}

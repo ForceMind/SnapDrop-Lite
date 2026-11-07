@@ -1,0 +1,185 @@
+{
+  "engines": [
+    "chromium",
+    "webkit"
+  ],
+  "passed": true,
+  "fileTransferExecuted": true,
+  "network": "same host; STUN disabled",
+  "results": [
+    {
+      "from": "chromium-to-webkit",
+      "bytes": 1048783,
+      "sha256": "ef655f642c8251795a97747f0289589bc74afb880ff36c3d80d480e2235bf5bb"
+    },
+    {
+      "from": "webkit-to-chromium",
+      "bytes": 1048783,
+      "sha256": "6ce5e38ce70fe5c45f0858edb3e0d0f5e4b3ec56ec89bf03d8c902ca9592c195"
+    }
+  ],
+  "browserVersions": [
+    "156.0.8078.4",
+    "27.2"
+  ],
+  "endpoints": [
+    {
+      "engine": "chromium",
+      "peerPresent": true,
+      "rtc": "connected",
+      "ice": "connected",
+      "gathering": "complete",
+      "signaling": "stable",
+      "channelState": "open",
+      "appDirect": true,
+      "codeAvailable": true,
+      "remoteHello": true,
+      "protocolReady": true,
+      "helloHandshakeTimedOut": false,
+      "candidateApplication": {
+        "attempted": 1,
+        "applied": 1,
+        "failures": [],
+        "mdns": 1,
+        "mdnsUuidV4": 1,
+        "ipv4": 0,
+        "ipv6": 0,
+        "otherAddress": 0
+      },
+      "sctpPresent": true,
+      "dtls": "connected",
+      "iceTransport": "connected",
+      "selectedPairAPI": {
+        "localType": "host",
+        "remoteType": "prflx",
+        "localProtocol": "udp",
+        "remoteProtocol": "udp"
+      },
+      "selectedStatsPresent": true,
+      "succeededPairs": 1,
+      "localCandidates": 4,
+      "remoteCandidates": 1,
+      "localSdp": {
+        "present": true,
+        "sessionHasIceUfrag": false,
+        "sessionHasIcePwd": false,
+        "sessionHasSha256Fingerprint": false,
+        "media": [
+          {
+            "kind": "application",
+            "rejected": false,
+            "protocol": "UDP/DTLS/SCTP",
+            "hasMid": true,
+            "hasIceUfrag": true,
+            "hasIcePwd": true,
+            "hasSha256Fingerprint": true,
+            "hasSctpPort": true,
+            "candidateLines": 1,
+            "endOfCandidates": false,
+            "setup": "actpass"
+          }
+        ]
+      },
+      "remoteSdp": {
+        "present": true,
+        "sessionHasIceUfrag": false,
+        "sessionHasIcePwd": false,
+        "sessionHasSha256Fingerprint": false,
+        "media": [
+          {
+            "kind": "application",
+            "rejected": false,
+            "protocol": "UDP/DTLS/SCTP",
+            "hasMid": true,
+            "hasIceUfrag": true,
+            "hasIcePwd": true,
+            "hasSha256Fingerprint": true,
+            "hasSctpPort": true,
+            "candidateLines": 1,
+            "endOfCandidates": false,
+            "setup": "active"
+          }
+        ]
+      }
+    },
+    {
+      "engine": "webkit",
+      "peerPresent": true,
+      "rtc": "connected",
+      "ice": "connected",
+      "gathering": "complete",
+      "signaling": "stable",
+      "channelState": "open",
+      "appDirect": true,
+      "codeAvailable": true,
+      "remoteHello": true,
+      "protocolReady": true,
+      "helloHandshakeTimedOut": false,
+      "candidateApplication": {
+        "attempted": 1,
+        "applied": 1,
+        "failures": [],
+        "mdns": 1,
+        "mdnsUuidV4": 1,
+        "ipv4": 0,
+        "ipv6": 0,
+        "otherAddress": 0
+      },
+      "sctpPresent": true,
+      "dtls": "connected",
+      "iceTransport": "connected",
+      "selectedPairAPI": {
+        "localType": "host",
+        "remoteType": "host",
+        "localProtocol": "udp",
+        "remoteProtocol": "udp"
+      },
+      "selectedStatsPresent": true,
+      "succeededPairs": 1,
+      "localCandidates": 2,
+      "remoteCandidates": 1,
+      "localSdp": {
+        "present": true,
+        "sessionHasIceUfrag": false,
+        "sessionHasIcePwd": false,
+        "sessionHasSha256Fingerprint": false,
+        "media": [
+          {
+            "kind": "application",
+            "rejected": false,
+            "protocol": "UDP/DTLS/SCTP",
+            "hasMid": true,
+            "hasIceUfrag": true,
+            "hasIcePwd": true,
+            "hasSha256Fingerprint": true,
+            "hasSctpPort": true,
+            "candidateLines": 1,
+            "endOfCandidates": false,
+            "setup": "active"
+          }
+        ]
+      },
+      "remoteSdp": {
+        "present": true,
+        "sessionHasIceUfrag": false,
+        "sessionHasIcePwd": false,
+        "sessionHasSha256Fingerprint": false,
+        "media": [
+          {
+            "kind": "application",
+            "rejected": false,
+            "protocol": "UDP/DTLS/SCTP",
+            "hasMid": true,
+            "hasIceUfrag": true,
+            "hasIcePwd": true,
+            "hasSha256Fingerprint": true,
+            "hasSctpPort": true,
+            "candidateLines": 1,
+            "endOfCandidates": false,
+            "setup": "actpass"
+          }
+        ]
+      }
+    }
+  ]
+}

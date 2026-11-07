@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:59:07.612385+00:00",
+  "scope": "actual CI62 source artifact content compared to independently extracted, dependency-reinstalled, 342-tested and rebuilt local clean-HEAD archive; workflow/browser conclusion is recorded separately by root",
+  "workflow": {
+    "runId": 42370267657,
+    "runNumber": 62,
+    "artifactId": 13573442924,
+    "headCommit": "88ebde0cfee36e7a06071a85661996b620d87c30",
+    "manifestMergeCommit": "81ff7001996d487b2b691ef100f920982e5ded2d",
+    "baseCommitFromMergeMessage": "2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "manifestMergeCommitMessage": "Merge 88ebde0cfee36e7a06071a85661996b620d87c30 into 2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "manifestCommitFetchedFromGitHub": true
+  },
+  "outerZip": {
+    "path": "/workspace/scratch/322a85615223/zeydrop-88ebde0-ci62.zip",
+    "bytes": 785207,
+    "sha256": "84322b5c6b4fcdef88be7c7bda6df7cb8ef4fce4c0876eab5f9c64d2491575ac",
+    "exactThreeRegularMembers": true,
+    "crcPassed": true,
+    "encryptedMembers": false
+  },
+  "archive": {
+    "bytes": 768528,
+    "sha256": "ed0c7be03eacf98b39baa6011b0858e162b460c0a7a5eff4e0efb163e0b3cbec",
+    "regularFiles": 319,
+    "sourceFiles": 290,
+    "builtFiles": 29,
+    "directories": 17,
+    "allMemberModesSizesShaMatchManifest": true,
+    "noDuplicateLinkSpecialOrUnsafePathMembers": true,
+    "normalizedOwnerMtime": true,
+    "byteIdenticalToIndependentlyVerifiedLocalArchive": true,
+    "allExtractedRebuiltSourceAndDistBytesModesMatchActualCiArchive": true
+  },
+  "manifestDifferences": {
+    "commit": {
+      "local": "88ebde0cfee36e7a06071a85661996b620d87c30",
+      "ci": "81ff7001996d487b2b691ef100f920982e5ded2d"
+    }
+  },
+  "revision": "50be36dcf5f9d638",
+  "independentVerification": {
+    "report": "/workspace/scratch/322a85615223/delete-feedback-runtime-verification.json",
+    "root": "/workspace/scratch/322a85615223/verify-delete-feedback-runtime/zeydrop-candidate",
+    "nodeVersion": "v24.22.1",
+    "checks": {
+      "rootNpmCiIgnoreScripts": {
+        "exitCode": 0
+      },
+      "serverNpmCiIgnoreScripts": {
+        "exitCode": 0
+      },
+      "nodeTests": {
+        "passed": 342,
+        "failed": 0,
+        "skipped": 0,
+        "exitCode": 0
+      },
+      "gitFreeBuild": {
+        "revision": "50be36dcf5f9d638",
+        "exitCode": 0
+      },
+      "repeatBuildAndLocalReferences": {
+        "exitCode": 0
+      },
+      "shellSyntax": {
+        "exitCode": 0
+      },
+      "allRebuiltDistFilesByteMatchArchive": {
+        "count": 29,
+        "passed": true
+      },
+      "allSourceAndBuildBytesModesStillMatchManifest": {
+        "count": 319,
+        "passed": true
+      }
+    }
+  },
+  "passed": true,
+  "limitation": "Source package verification only; not evidence of real WAN, NAT reachability, mobile/Safari hardware, native storage-failure acceptance or production deployment."
+}
