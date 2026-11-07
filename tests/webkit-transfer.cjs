@@ -9,6 +9,22 @@ const { chromium, firefox, webkit } = require('playwright');
 const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
 const { startDev } = require('../scripts/dev.cjs');
 
+// A readiness timeout is not necessarily an ICE failure. In particular, an
+// open, selected direct channel can still be waiting for the protocol hello.
+// Classify only the existing sanitized snapshot, never raw stats/SDP/errors.
+function classifyConnectionTimeout(endpoints) {
+    if (!Array.isArray(endpoints) || endpoints.length !== 2 || endpoints.some(endpoint => !endpoint))
+        return 'connection-snapshot-unavailable';
+    if (endpoints.some(endpoint => endpoint.helloHandshakeTimedOut === true)) return 'protocol-hello-not-ready';
+    if (endpoints.some(endpoint => endpoint.appDirect !== true)) return 'selected-route-unavailable';
+    if (endpoints.some(endpoint => endpoint.channelState !== 'open')) return 'channel-not-open';
+    if (endpoints.some(endpoint => endpoint.remoteHello !== true || endpoint.protocolReady === false)) return 'protocol-hello-not-ready';
+    if (endpoints.some(endpoint => endpoint.codeAvailable !== true)) return 'security-code-not-ready';
+    // Readiness may change between the browser deadline and this later sample.
+    // Retain the timeout as a failure; a late snapshot never grants a pass.
+    return 'connection-readiness-timeout';
+}
+
 async function runPair(names) {
     const report={engines:names,passed:false,fileTransferExecuted:false,network:'same host; STUN disabled',results:[]};
     const server = await startDev(0);
@@ -63,13 +79,13 @@ async function runPair(names) {
         try {
             for (const page of pages) await page.waitForFunction(() => {
                 const peer = [...zeydrop.peers.peers.values()][0];
-                return peer?._path?.direct && peer?._remoteHello && peer?._code;
+                return peer?._path?.direct && peer?._protocolReady() && peer?._code;
             }, null, { timeout: 30000 });
         } catch {
             report.endpoints=await Promise.all(pages.map((page,index)=>page.evaluate(rtcEndpointSnapshot,names[index])));
             report.signaling=signalTrace;
-            report.failureKind='selected-route-unavailable';
-            throw Error('No verified non-relay direct path');
+            report.failureKind=classifyConnectionTimeout(report.endpoints);
+            throw Error('Browser connection readiness deadline exceeded');
         }
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText()));
         assert.equal(codes[0], codes[1], 'cross-engine DTLS identity code must match');
@@ -154,4 +170,5 @@ async function main() {
     console.log('Sanitized strict browser file matrix:',JSON.stringify(report));
     if(results.some(result=>!result.passed))process.exitCode=1;
 }
-main().catch(error => { console.error('Browser compatibility infrastructure error:',error?.name||'Error');process.exitCode = 1; });
+module.exports = { classifyConnectionTimeout };
+if (require.main === module) main().catch(error => { console.error('Browser compatibility infrastructure error:',error?.name||'Error');process.exitCode = 1; });

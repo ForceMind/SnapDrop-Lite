@@ -251,16 +251,17 @@ class RTCPeer extends TransferPeer {
         this._connectionEvent();
     }
     verify() {
-        if (!this._code || !this._path.direct || !this._remoteHello || !this._canInspectPath()) return;
+        if (!this._code || !this._path.direct || !this._protocolReady() || !this._canInspectPath()) return;
         this._verified = true; this._connectionEvent();
         this.restoreTransfers?.();
     }
     _bindChannel(channel) {
-        this._remoteHello = false;
+        this._clearHelloHandshake();
+        this._remoteHello = false; this._helloRequiresAck = false; this._helloTimedOut = false;
         this._channel = channel; channel.binaryType = 'arraybuffer'; channel.bufferedAmountLowThreshold = 128 * 1024;
         channel.onopen = () => {
-            if (this._closed || this._channel !== channel) return;
-            this.sendJSON({ type: 'hello', version: 2 });
+            if (this._closed || this._channel !== channel || channel.readyState !== 'open') return;
+            this._startHello(channel);
             clearInterval(this._statsTimer); this._statsTimer = setInterval(() => this._samplePath(), 2000);
             this._samplePath(); this._securityCode();
         };
@@ -290,6 +291,73 @@ class RTCPeer extends TransferPeer {
         };
         channel.onclose = channelLost;
         channel.onerror = channelLost;
+        // The browser can deliver an already-open channel before onopen is set.
+        if (channel.readyState === 'open') channel.onopen();
+    }
+    _clearHelloHandshake(expected = this._helloHandshake) {
+        if (!expected) return;
+        clearTimeout(expected.timer); expected.timer = null;
+        if (this._helloHandshake === expected) this._helloHandshake = null;
+    }
+    _helloCurrent(handshake) {
+        return handshake && this._helloHandshake === handshake && !this._closed
+            && this._channel === handshake.channel && handshake.channel.readyState === 'open'
+            && !['disconnected', 'failed', 'closed'].includes(this._state);
+    }
+    _startHello(channel) {
+        if (this._closed || !channel || this._channel !== channel || channel.readyState !== 'open'
+            || ['disconnected', 'failed', 'closed'].includes(this._state)) return;
+        if (this._helloHandshake?.channel === channel) return;
+        this._clearHelloHandshake();
+        this._helloTimedOut = false;
+        const handshake = this._helloHandshake = { channel, nonce: crypto.randomUUID(), attempts: 0,
+            acknowledged: false, replies: 0, timer: null };
+        const tick = () => {
+            handshake.timer = null;
+            if (!this._helloCurrent(handshake)) { this._clearHelloHandshake(handshake); return; }
+            if (handshake.acknowledged && this._remoteHello) return;
+            if (handshake.attempts >= 10) {
+                // Older v2 peers have no ACK extension. Their successfully
+                // processed hello is still compatible; never close a ready peer.
+                if (!this._protocolReady()) {
+                    this._helloTimedOut = true;
+                    this._fail('文件协议握手未完成。直连通道可能已建立，请重新配对后重试；不会改用文件中继。');
+                }
+                return;
+            }
+            handshake.attempts++;
+            try { this.sendJSON({ type: 'hello', version: 2, nonce: handshake.nonce }); } catch {}
+            handshake.timer = setTimeout(tick, 1000);
+        };
+        tick();
+    }
+    // TransferPeer calls these hooks only after its exact-wire/path-epoch
+    // dequeue guard succeeds. Receipt of an event alone must never earn an ACK.
+    _helloReceived(message) {
+        const handshake = this._helloHandshake;
+        if (!this._helloCurrent(handshake)) return;
+        if (typeof message.nonce === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(message.nonce)
+            && handshake.replies < 10) {
+            this._helloRequiresAck = true;
+            handshake.replies++;
+            try { this.sendJSON({ type: 'hello-ack', version: 2, nonce: message.nonce }); } catch {}
+        }
+        if (handshake.acknowledged) { clearTimeout(handshake.timer); handshake.timer = null; }
+    }
+    _helloAcknowledged(message) {
+        const handshake = this._helloHandshake;
+        if (!this._helloCurrent(handshake) || message.nonce !== handshake.nonce) return;
+        const first = !handshake.acknowledged;
+        handshake.acknowledged = true;
+        if (this._remoteHello) {
+            clearTimeout(handshake.timer); handshake.timer = null;
+            if (first) this._connectionEvent();
+        }
+    }
+    _protocolReady() {
+        // A new peer must prove both directions processed hello before any
+        // verification/file offer. ACK alone never establishes peer capability.
+        return !!this._remoteHello && (!this._helloRequiresAck || this._helloHandshake?.acknowledged === true);
     }
     _send(data) {
         if (!this._isConnected()) throw Error('文件通道尚未就绪');
@@ -318,6 +386,7 @@ class RTCPeer extends TransferPeer {
         // Invalidate every outstanding stats request before aborting asynchronous file work.
         this._pathEpoch = (this._pathEpoch || 0) + 1;
         this._state = state; this._path = { direct: false }; this._verified = false;
+        if (resetIdentity || ['disconnected', 'failed', 'closed'].includes(state)) this._clearHelloHandshake();
         if (resetIdentity) { this._identityEpoch = (this._identityEpoch || 0) + 1; this._code = null; }
         if (reason) {
             // Transient loss retains a bounded local checkpoint; terminal failure aborts.
@@ -350,6 +419,7 @@ class RTCPeer extends TransferPeer {
             if (path.status === 'relay') return this._protocolError('检测到中继路径，已停止连接');
             if (!path.direct) return this._pathUnavailable('直连路径暂时无法核验，当前文件已停止；恢复后请重新核对安全码');
             this._path = path; this._reason = null; this._state = 'connected';
+            this._startHello(this._channel);
             this._restartPending = false; this._waitingForRemote = false;
             clearTimeout(this._deadline); clearTimeout(this._disconnectTimer); clearTimeout(this._pathWaitTimer);
             this._disconnectTimer = null; this._pathWaitTimer = null;
@@ -409,7 +479,7 @@ class RTCPeer extends TransferPeer {
         this._disconnectTimer = null; this._pathWaitTimer = null;
         this._reason = reason; this._connectionEvent();
     }
-    _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); this._queueEvent?.(); }
+    _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._protocolReady(), candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); this._queueEvent?.(); }
     _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
     close(reason = '连接已关闭，文件未完成', preserve = false) {
         if (this._closed) return null;

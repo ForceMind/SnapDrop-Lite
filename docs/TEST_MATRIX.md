@@ -64,3 +64,5 @@ E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服
 - scripts/server-load.cjs：64/256/1000连接实际短profile精确收齐及资源回收，server RSS/CPU独立于负载发生器，原始报告见SERVER_PERFORMANCE。不是长期soak、真实WAN或文件速度证据。
 
 CI50实际新增清单：Chromium/WebKit全流程和390px截图通过；Firefox原复选框刷新断言失败，已修复但等待新CI。CI50 Chromium1GiB恢复执行并通过。测试专用browser-resources只采Chromium目标CDP有界JS heap/backingStorage/renderer duration，遇不支持字段缺省，非RSS/全CPU。实际数据待新CI，4项采样边界+2项表单恢复回归使本地Node合计183项。
+
+握手修复新增10项实际network+transfer源码回归（旧代码可复现单向丢hello后提前verify），以及1项连接阶段分类；nonce ACK先到、旧通道/epoch、已open绑定、十次截止、legacy兼容和重复消息无echo均覆盖。锁回调2项回归先红后绿，证明原Quota/Corrupt对象对调用方保留而不逃出锁callback。合计196项本地测试，真实浏览器结果待新head。

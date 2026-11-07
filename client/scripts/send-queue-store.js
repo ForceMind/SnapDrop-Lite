@@ -82,9 +82,15 @@ class ZeydropSendQueueStore {
     async _locked(fn, signal) {
         if (!this.supported) throw this._error('QueueUnsupportedError', '此浏览器不支持安全的本机待发清单，请继续使用当前页面发送');
         this._abort(signal);
-        return this._locks.request(ZeydropSendQueueStore.KEY, { mode:'exclusive', ...(signal ? {signal} : {}) }, () => {
-            this._abort(signal); return fn(this._storage());
+        // Firefox may report exceptions crossing a native lock callback as
+        // global errors even when the request promise is handled. Keep that
+        // callback fulfilled and reject only the caller, with the same error.
+        const outcome = await this._locks.request(ZeydropSendQueueStore.KEY, { mode:'exclusive', ...(signal ? {signal} : {}) }, async () => {
+            try { this._abort(signal); return { ok:true, value:await fn(this._storage()) }; }
+            catch (error) { return { ok:false, error }; }
         });
+        if (!outcome.ok) throw outcome.error;
+        return outcome.value;
     }
     _selection(files) {
         if (!files || !Number.isInteger(files.length) || files.length < 1 || files.length > ZeydropSendQueueStore.MAX_FILES)

@@ -98,7 +98,15 @@ class TransferPeer {
         if (!msg || typeof msg !== 'object' || Array.isArray(msg)) throw Error('无效的传输消息');
         if (msg.type === 'hello') {
             if (msg.version !== 2) throw Error('双方版本不兼容，请刷新网页');
-            this._remoteHello = true; this._connectionEvent(); this.restoreTransfers(); return;
+            const first = !this._remoteHello;
+            this._remoteHello = true;
+            this._helloReceived?.(msg);
+            if (first) { this._connectionEvent(); this.restoreTransfers(); }
+            return;
+        }
+        if (msg.type === 'hello-ack') {
+            if (msg.version !== 2) throw Error('双方版本不兼容，请刷新网页');
+            this._helloAcknowledged?.(msg); return;
         }
         if (!this._remoteHello) throw Error('传输协议尚未就绪');
         // Resume control is valid only for an existing, user-approved file from the
@@ -285,7 +293,7 @@ class TransferPeer {
         this.restoreTransfers(); return true;
     }
     restoreTransfers() {
-        if (!this._verified || !this._remoteHello || !this._path?.direct || !this._isConnected()) return false;
+        if (!this._canSend()) return false;
         const hold = this._held;
         if (hold) {
             if (hold.cancelled) { this._dropHeld(hold.cancelled); return false; }
@@ -412,7 +420,8 @@ class TransferPeer {
         }
     }
     rejectIncoming(id) { if (this._incoming?.meta.id === id) this.cancel(id, '已拒绝接收'); }
-    _canSend() { return this._verified && this._path?.direct && this._remoteHello && this._isConnected(); }
+    _protocolReady() { return this._remoteHello; }
+    _canSend() { return this._verified && this._path?.direct && this._protocolReady() && this._isConnected(); }
     _queueEvent() {
         Events.fire('send-queue-state', { peerId: this._peerId, count: this._filesQueue.length + (this._held?.pendingFiles?.length || 0),
             blocked: this._held ? !!this._held.queueBlocked : this._queueBlocked,
@@ -560,7 +569,7 @@ class TransferPeer {
         this._queueEvent();
     }
     sendText(text) {
-        if (!this._verified || !this._path?.direct) return Events.fire('notify-user', '请先核对安全码');
+        if (!this._canSend()) return Events.fire('notify-user', '请等待对方就绪并核对安全码');
         if (text.length > 4096) return Events.fire('notify-user', '文本最多 4096 字符');
         this.sendJSON({ type: 'text', text });
     }

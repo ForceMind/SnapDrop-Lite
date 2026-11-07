@@ -131,6 +131,29 @@ test('quota/permission failures propagate and cannot destroy the previously save
     assert.equal((await h.store.load()).revision,snapshot.revision);h.writeError(null);
     h.readError(new DOMException('blocked','SecurityError'));await assert.rejects(h.store.load(),{name:'SecurityError'});
 });
+test('a quota error leaves the Web Locks callback fulfilled and rejects its caller with the original error',async()=>{
+    const h=await rig(),callbackErrors=[];
+    const locks={request(name,options,callback){return h.locks.request(name,options,async()=>{
+        try{return await callback();}catch(error){callbackErrors.push(error);throw error;}
+    });}};
+    const store=h.make({locks}),original=await store.save([file('original')],{optIn:true,expectedRevision:null});
+    const raw=h.values.get(store.storageKey),quota=new DOMException('quota','QuotaExceededError');h.writeError(quota);
+    await assert.rejects(store.save([file('replacement')],{optIn:true,expectedRevision:original.revision}),error=>error===quota);
+    assert.equal(h.values.get(store.storageKey),raw);
+    assert.deepEqual(callbackErrors,[],'storage errors must not escape the native lock callback');
+});
+test('corrupt metadata rejects outside the Web Locks callback without wrapping the original parser error',async()=>{
+    const h=await rig(),callbackErrors=[];
+    const locks={request(name,options,callback){return h.locks.request(name,options,async()=>{
+        try{return await callback();}catch(error){callbackErrors.push(error);throw error;}
+    });}};
+    const store=h.make({locks}),parse=store._parse.bind(store);let originalError;
+    store._parse=text=>{try{return parse(text);}catch(error){originalError=error;throw error;}};
+    h.values.set(store.storageKey,'{truncated');
+    await assert.rejects(store.load(),error=>error===originalError&&error.name==='QueueCorruptError');
+    assert.equal(h.values.get(store.storageKey),'{truncated');
+    assert.deepEqual(callbackErrors,[],'invalid metadata must not escape the native lock callback');
+});
 test('file hashing is chunked and cancellable before metadata commit',async()=>{
     const h=await rig(),content=file(Buffer.alloc(2*256*1024+19)),late=delayed(content),abort=new AbortController();
     const saving=h.store.save([late.selected],{optIn:true,expectedRevision:null,signal:abort.signal});await late.started.promise;

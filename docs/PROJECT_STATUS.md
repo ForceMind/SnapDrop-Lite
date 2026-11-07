@@ -64,3 +64,9 @@
 Chromium/WebKit的发送清单全流程已通过，Firefox首次保存/完整哈希通过，但刷新时浏览器恢复了已勾选同意框，原断言保持并失败于测试line180；不代表File已自动绑定或发送。已对同意框禁用表单恢复，并在初始化/pagehide/BFCache返回时清空许可及文件控件，新增2项实际UI回归。CI50的Chromium1GiB/Firefox100MiB通过；六组合另有Chromium↔WebKit底层已直连但应用hello未就绪的失败，其余5组通过。该失败不能归因于未知selected路径，需修复应用握手。原始三引擎结果见ci50-send-queue-browser-*.json；CI49 TypeError未再复现，但原失败保留，不倒推为通过。
 
 新增测试专用CDP资源采样：有限频率/样本/白名单字段，JS heap、backingStorage（含外部字符串）与renderer duration单独记录，非RSS/全CPU或内存硬上限；Firefox/WebKit不支持时明确unsupported。新增4项计量边界测试，握手修复前本地总计183项。真实CDP数据须后续CI，不伪造当前本地浏览器采样。
+
+### 待下一轮CI的连接修复
+
+已用旧HEAD实际复现单向首条hello丢失后提前verify，加入每通道随机nonce/实际处理后ACK/最多10次重发及协议就绪门槛，保持路径/身份/接收授权；十项生命周期+一项阶段分类回归。旧wire、epoch、nonce、计时器均隔离，legacy v2兼容；文字也共享就绪门槛。
+
+CI51 Firefox清单9项流程均完成，但预期quota/corrupt操作触发两条全局error，最终严格错误断言仍失败。锁回调改为结果包装、锁外重抛原异常，新增两项先红后绿回归。上述修改合并后本地196项，等待新head完整浏览器CI，不标已发布。

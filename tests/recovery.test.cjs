@@ -43,7 +43,7 @@ function harness() {
     }
     const context = {
         window: target, CustomEvent, TextEncoder, RTCPeerConnection: Connection,
-        crypto: { subtle: { digest: (...args) => webcrypto.subtle.digest(...args) } },
+        crypto: { randomUUID: () => webcrypto.randomUUID(), subtle: { digest: (...args) => webcrypto.subtle.digest(...args) } },
         hex: bytes => Buffer.from(bytes).toString('hex'),
         setTimeout: schedule, clearTimeout: id => timers.delete(id),
         setInterval: schedule, clearInterval: id => timers.delete(id),

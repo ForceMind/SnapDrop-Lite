@@ -84,6 +84,8 @@ async function rtcEndpointSnapshot(engine) {
         channelState: allowed((window.__primitiveChannel || peer?._channel)?.readyState, ['connecting','open','closing','closed']),
         appDirect: peer?._path?.direct === true,
         codeAvailable: !!peer?._code, remoteHello: peer?._remoteHello === true,
+        protocolReady: typeof peer?._protocolReady === 'function' ? peer._protocolReady() === true : peer?._remoteHello === true,
+        helloHandshakeTimedOut: peer?._helloTimedOut === true,
         candidateApplication: window.__rtcTraceFor?.(pc) || null,
         sctpPresent: !!pc.sctp,
         dtls: allowed(pc.sctp?.transport?.state, ['new','connecting','connected','closed','failed']),

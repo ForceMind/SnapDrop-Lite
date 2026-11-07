@@ -150,13 +150,13 @@ class PeersUI {
     state(info) {
         const el = $(info.peerId); if (!el) return;
         el.querySelector('.status').textContent = info.state === 'closed' ? '连接已关闭' : info.state === 'failed' ? '无法直连' : info.state === 'disconnected' ? '连接断开，正在恢复' : info.path?.direct ? '设备直连已建立' : '正在建立并核验直连…';
-        el.querySelector('.connection-help').textContent = info.reason || (info.path?.direct ? (info.verified ? '安全码已核对，可以选择文件' : '请先在两台设备核对下方安全码') : '请让另一台设备保持页面打开');
+        el.querySelector('.connection-help').textContent = info.reason || (info.path?.direct ? (!info.ready ? '直连已建立，正在等待另一台设备就绪' : info.verified ? '安全码已核对，可以选择文件' : '请先在两台设备核对下方安全码') : '请让另一台设备保持页面打开');
         el.querySelector('.path-detail').textContent = info.path?.direct ? `${info.path.protocol.toUpperCase()} · ${info.path.family} · ${info.path.localType} ↔ ${info.path.remoteType}${info.path.rtt !== null ? ' · ' + info.path.rtt + ' ms' : ''}` : `候选：host ${info.candidates?.host || 0} / srflx ${info.candidates?.srflx || 0}${info.stunError ? ' · 部分 STUN 探测失败' : ''}`;
         el.querySelector('.security-code').textContent = info.code || '等待协商';
         const verify = el.querySelector('.verify-peer'); verify.disabled = !info.code || !info.path?.direct || !info.ready || info.verified;
         verify.textContent = info.verified ? '安全码已核对' : '安全码一致，允许传输';
         el.querySelector('input').disabled = !info.verified || !info.path?.direct || !info.ready;
-        el.querySelector('.send-text').disabled = !info.verified || !info.path?.direct;
+        el.querySelector('.send-text').disabled = !info.verified || !info.path?.direct || !info.ready;
         el.dataset.state = info.state;
     }
     queue(info) {

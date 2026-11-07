@@ -2,6 +2,8 @@
 
 当前只提供开发部署候选，未在用户正式服务器部署。
 
+本轮代码在 `feat/direct-first-workspace-20261019` / Draft PR #2，尚未合并到 `main`；直接检出默认main会得到旧版本。优先下载 [PROJECT_STATUS](PROJECT_STATUS.md) 对应**同一次完整CI通过**的候选并核对manifest/校验值；若从Git部署，须检出该测试对应的精确commit，再运行本文流程。移动分支名、旧CI绿灯或仅有源码附件不能替代精确版本验收。仓库最后更名由用户手动完成。
+
 ## 前提
 
 - 管理自己的域名及 DNS；不要使用尚未购买确认的 zeydrop.com。

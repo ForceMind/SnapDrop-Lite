@@ -50,7 +50,13 @@ async function main() {
             const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1080 } });
             contexts.push(context);
             const page = await context.newPage(); pages.push(page);
-            page.on('pageerror', error => report.errors.push(errorType(error)));
+            page.on('pageerror', error => {
+                report.errors.push(errorType(error));
+                const source = String(error?.stack || '').match(/scripts\/(ui|network|transfer|send-queue-store)\.js(?:\?v=[a-f0-9]+)?:(\d+):(\d+)/);
+                report.pageErrors ||= [];
+                if (report.pageErrors.length < 20) report.pageErrors.push({ type: errorType(error), phase: report.phase || 'startup',
+                    ...(source ? { script: source[1] + '.js', line: Number(source[2]), column: Number(source[3]) } : {}) });
+            });
             await page.addInitScript(installRtcTrace);
             await page.route('**/config.js?*', route => route.fulfill({ contentType: 'text/javascript',
                 body: 'window.ZEYDROP_CONFIG={enableStun:false,memoryLimit:67108864};' }));
@@ -86,7 +92,7 @@ async function main() {
         async function waitPeer(page) {
             await page.waitForFunction(() => {
                 const peer = [...zeydrop.peers.peers.values()][0];
-                return peer?._path?.direct && peer?._remoteHello && peer?._code && peer._isConnected();
+                return peer?._path?.direct && peer?._protocolReady() && peer?._code && peer._isConnected();
             }, null, { timeout: 40000 });
         }
         async function verifyPair() {
@@ -172,6 +178,7 @@ async function main() {
         assert.equal(await receiver.evaluate(() => window.__queueOffers), 0, 'saving metadata must never send a file offer');
         report.checks.push('explicit opt-in persists only metadata and independently matching complete SHA-256 for two files');
 
+        report.phase = 'refresh-manifest';
         await sender.reload(); await sender.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
         await openQueue(); await queueCount(2);
         assert.notEqual(await sender.evaluate(() => zeydrop.server._peerId), originalSession, 'refresh must create a new signaling identity');
@@ -207,6 +214,7 @@ async function main() {
 
         // Same name/size/MIME/mtime, different bytes: this must reach full hashing,
         // rather than passing/failing only because file metadata is different.
+        report.phase = 'reselect-originals';
         const wrong = Buffer.from(bodies[0]); wrong[wrong.length - 1] ^= 0xff;
         await writeFile(0, wrong); await choose('#reselectSendQueue');
         await sender.waitForFunction(() => /不一致|不匹配|未恢复任何|校验失败/.test(document.querySelector('#sendQueueStatus').textContent));
@@ -249,6 +257,7 @@ async function main() {
                 return finish.apply(this, args);
             };
         }, names[0]);
+        report.phase = 'manual-queue-transfer';
         await sender.locator('#sendStoredQueue').click();
         for (let index = 0; index < files.length; index++) {
             await receiver.locator('#fileOfferDialog[show]').waitFor();
@@ -294,6 +303,7 @@ async function main() {
         report.checks.push('both downloaded files independently match local Node SHA-256 and byte lengths');
 
         // Storage failures remain local UI failures and cannot authorize a send.
+        report.phase = 'storage-quota';
         await sender.evaluate(key => {
             const setItem = Storage.prototype.setItem;
             window.__queueSetItem = setItem; window.__queueQuotaFailures = 0;
@@ -310,6 +320,7 @@ async function main() {
         assert.equal(await receiver.evaluate(() => window.__queueOffers), 2);
         report.checks.push('synthetic localStorage quota failure is visible and never binds files or sends an offer');
 
+        report.phase = 'corrupt-metadata';
         await sender.locator('#leaveRoomBtn').click(); await receiver.locator('#leaveRoomBtn').click();
         await sender.evaluate(key => localStorage.setItem(key, '{invalid-queue'), KEY);
         await sender.reload(); await openQueue();
@@ -324,7 +335,7 @@ async function main() {
         assert.equal(traffic.fileDataObserved, false, 'file names, complete hashes and body sentinels must never enter WebSocket signaling');
         report.signaling = traffic; report.transferredBytes = bodies.reduce((sum, bytes) => sum + bytes.length, 0);
         assert.deepEqual(report.errors, []);
-        report.passed = true;
+        report.passed = true; report.phase = 'complete';
     } catch (error) {
         report.failure = errorType(error); report.lastCompletedCase = report.checks.at(-1) || 'startup';
         // Source coordinates and identifier-only error hints locate a failing

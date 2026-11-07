@@ -59,6 +59,7 @@ test('obsolete channel callbacks cannot enqueue messages after rebind', () => {
         window: { RTCPeerConnection: FakeRTC, crypto: { subtle: {} }, ZEYDROP_CONFIG: { enableStun: false },
             addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
         RTCPeerConnection: FakeRTC,
+        crypto: require('node:crypto').webcrypto,
         TransferPeer: class { constructor(server,id) { this._peerId=id; } },
         Events: { fire() {}, on() {}, off() {} },
         CustomEvent, TextEncoder, setTimeout, clearTimeout, setInterval, clearInterval
@@ -89,4 +90,5 @@ test('obsolete channel callbacks cannot enqueue messages after rebind', () => {
     peer._pathEpoch++;
     assert.equal(queuedGuard(), false, 'ICE path epoch change rejects an already queued same-channel control');
     clearTimeout(peer._deadline);
+    peer._clearHelloHandshake(); clearInterval(peer._statsTimer);
 });
