@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "engine": "firefox",
+  "network": "same-host, two contexts, STUN disabled",
+  "scope": "opt-in metadata queue, full-hash reselect and manually authorized file transfer; not WAN or real hardware",
+  "queueFlowExecuted": true,
+  "checks": [
+    "explicit opt-in persists only metadata and independently matching complete SHA-256 for two files"
+  ],
+  "errors": [],
+  "passed": false,
+  "browserVersion": "157.0",
+  "capabilities": {
+    "webLocks": true,
+    "storeSupported": true,
+    "hash": true,
+    "secureUuid": true,
+    "textEncoder": true
+  },
+  "queueCapability": "supported",
+  "phase": "first-save-metadata-validation",
+  "hashTiming": {
+    "fileCount": 2,
+    "bytesPerPass": 81976,
+    "saveWallMs": 172,
+    "configuredChunkBytes": 262144,
+    "scope": "small synthetic files on one CI host; wall time includes file chooser/UI/IPC; not CPU, RSS, mobile hardware or WAN performance"
+  },
+  "failure": "AssertionError",
+  "lastCompletedCase": "explicit opt-in persists only metadata and independently matching complete SHA-256 for two files",
+  "failureSource": {
+    "line": 180,
+    "column": 16
+  },
+  "debug": [
+    {
+      "engine": "firefox",
+      "peerPresent": false
+    },
+    {
+      "engine": "firefox",
+      "peerPresent": false
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 更新时间：2026-11-06。版本0.3.0-dev.1，分支 `feat/direct-first-workspace-20261019` / Draft PR #2。最新已验证运行代码 `848d16c1bd1e419ab30c543f8afa0eb0c0c2ff1e`，build revision `dd492385685e4a1f`。
 
-## 本轮持续研发（2026-11-06，新的CI待验收）
+## 本轮持续研发（2026-11-06，新功能验收未通过）
 
 在a59204e/CI48全绿的基础上继续修改开发分支：
 
@@ -10,9 +10,13 @@
 - 自愿跨刷新多文件发送清单，完整哈希重选/新配对/手动发送/成功逐项删除；14项存储回归通过，新增真实浏览器验收待CI。
 - 修复hello会话容量竞态及满表阻断合法恢复，3项实际WS边界回归通过。
 - 服务端独立进程压力/RSS/CPU/回收工具已运行：64/256/1000连接短基线精确收齐、恢复时钟推进后状态归零，详见SERVER_PERFORMANCE；不代表长期soak或公网。
-- 新UI异步代次与撤回同意补10项实际class回归。本地合计177/177、依赖审计零已知生产漏洞、构建/脚本检查通过；浏览器CI待验收。
+- 新UI异步代次、撤回同意与Firefox表单恢复补12项实际class回归。本地合计183/183、依赖审计零已知生产漏洞、构建/脚本检查通过；浏览器CI待验收。
 
-上述运行时代码不能沿用CI48的绿灯，完成本轮构建、压力及浏览器矩阵后才生成新的候选。main/生产均未改，PR2保持Draft。
+[CI49](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42346993080)在新增发送清单E2E首个保存检查前出现TypeError，两端实际直连已建立，未确认根因；原始去敏证据ci49-send-queue-failure.json保留。177项、压力、HTTPS、恢复、Firefox100MiB、WebKit UI和六组合通过，Chromium1GiB因前序失败跳过。
+
+4deda00补安全源码行号和三引擎清单测试；86c6ae4将main的既有历史文档同步入开发分支并保留历史说明，解决add/add冲突，main本身未改。[CI50](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42347854091)正在重验。13e8a01候选188文件独立解压/重装/177测试/无.git重建及CI归档逐字节一致，见candidate-extraction-13e8a01-20261107.json；它不是浏览器验收通过声明。
+
+上述运行时代码不能沿用CI48的绿灯，完成本轮构建、压力及浏览器矩阵后才交付新验收候选。main/生产均未改，PR2保持Draft。
 
 ## 当前结论
 
@@ -54,3 +58,9 @@
 - 跨刷新发送清单本轮实现、等待新CI与真机验收；显式同意LAN自动发现仍未实现。同页队列已支持；OPFS24小时后过期/最多20项，清理仅站点运行时尽力执行，不保证恢复或后台删除。
 
 启动head0c7bf14/77项；906a15c→105；cfdda0c→134/CI45、9ad3ddc→CI46全绿；848d16c→139/CI47全绿。CI44曾因APT慢源耗尽18分钟而取消，未运行浏览器；过程证据与修复保留。早期累计状态保存在history/PROJECT_STATUS_before_20261106_audit.md及Git历史。以后运行时代码改动须重新验证，不沿用本次绿灯；保持Draft，不自动合并main或部署生产。
+
+### CI50新增定位与修复（待下轮验证）
+
+Chromium/WebKit的发送清单全流程已通过，Firefox首次保存/完整哈希通过，但刷新时浏览器恢复了已勾选同意框，原断言保持并失败于测试line180；不代表File已自动绑定或发送。已对同意框禁用表单恢复，并在初始化/pagehide/BFCache返回时清空许可及文件控件，新增2项实际UI回归。CI50的Chromium1GiB/Firefox100MiB通过；六组合另有Chromium↔WebKit底层已直连但应用hello未就绪的失败，其余5组通过。该失败不能归因于未知selected路径，需修复应用握手。原始三引擎结果见ci50-send-queue-browser-*.json；CI49 TypeError未再复现，但原失败保留，不倒推为通过。
+
+新增测试专用CDP资源采样：有限频率/样本/白名单字段，JS heap、backingStorage（含外部字符串）与renderer duration单独记录，非RSS/全CPU或内存硬上限；Firefox/WebKit不支持时明确unsupported。新增4项计量边界测试，握手修复前本地总计183项。真实CDP数据须后续CI，不伪造当前本地浏览器采样。

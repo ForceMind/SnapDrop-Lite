@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto'), os = require('node:os');
 const { chromium, firefox, webkit } = require('playwright'); const { startDev } = require('../scripts/dev.cjs');
 const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
+const { start: startResources } = require('./browser-resources.cjs');
 async function main() {
     const server = await startDev(0); const results = { engine: process.env.BROWSER_TYPE || 'chromium', cases: [], network: 'two contexts on the same test host; STUN disabled', errors: [] };
     const engine = { chromium, firefox, webkit }[results.engine];
@@ -11,7 +12,7 @@ async function main() {
     results.profiles = persistent ? 'two persistent profiles (disk-backed OPFS)' : 'two ephemeral contexts';
     const launchOptions = { headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-loopback-in-peer-connection', '--disable-features=WebRtcHideLocalIpsWithMdns'] } : {}) };
     let browser = null;
-    const contexts = []; const pages = [];
+    const contexts = []; const pages = []; const resourceProbes = [];
     await fs.mkdir('test-results', { recursive: true });
     try {
         if (!persistent) browser = await engine.launch(launchOptions);
@@ -97,11 +98,17 @@ async function main() {
         for (const size of [0, 100 * 1024 * 1024, ...(process.env.LARGE_FILE_TEST === '1' ? [1024 ** 3] : [])]) {
             const name = 'stream-' + size + '.bin', local = path.resolve('test-results', name);
             const handle = await fs.open(local, 'w'); await handle.truncate(size); await handle.close();
+            const probes = await Promise.all(pages.map(page => startResources(page, { engine: results.engine, intervalMs: 1000, maxSamples: 360 })));
+            resourceProbes.push(...probes);
             const start = Date.now(); await a.locator('x-peer input[type=file]').setInputFiles(local);
             await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
             await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing, null, { timeout: 300000 });
             const terminal = await a.evaluate(name => ({ state: window.__testTransfers[name], notices: window.__testNotices }), name);
             assert.equal(terminal.state?.phase, 'complete', 'File did not complete: ' + JSON.stringify(terminal));
+            const observations = await Promise.all(probes.map(probe => probe.stop()));
+            results.resourceObservations ||= {};
+            results.resourceObservations[String(size)] = { sender: observations[0], receiver: observations[1],
+                window: 'before automated file selection/consent until verified complete; excludes subsequent independent disk rehash' };
             const actualSize = await b.evaluate(async name => (await (await (await navigator.storage.getDirectory()).getFileHandle(name)).getFile()).size, name);
             assert.equal(actualSize, size);
             const sha = crypto.createHash('sha256'); for (let offset = 0; offset < size; offset += 1024 * 1024) sha.update(Buffer.alloc(Math.min(1024 * 1024, size - offset)));
@@ -228,6 +235,7 @@ async function main() {
         results.debug = await Promise.all(pages.map(page => page.evaluate(rtcEndpointSnapshot,results.engine).catch(()=>({unavailable:true}))));
         throw error;
     } finally {
+        await Promise.allSettled(resourceProbes.map(probe => probe.stop()));
         await fs.writeFile('test-results/browser-' + results.engine + '.json', JSON.stringify(results, null, 2));
         await Promise.all(contexts.map(context => context.close())); await browser?.close(); await server.close(); await fs.rm(profileRoot, { recursive: true, force: true });
         for (const file of await fs.readdir('test-results')) if (/^stream-\d+\.bin$/.test(file)) await fs.rm(path.join('test-results', file));

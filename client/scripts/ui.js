@@ -209,6 +209,9 @@ class SendQueueUI {
         this.snapshot = null; this.boundFiles = null; this.bindings = new WeakMap();
         this.sequence = 0; this.completionChain = Promise.resolve();
         if (!this.store?.supported) return;
+        // Browser form/history restoration is not a new storage permission.
+        const resetConsent = () => { $('rememberSendQueue').checked = false; $('sendQueueFiles').value = ''; };
+        resetConsent();
         $('sendQueueSection').hidden = false;
         $('rememberSendQueue').onchange = () => {
             if (!$('rememberSendQueue').checked && this.mode === 'save') this.hashController?.abort();
@@ -236,7 +239,12 @@ class SendQueueUI {
         });
         window.addEventListener('pagehide', () => {
             this.sequence++; this.hashController?.abort(); this.hashController = null; this.busy = false;
-            this.boundFiles = null; this.bindings = new WeakMap(); this.render();
+            this.boundFiles = null; this.bindings = new WeakMap(); resetConsent(); this.render();
+        });
+        window.addEventListener('pageshow', event => {
+            if (!event.persisted) return;
+            this.sequence++; this.hashController?.abort(); this.hashController = null; this.busy = false;
+            this.boundFiles = null; this.bindings = new WeakMap(); resetConsent(); this.render();
         });
         void this.refresh();
     }

@@ -117,8 +117,8 @@
                     <details id="sendQueueSection" class="send-queue-storage" hidden>
                         <summary>跨刷新保留待发清单</summary>
                         <p>只在此浏览器保存文件名、大小和完整校验值，不保存原文件，也不发送到服务器。清单 24 小时后过期；刷新后须重新配对、核对安全码并重选全部原件。</p>
-                        <label class="queue-consent"><input id="rememberSendQueue" type="checkbox">允许在本机保存本次待发清单</label>
-                        <input id="sendQueueFiles" type="file" multiple hidden>
+                        <label class="queue-consent"><input id="rememberSendQueue" type="checkbox" autocomplete="off">允许在本机保存本次待发清单</label>
+                        <input id="sendQueueFiles" type="file" multiple hidden autocomplete="off">
                         <div class="queue-storage-actions"><button id="saveSendQueue" type="button" disabled>选择文件并保存清单</button><button id="reselectSendQueue" type="button" disabled>重新选择全部原文件</button><button id="sendStoredQueue" type="button" disabled>发送已核验清单</button><button id="clearSendQueue" type="button" disabled>删除本机清单</button><button id="cancelQueueHash" type="button" hidden>停止校验</button></div>
                         <p id="sendQueueStatus" role="status" aria-live="polite">当前没有待发清单</p><ul id="sendQueueList"></ul>
                     </details>

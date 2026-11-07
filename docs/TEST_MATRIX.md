@@ -62,3 +62,5 @@ E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服
 
 - tests/send-queue-ui.test.cjs：10项，直接执行真实UI class与实际store，验证撤回同意、跨标签、旧异步load/remove/clear/send隔离及最终哈希才删除；本地合计177项通过。
 - scripts/server-load.cjs：64/256/1000连接实际短profile精确收齐及资源回收，server RSS/CPU独立于负载发生器，原始报告见SERVER_PERFORMANCE。不是长期soak、真实WAN或文件速度证据。
+
+CI50实际新增清单：Chromium/WebKit全流程和390px截图通过；Firefox原复选框刷新断言失败，已修复但等待新CI。CI50 Chromium1GiB恢复执行并通过。测试专用browser-resources只采Chromium目标CDP有界JS heap/backingStorage/renderer duration，遇不支持字段缺省，非RSS/全CPU。实际数据待新CI，4项采样边界+2项表单恢复回归使本地Node合计183项。

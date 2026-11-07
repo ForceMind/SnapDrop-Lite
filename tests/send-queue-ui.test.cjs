@@ -21,10 +21,21 @@ function fakeStore(snapshot = null) {
         save: async () => snapshot, reselect: async (revision, files) => ({ snapshot, files }),
         removeEntry: async () => null, clear: async () => true, clearCorrupt: async () => true };
 }
-async function rig({ store = fakeStore(), actual = false, beforeUI } = {}) {
+async function rig({ store = fakeStore(), actual = false, beforeUI, beforeDOM } = {}) {
     const elements = new Map(), listeners = new Map(), events = new Map(), values = new Map();
-    const $ = id => { if (!elements.has(id)) elements.set(id, { hidden: false, disabled: false, checked: false, files: [], children: [],
-        replaceChildren() { this.children = []; }, append(item) { this.children.push(item); }, click() {} }); return elements.get(id); };
+    const $ = id => {
+        if (!elements.has(id)) {
+            const element = { hidden: false, disabled: false, checked: false, files: [], value: '', children: [],
+                replaceChildren() { this.children = []; }, append(item) { this.children.push(item); }, click() {} };
+            // A real file input drops its FileList when code clears its value.
+            if (id === 'sendQueueFiles') {
+                let value = '';
+                Object.defineProperty(element, 'value', { get: () => value, set(next) { value = next; if (next === '') this.files = []; } });
+            }
+            elements.set(id, element);
+        }
+        return elements.get(id);
+    };
     const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
     const locks = { tail: Promise.resolve(), request(name, options, fn) {
         const job = this.tail.then(() => { if (options.signal?.aborted) throw error('AbortError'); return fn(); });
@@ -38,6 +49,7 @@ async function rig({ store = fakeStore(), actual = false, beforeUI } = {}) {
     if (actual) { vm.runInContext(storeSource, context); store = window.ZeydropSendQueue; }
     else window.ZeydropSendQueue = store;
     if (beforeUI) await beforeUI(store);
+    if (beforeDOM) beforeDOM($);
     vm.runInContext(queueSource + '\nthis.QueueUI = SendQueueUI;', context);
     const sent = [], peer = { _filesQueue: [], _canSend: () => true, sendFiles(files) { sent.push(files); this._outgoing = {}; return true; } };
     const ui = new context.QueueUI({ peers: new Map([['peer', peer]]) });
@@ -50,6 +62,43 @@ function delayedFile(content = 'private', name = 'private.txt') {
     return { started, release, file: { name, size: bytes.length, type: 'text/plain', lastModified: 0,
         slice(start, end) { return { async arrayBuffer() { started.resolve(); await release.promise; return bytes.slice(start, end).buffer; } }; } } };
 }
+
+test('constructor rejects browser-restored consent and file input state without discarding saved metadata', async () => {
+    const saved = manifest(), restoredFile = {}, store = fakeStore(saved);
+    const h = await rig({ store, beforeDOM($) {
+        $('rememberSendQueue').checked = true;
+        $('sendQueueFiles').value = 'C:\\fakepath\\restored.bin'; $('sendQueueFiles').files = [restoredFile];
+    } });
+    await h.ready();
+    assert.equal(h.$('rememberSendQueue').checked, false);
+    assert.equal(h.$('sendQueueFiles').value, ''); assert.equal(h.$('sendQueueFiles').files.length, 0);
+    assert.equal(h.ui.snapshot, saved); assert.equal(h.ui.boundFiles, null);
+    assert.equal(h.ui.bindings.get(restoredFile), undefined); assert.equal(h.$('sendStoredQueue').disabled, true);
+    assert.equal(h.sent.length, 0);
+});
+
+test('BFCache restoration resets transient permission and File bindings while ordinary pageshow preserves the current choice', async () => {
+    const saved = manifest(), file = {}, store = fakeStore(saved), h = await rig({ store }); await h.ready();
+    h.ui.mode = 'reselect'; await h.ui.choose([file]); h.$('rememberSendQueue').checked = true;
+    h.$('sendQueueFiles').value = 'C:\\fakepath\\current.bin'; h.$('sendQueueFiles').files = [file];
+    const sequence = h.ui.sequence;
+    h.windowEvent('pageshow', { persisted: false }); await h.ready();
+    assert.equal(h.$('rememberSendQueue').checked, true); assert.equal(h.ui.sequence, sequence);
+    assert.equal(h.$('sendQueueFiles').value, 'C:\\fakepath\\current.bin');
+    assert.equal(h.ui.boundFiles[0], file); assert.equal(h.ui.bindings.get(file), saved.files[0].entryId);
+
+    h.windowEvent('pagehide', { persisted: true });
+    assert.equal(h.$('rememberSendQueue').checked, false); assert.equal(h.$('sendQueueFiles').value, '');
+    assert.equal(h.ui.boundFiles, null); assert.equal(h.ui.bindings.get(file), undefined);
+    // Firefox may restore dynamic form state after pagehide but before pageshow.
+    h.$('rememberSendQueue').checked = true;
+    h.$('sendQueueFiles').value = 'C:\\fakepath\\restored.bin'; h.$('sendQueueFiles').files = [file];
+    h.windowEvent('pageshow', { persisted: true }); await h.ready();
+    assert.equal(h.$('rememberSendQueue').checked, false);
+    assert.equal(h.$('sendQueueFiles').value, ''); assert.equal(h.$('sendQueueFiles').files.length, 0);
+    assert.equal(h.ui.snapshot, saved); assert.equal(h.ui.boundFiles, null); assert.equal(h.ui.bindings.get(file), undefined);
+    assert.equal(h.$('sendStoredQueue').disabled, true); assert.equal(h.sent.length, 0);
+});
 
 test('withdrawing metadata consent during hashing aborts before any manifest is stored', async () => {
     const h = await rig({ actual: true }); await h.ready();
