@@ -20,6 +20,7 @@ export const PUBLIC_CLIENT_FILES = Object.freeze([
     'client/scripts/network.js',
     'client/scripts/recovery-worker.js',
     'client/scripts/recovery.js',
+    'client/scripts/send-queue-store.js',
     'client/scripts/transfer.js',
     'client/scripts/ui.js',
     'client/scripts/vendor.js',

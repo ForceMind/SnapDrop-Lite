@@ -9,6 +9,16 @@ const { webkit, firefox, chromium } = require('playwright'); const { startDev } 
         await page.goto(server.origin); await page.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
         await page.locator('#createRoomBtn').click(); await page.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        if (await page.locator('#sendQueueSection').isVisible()) {
+            await page.locator('#sendQueueSection summary').click();
+            assert.equal(await page.locator('#saveSendQueue').isDisabled(), true);
+            await page.locator('#rememberSendQueue').check();
+            assert.equal(await page.locator('#saveSendQueue').isDisabled(), false);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'open send checklist fits mobile width');
+            await page.locator('#rememberSendQueue').uncheck();
+            assert.equal(await page.locator('#saveSendQueue').isDisabled(), true);
+            await page.locator('#sendQueueSection summary').click();
+        }
         assert.ok(await page.locator('#inviteQR').isVisible());
         await page.evaluate(() => {
             window.__smokeRecoverySupported=window.ZeydropRecovery?.supported;
@@ -73,7 +83,7 @@ const { webkit, firefox, chromium } = require('playwright'); const { startDev } 
         const diagnosticDownload = page.waitForEvent('download'); await page.locator('#exportDiagnostics').click();
         const report = JSON.parse(await fs.readFile(await (await diagnosticDownload).path(), 'utf8'));
         assert.equal(report.product, 'Zeydrop'); assert.ok(report.events.some(event=>event.kind==='signaling' && event.state==='connected'));
-        await fs.mkdir('test-results', { recursive:true }); await fs.writeFile('test-results/smoke-'+engine+'.json',JSON.stringify({passed:true, engine, tests:['render','WS session','invite + QR','leave','mobile overflow','visible consent dialog and reject','hidden-capability keyboard focus cycles','keyboard connection details and escaped fixture name','file selection blocked before identity confirmation (UI fixture)','clipboard unavailable manual copy and contenteditable keyboard cycle','local diagnostic export'], limitation:'UI smoke only; fixture direct-path state is not a real connection; no Safari WebRTC or iOS device claim'},null,2));
+        await fs.mkdir('test-results', { recursive:true }); await fs.writeFile('test-results/smoke-'+engine+'.json',JSON.stringify({passed:true, engine, tests:['render','WS session','invite + QR','leave','mobile overflow and capability-gated opt-in send checklist','visible consent dialog and reject','hidden-capability keyboard focus cycles','keyboard connection details and escaped fixture name','file selection blocked before identity confirmation (UI fixture)','clipboard unavailable manual copy and contenteditable keyboard cycle','local diagnostic export'], limitation:'UI smoke only; fixture direct-path state is not a real connection; no Safari WebRTC or iOS device claim'},null,2));
         console.log('PASS', engine, 'UI smoke');
     } finally { await browser?.close(); await server.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -55,3 +55,11 @@ CI47 Chrome1GiB用例81538ms，独立磁盘SHA-256一致；峰值应用接收队
 Issue4：真实跨宽带/蜂窝/运营商、IPv6/NAT64/CGNAT/严格NAT、切网/后台冻结；Issue5：真实macOS/iOS Safari；另有Windows Edge、Android、实际磁盘/配额/驱逐/触控/屏幕阅读器/PWA。独立测试主机的可信TLS/续期、systemd、迁移/重启/失败恢复/回滚未演练，按REAL_DEVICE_TESTING、DEPLOYMENT、RELEASE_GATES逐项记录。
 
 跨刷新发送队列持久化、显式同意LAN自动发现仍未实现；同页队列已支持。OPFS24小时后过期，清理仅站点运行时尽力执行；无法保证恢复或关闭标签后后台删除。无法选中非relay路径时明确失败，不回退TURN/DERP/HTTP/WS文件代理。以上外部项补齐前继续Draft，不自动合并main、生产部署或创建稳定Release。
+
+## 持续研发：失败重试、发送清单与容量短基线（新CI待运行）
+
+以a59204e/CI48重新同步后，新增失败任务15分钟/30File引用的手动重试、暂停并保留后续队列、held清空与Blob屏障；自愿本机跨刷新发送清单（100项/128KiB/固定24小时），256KiB分块完整SHA-256重选、Web Locks+revision CAS、新配对/人工核码/手动发送、最终成功逐项移除。新增实际UI异步代次与撤回存储同意保护。
+
+修复hello分配会话容量的并发竞态和满表拒绝合法恢复。新增隔离进程server-load工具，64/256/1000连接短基线、四类协议限额、资源回收以及RSS/CPU口径见SERVER_PERFORMANCE；原始去敏结果包含源码哈希。没有以计数器归零推断RSS归零，没有以256连接推断生产SLA。
+
+本地177/177 Node通过（旧139+协议8+store14+UI10+capacity3+load3），生产依赖审计0已知漏洞、可重复构建/引用/PWA、shell语法、diff检查通过。本地实际尝试浏览器，系统Chromium因socket EPERM被执行环境阻断；此处不标浏览器通过。新增真实浏览器发送清单、失败重试及原有1GiB/100MiB/六组合/HTTPS检查须对应新head的GitHub CI验收。真实Safari/移动/跨运营商/生产主机与长期soak仍开放。

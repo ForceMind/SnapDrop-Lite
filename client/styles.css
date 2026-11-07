@@ -1137,3 +1137,13 @@ x-dialog:not([show]) { display:none; }
     .recovery-options { padding: 10px; }
     .recovery-record span { flex-basis: 100%; }
 }
+.send-queue { margin-top: 14px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.6; }
+.send-queue-storage { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; text-align: left; font-size: 12px; line-height: 1.7; }
+.send-queue-storage summary { cursor: pointer; font-weight: 650; font-size: 14px; }
+.send-queue-storage p, .send-queue-storage li { overflow-wrap: anywhere; }
+.queue-consent { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; }
+.queue-consent input { width: 18px; height: 18px; flex: none; margin: 2px 0; accent-color: #236b53; }
+.queue-storage-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.queue-storage-actions button, .send-queue button { min-height: 44px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.queue-storage-actions button:disabled, .send-queue button:disabled { cursor: default; opacity: .5; }
+.send-queue-storage ul { padding-left: 20px; }

@@ -24,6 +24,7 @@ jobs:
       - run: npm ci --ignore-scripts && npm --prefix server ci --ignore-scripts
       - run: npm audit --omit=dev && npm --prefix server audit --omit=dev
       - run: npm test
+      - run: node scripts/server-load.cjs --connections 64 --signals 20 --duration-ms 1000 --cycles 2 --out test-results/server-load.json
       - run: bash -n build.sh deploy.sh scripts/rollback.sh
       - run: npm run build && node scripts/check-build.mjs
       # The Azure package mirror exhausted CI #44's install budget. Use the
@@ -75,6 +76,7 @@ jobs:
       - run: node tests/interoperability.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/persistent-flow-browser.cjs
+      - run: node tests/send-queue-browser.cjs
       - run: LARGE_FILE_TEST=1 npm run test:browser
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=firefox npm run test:browser

@@ -125,12 +125,17 @@ class PeersUI {
         Events.on('peer-joined', event => { this.add(event.detail); this.count(); });
         Events.on('peer-left', event => { $(event.detail)?.remove(); this.count(); });
         Events.on('connection-state', event => this.state(event.detail));
+        Events.on('send-queue-state', event => this.queue(event.detail));
     }
     count() { $('peerCount').textContent = document.querySelectorAll('x-peer').length + ' 台设备'; }
     add(peer) {
         if ($(peer.id)) return;
         const el = document.createElement('x-peer'); el.id = peer.id;
         el.innerHTML = '<div class="peer-device"><svg class="icon"><use href="#desktop-mac"/></svg><strong class="name"></strong></div><div class="status" role="status">正在建立直连…</div><div class="connection-help"></div><div class="peer-verification"><small>在两台设备核对相同的安全码</small><strong class="security-code">等待协商</strong><button type="button" class="verify-peer" disabled>安全码一致，允许传输</button></div><label class="select-files button" tabindex="0">选择文件<input type="file" multiple disabled></label><div class="peer-actions"><button type="button" class="send-text">发送文字</button><button type="button" class="retry-peer">重试连接</button></div><details class="peer-diagnostics"><summary>连接详情</summary><div class="path-detail"></div></details>';
+        const queue = document.createElement('div'); queue.className = 'send-queue'; queue.hidden = true;
+        queue.innerHTML = '<p class="queue-summary" role="status"></p><div class="peer-actions"><button type="button" class="continue-queue">继续后续文件</button><button type="button" class="clear-queue">清空待发队列</button></div>';
+        el.append(queue);
+        for (const action of ['continue', 'clear']) queue.querySelector('.' + action + '-queue').onclick = () => Events.fire('transfer-control', { peerId: peer.id, action: action + '-queue' });
         el.querySelector('.name').textContent = peer.name.deviceName;
         const input = el.querySelector('input');
         input.addEventListener('change', () => { Events.fire('files-selected', { to: peer.id, files: input.files }); input.value = ''; });
@@ -154,11 +159,23 @@ class PeersUI {
         el.querySelector('.send-text').disabled = !info.verified || !info.path?.direct;
         el.dataset.state = info.state;
     }
+    queue(info) {
+        const el = $(info.peerId); if (!el) return;
+        const queue = el.querySelector('.send-queue'); queue.hidden = !info.count;
+        queue.querySelector('.queue-summary').textContent = '待发 ' + info.count + ' 个文件' + (info.blocked ? ' · 已保留队列，请选择重新发送或继续后续文件' : info.busy ? ' · 等待当前文件保存' : '');
+        const next = queue.querySelector('.continue-queue'); next.hidden = !info.blocked; next.disabled = !info.ready || info.busy;
+    }
 }
 class TransfersUI {
     constructor() {
         this.rows = new Map();
         Events.on('transfer-state', event => this.update(event.detail));
+        Events.on('transfer-retry-state', event => {
+            const row = this.rows.get(event.detail.id); if (!row) return;
+            row.querySelector('.retry-transfer').hidden = !event.detail.available;
+            row.querySelector('.forget-transfer').hidden = !event.detail.available;
+            row.querySelector('.transfer-actions').hidden = !event.detail.available;
+        });
     }
     update(info) {
         let row = this.rows.get(info.id);
@@ -166,7 +183,7 @@ class TransfersUI {
             // Keep history bounded; active transfers are never removed.
             if (this.rows.size >= 30) for (const [id, old] of this.rows) if (old.dataset.done === 'true') { old.remove(); this.rows.delete(id); break; }
             row = document.createElement('article'); row.className = 'transfer-row';
-            row.innerHTML = '<div class="transfer-heading"><strong class="transfer-name"></strong><span class="transfer-phase"></span></div><progress max="1" value="0"></progress><div class="transfer-detail"></div><div class="transfer-actions"><button type="button" class="pause-transfer">暂停</button><button type="button" class="cancel-transfer">取消</button></div>';
+            row.innerHTML = '<div class="transfer-heading"><strong class="transfer-name"></strong><span class="transfer-phase"></span></div><progress max="1" value="0"></progress><div class="transfer-detail"></div><div class="transfer-actions"><button type="button" class="pause-transfer">暂停</button><button type="button" class="cancel-transfer">取消</button><button type="button" class="retry-transfer" hidden>重新发送</button><button type="button" class="forget-transfer" hidden>移除重试</button></div>';
             this.rows.set(info.id, row); $('transfers').prepend(row); $('transferSection').hidden = false;
         }
         row.querySelector('.transfer-name').textContent = info.name;
@@ -175,10 +192,168 @@ class TransfersUI {
         row.querySelector('.transfer-detail').textContent = (info.error ? info.error + ' · ' : '') + fmt(info.bytes) + ' / ' + fmt(info.size) + (['sending', 'receiving'].includes(info.phase) ? ' · ' + fmt(Math.round(info.speed)) + '/s' + (info.eta !== null ? ' · 约 ' + Math.ceil(info.eta) + ' 秒' : '') : '');
         const paused = info.phase === 'paused', done = ['complete', 'cancelled'].includes(info.phase);
         row.dataset.done = String(done);
-        row.querySelector('.transfer-actions').hidden = done;
-        const pause = row.querySelector('.pause-transfer'); pause.disabled = !['sending', 'receiving', 'paused'].includes(info.phase); pause.textContent = paused ? '继续' : '暂停';
+        row.querySelector('.transfer-actions').hidden = done && !info.retryable;
+        const pause = row.querySelector('.pause-transfer'); pause.hidden = done; pause.disabled = !['sending', 'receiving', 'paused'].includes(info.phase); pause.textContent = paused ? '继续' : '暂停';
         pause.onclick = () => Events.fire('transfer-control', { peerId: info.peerId, id: info.id, action: paused ? 'resume' : 'pause' });
-        row.querySelector('.cancel-transfer').onclick = () => Events.fire('transfer-control', { peerId: info.peerId, id: info.id, action: 'cancel' });
+        const cancel = row.querySelector('.cancel-transfer'); cancel.hidden = done;
+        cancel.onclick = () => Events.fire('transfer-control', { peerId: info.peerId, id: info.id, action: 'cancel' });
+        for (const action of ['retry', 'forget']) {
+            const button = row.querySelector('.' + action + '-transfer'); button.hidden = !info.retryable;
+            button.onclick = () => Events.fire('transfer-control', { peerId: info.peerId, id: info.id, action });
+        }
+    }
+}
+class SendQueueUI {
+    constructor(peers) {
+        this.peers = peers; this.store = window.ZeydropSendQueue;
+        this.snapshot = null; this.boundFiles = null; this.bindings = new WeakMap();
+        this.sequence = 0; this.completionChain = Promise.resolve();
+        if (!this.store?.supported) return;
+        $('sendQueueSection').hidden = false;
+        $('rememberSendQueue').onchange = () => {
+            if (!$('rememberSendQueue').checked && this.mode === 'save') this.hashController?.abort();
+            this.render();
+        };
+        $('saveSendQueue').onclick = () => { this.mode = 'save'; $('sendQueueFiles').click(); };
+        $('reselectSendQueue').onclick = () => { this.mode = 'reselect'; $('sendQueueFiles').click(); };
+        $('sendQueueFiles').onchange = () => {
+            const files = Array.from($('sendQueueFiles').files); $('sendQueueFiles').value = '';
+            if (files.length) void this.choose(files);
+        };
+        $('cancelQueueHash').onclick = () => this.hashController?.abort();
+        $('clearSendQueue').onclick = () => void this.clear();
+        $('sendStoredQueue').onclick = () => void this.send();
+        Events.on('connection-state', () => this.render());
+        Events.on('send-queue-state', () => this.render());
+        Events.on('send-file-complete', event => {
+            this.completionChain = this.completionChain.then(() => this.completed(event.detail.file, event.detail.sha256)).catch(error => this.failure(error));
+        });
+        window.addEventListener('storage', event => {
+            if (event.key !== null && event.key !== this.store.storageKey) return;
+            this.sequence++; this.hashController?.abort(); this.hashController = null; this.busy = false;
+            this.boundFiles = null; this.bindings = new WeakMap();
+            void this.refresh('另一标签页修改了清单，请重新选择原件');
+        });
+        window.addEventListener('pagehide', () => {
+            this.sequence++; this.hashController?.abort(); this.hashController = null; this.busy = false;
+            this.boundFiles = null; this.bindings = new WeakMap(); this.render();
+        });
+        void this.refresh();
+    }
+    peer() { return [...this.peers.peers.values()].find(peer => peer._canSend()); }
+    active() { return [...this.peers.peers.values()].some(peer => peer._outgoing || peer._filesQueue.length || peer._held || peer._queueWaitId); }
+    render(note) {
+        if (!this.store?.supported) return;
+        if (note !== undefined) this.notice = note;
+        const exists = !!this.snapshot, active = this.active();
+        $('saveSendQueue').disabled = this.busy || exists || this.invalid || active || !$('rememberSendQueue').checked;
+        $('reselectSendQueue').disabled = this.busy || !exists || active;
+        $('clearSendQueue').disabled = this.busy || (!exists && !this.invalid);
+        $('sendStoredQueue').disabled = this.busy || !this.boundFiles || !this.peer() || active;
+        $('cancelQueueHash').hidden = !this.hashController;
+        const status = this.notice || (exists
+            ? `本机清单 ${this.snapshot.files.length} 个文件 · ${this.boundFiles ? '原件已核验，请连接并核对安全码后手动发送' : '请重新选择全部原件，未自动发送'}`
+            : '当前没有待发清单');
+        if ($('sendQueueStatus').textContent !== status) $('sendQueueStatus').textContent = status;
+        const listRevision = this.snapshot?.revision || null;
+        if (this.listRevision === listRevision) return;
+        this.listRevision = listRevision;
+        const list = $('sendQueueList'); list.replaceChildren();
+        for (const entry of this.snapshot?.files.slice(0, 10) || []) {
+            const item = document.createElement('li'); item.textContent = entry.name + ' · ' + fmt(entry.size); list.append(item);
+        }
+        if (this.snapshot?.files.length > 10) { const item = document.createElement('li'); item.textContent = '另有 ' + (this.snapshot.files.length - 10) + ' 个文件'; list.append(item); }
+    }
+    failure(error) {
+        this.boundFiles = null;
+        const messages = {
+            QueueConflictError: '另一标签页修改了清单，请重新加载并选择原件',
+            QueueFileMismatchError: '原文件不匹配，文件内容或信息已变化；没有发送文件',
+            QueueCorruptError: '本机清单损坏，请删除后重新创建',
+            QueueExpiredError: '本机清单已过期，请重新创建',
+            QueueConsentError: '请先明确允许在本机保存清单',
+            QueueLimitError: '清单最多 100 个文件，记录总量须小于 128 KiB',
+            QuotaExceededError: '浏览器存储空间不足，未保存待发清单',
+            SecurityError: '浏览器不允许本机存储，请使用普通文件选择发送',
+            AbortError: '已停止校验，没有自动发送文件'
+        };
+        if (error.name === 'QueueCorruptError') { this.invalid = true; this.snapshot = null; }
+        if (error.name === 'QueueExpiredError') this.snapshot = null;
+        this.render(messages[error.name] || '清单操作失败，请重新选择原件或删除本机清单');
+        if (error.name === 'QueueConflictError') {
+            this.bindings = new WeakMap(); void this.refresh(messages.QueueConflictError);
+        }
+    }
+    async refresh(note = '') {
+        const sequence = this.sequence;
+        try {
+            const snapshot = await this.store.load(); if (sequence !== this.sequence) return;
+            this.snapshot = snapshot; this.invalid = false; this.render(note);
+        } catch (error) { if (sequence === this.sequence) this.failure(error); }
+    }
+    async choose(files) {
+        if (this.busy || this.active()) return;
+        const sequence = ++this.sequence;
+        this.busy = true; this.boundFiles = null; this.bindings = new WeakMap();
+        this.hashController = new AbortController();
+        const options = { signal: this.hashController.signal, onProgress: () => {
+            if (sequence === this.sequence) this.render('正在分块校验原文件，请稍候；尚未发送');
+        } };
+        this.render('正在分块校验原文件，请稍候；尚未发送');
+        try {
+            if (this.mode === 'save') {
+                const snapshot = await this.store.save(files, { ...options, optIn: $('rememberSendQueue').checked, expectedRevision: null });
+                if (sequence !== this.sequence) return;
+                this.snapshot = snapshot; this.boundFiles = files;
+            } else {
+                const result = await this.store.reselect(this.snapshot.revision, files, { ...options, confirmed: true });
+                if (sequence !== this.sequence) return;
+                this.snapshot = result.snapshot; this.boundFiles = result.files;
+            }
+            for (let index = 0; index < this.boundFiles.length; index++) this.bindings.set(this.boundFiles[index], this.snapshot.files[index].entryId);
+            this.notice = '';
+        } catch (error) { if (sequence === this.sequence) this.failure(error); }
+        finally { if (sequence === this.sequence) { this.busy = false; this.hashController = null; this.render(); } }
+    }
+    async send() {
+        const peer = this.peer(), files = this.boundFiles;
+        const sequence = this.sequence;
+        if (this.busy || !peer || !files || this.active()) return;
+        try {
+            const current = await this.store.load();
+            if (sequence !== this.sequence) return;
+            if (!current || current.revision !== this.snapshot?.revision) {
+                this.snapshot = current; throw Object.assign(Error(), { name: 'QueueConflictError' });
+            }
+            if (this.peer() !== peer || this.boundFiles !== files || this.active()) return;
+            if (peer.sendFiles(files) === true) { this.boundFiles = null; this.render('已加入发送队列，每个文件仍须对方同意；校验成功后才从清单移除'); }
+        } catch (error) { if (sequence === this.sequence) this.failure(error); }
+    }
+    async completed(file, sha256) {
+        const entryId = this.bindings.get(file);
+        if (!entryId || !this.snapshot) return;
+        const sequence = this.sequence;
+        if (this.snapshot.files.find(entry => entry.entryId === entryId)?.sha256 !== sha256)
+            throw Object.assign(Error(), { name: 'QueueFileMismatchError' });
+        try {
+            const snapshot = await this.store.removeEntry(entryId, { expectedRevision: this.snapshot.revision });
+            if (sequence !== this.sequence) return;
+            this.snapshot = snapshot;
+            this.bindings.delete(file); this.render(this.snapshot ? '已完成文件已移除，剩余 ' + this.snapshot.files.length + ' 个文件' : '清单中的文件均已校验完成，本机清单已删除');
+        } catch (error) { if (sequence === this.sequence) this.failure(error); }
+    }
+    async clear() {
+        if (this.busy) return;
+        const sequence = ++this.sequence;
+        this.busy = true; this.boundFiles = null; this.bindings = new WeakMap(); this.render();
+        try {
+            if (this.invalid) await this.store.clearCorrupt({ confirmed: true });
+            else await this.store.clear({ expectedRevision: this.snapshot?.revision ?? null });
+            if (sequence !== this.sequence) return;
+            this.snapshot = null; this.invalid = false; this.boundFiles = null; this.bindings = new WeakMap();
+            this.render('本机清单已删除；当前已授权的传输如需停止，请在传输记录中取消');
+        } catch (error) { if (sequence === this.sequence) this.failure(error); }
+        finally { if (sequence === this.sequence) { this.busy = false; this.render(); } }
     }
 }
 class Zeydrop {
@@ -195,6 +370,7 @@ class Zeydrop {
         };
         new PeersUI(); this.server = new ServerConnection(); this.peers = new PeersManager(this.server);
         new FileOfferDialog(); new ReceiveDialog(); new TransfersUI(); this.rooms(); this.text();
+        this.sendQueue = new SendQueueUI(this.peers);
         Events.on('display-name', event => $('displayName').textContent = '你的设备：' + event.detail.message.deviceName);
         Events.on('offline', () => Events.fire('notify-user', '网络已断开'));
         Events.on('dragover', event => event.preventDefault()); Events.on('drop', event => event.preventDefault());

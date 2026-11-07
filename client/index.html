@@ -114,6 +114,14 @@
                     <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
                     <div class="diagnostics-action"><button id="exportDiagnostics" type="button">导出连接诊断</button><small>仅在本机下载连接状态，不含 IP、邀请或文件信息</small></div>
                     <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>仅存在当前浏览器，24 小时后过期，本站打开时清理；可随时删除</small><div id="localStorageRecords" hidden></div></div>
+                    <details id="sendQueueSection" class="send-queue-storage" hidden>
+                        <summary>跨刷新保留待发清单</summary>
+                        <p>只在此浏览器保存文件名、大小和完整校验值，不保存原文件，也不发送到服务器。清单 24 小时后过期；刷新后须重新配对、核对安全码并重选全部原件。</p>
+                        <label class="queue-consent"><input id="rememberSendQueue" type="checkbox">允许在本机保存本次待发清单</label>
+                        <input id="sendQueueFiles" type="file" multiple hidden>
+                        <div class="queue-storage-actions"><button id="saveSendQueue" type="button" disabled>选择文件并保存清单</button><button id="reselectSendQueue" type="button" disabled>重新选择全部原文件</button><button id="sendStoredQueue" type="button" disabled>发送已核验清单</button><button id="clearSendQueue" type="button" disabled>删除本机清单</button><button id="cancelQueueHash" type="button" hidden>停止校验</button></div>
+                        <p id="sendQueueStatus" role="status" aria-live="polite">当前没有待发清单</p><ul id="sendQueueList"></ul>
+                    </details>
                 </div>
             </section>
         </main>
@@ -265,6 +273,7 @@
     <script src="config.js"></script>
     <script src="scripts/vendor.js"></script>
     <script src="scripts/recovery.js"></script>
+    <script src="scripts/send-queue-store.js"></script>
     <script src="scripts/transfer.js"></script>
     <script src="scripts/network.js"></script>
     <script src="scripts/diagnostics.js"></script>

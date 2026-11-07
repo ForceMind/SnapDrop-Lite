@@ -26,7 +26,9 @@ class ZeydropServer {
                 // Exact matching also rejects query credentials and avoids parsing
                 // exceptions escaping the upgrade handler before authentication.
                 && info.req.url === '/server/webrtc'
-                && this.sessions.size < 1000 && this.connections.size < 1000
+                // A full session table must still allow bounded transports so
+                // an existing offline identity can present its resume token.
+                && this.connections.size < 1000
         });
         this._wss.on('connection', (socket, request) => this.connect(socket, request));
         this.timer = setInterval(() => this.sweep(), 5000);
@@ -69,6 +71,10 @@ class ZeydropServer {
             if (session && (!session.peer && now - session.detached > RESUME_TTL)) session = null;
             if (session?.peer) { peer.socket.close(1008, 'Session already online'); return; }
             if (!session) {
+                // Upgrade checks happen before hello, so several transports
+                // can be admitted while the table is nearly full. Reserve
+                // capacity atomically here, immediately before allocation.
+                if (this.sessions.size >= 1000) { peer.socket.close(1008, 'Session capacity'); return; }
                 const ua = String(this._userAgent(peer) || '');
                 session = { id: randomUUID(), token: token(), room: null, detached: now, name: this.deviceName(ua) };
                 this.sessions.set(session.token, session);

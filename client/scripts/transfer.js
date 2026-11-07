@@ -51,6 +51,7 @@ class TransferPeer {
     constructor(server, peerId) {
         this._server = server; this._peerId = peerId;
         this._filesQueue = []; this._outgoing = null; this._incoming = null;
+        this._retryFiles = new Map(); this._queueBlocked = false;
         this._messageChain = Promise.resolve(); this._queuedBytes = 0;
         this._verified = false; this._remoteHello = false;
         // Page-memory only: no file bytes, handles or resume metadata enter signaling.
@@ -180,6 +181,7 @@ class TransferPeer {
             if (msg.sha256 !== outgoing.sha256) throw Error('对方返回的校验值不一致');
             clearTimeout(outgoing.timer); this._outgoing = null;
             this._queueWaitId = msg.readyNext === true ? null : msg.id;
+            Events.fire('send-file-complete', { file: outgoing.file, sha256: outgoing.sha256 });
             this._progress(outgoing, 'complete'); this._dequeueFile(); return;
         }
         if (msg.type === 'ready-next' && msg.id === this._queueWaitId) { this._queueWaitId = null; this._dequeueFile(); return; }
@@ -191,6 +193,7 @@ class TransferPeer {
     // No storage-backed persistence: page reload or browser exit cancels recovery.
     suspendTransfers(reason) {
         if (this._held) return true;
+        this._clearRetries();
         const outgoing = this._outgoing && ['sending', 'verifying', 'resuming'].includes(this._outgoing.phase) ? this._outgoing : null;
         const incoming = this._incoming?.sink && !this._incoming.finishing ? this._incoming : null;
         // Queued File objects are never uploaded to signaling. Retain them
@@ -223,7 +226,7 @@ class TransferPeer {
             state.awaitingResume = true;
             this._progress(state, 'reconnecting');
         }
-        const hold = { outgoing, incoming, pendingFiles,
+        const hold = { outgoing, incoming, pendingFiles, queueBlocked: this._queueBlocked,
             deadline: Math.min(deadline, ...[outgoing, incoming].filter(Boolean).map(state => state.resumeDeadline)) };
         // An in-flight sink.write may finish after the transport disappears. Its
         // hash/offset is accounted for before the receiver advertises a prefix.
@@ -233,6 +236,7 @@ class TransferPeer {
         if (outgoing?.waiter) { const waiter = outgoing.waiter; outgoing.waiter = null; waiter.reject(Error('正在恢复连接')); }
         hold.ready = this._messageChain.catch(() => {});
         hold.timer = setTimeout(() => this._dropHeld('续传窗口已过期，请重新选择文件'), Math.max(0, hold.deadline - Date.now()));
+        this._queueEvent();
         return true;
     }
     _dropHeld(reason) {
@@ -261,6 +265,7 @@ class TransferPeer {
             Events.fire('file-offer-cancelled', { id: state.meta.id, sender: this._peerId });
         }
         Events.fire('notify-user', reason);
+        this._queueEvent();
     }
     _cancelTransferredState(state, reason) {
         if (this._incoming === state || this._outgoing === state) this.cancel(state.meta.id, reason);
@@ -289,6 +294,7 @@ class TransferPeer {
             this._resumeReady = hold.ready;
             this._incoming = hold.incoming; this._outgoing = hold.outgoing;
             this._filesQueue = hold.pendingFiles || [];
+            this._queueBlocked = !!hold.queueBlocked;
             hold.pendingFiles = [];
             for (const state of [this._incoming, this._outgoing]) {
                 if (!state) continue;
@@ -406,19 +412,56 @@ class TransferPeer {
         }
     }
     rejectIncoming(id) { if (this._incoming?.meta.id === id) this.cancel(id, '已拒绝接收'); }
+    _canSend() { return this._verified && this._path?.direct && this._remoteHello && this._isConnected(); }
+    _queueEvent() {
+        Events.fire('send-queue-state', { peerId: this._peerId, count: this._filesQueue.length + (this._held?.pendingFiles?.length || 0),
+            blocked: this._held ? !!this._held.queueBlocked : this._queueBlocked,
+            busy: !!(this._outgoing || this._queueWaitId || this._held?.outgoing), ready: !this._held && !!this._canSend() });
+    }
+    _forgetRetry(id) {
+        const entry = this._retryFiles.get(id); if (!entry) return;
+        clearTimeout(entry.timer); this._retryFiles.delete(id);
+        Events.fire('transfer-retry-state', { peerId: this._peerId, id, available: false });
+    }
+    _clearRetries() { for (const id of this._retryFiles.keys()) this._forgetRetry(id); }
+    _rememberRetry(state) {
+        // Keep only File references in this page, never chunks, handles or signaling data.
+        while (this._retryFiles.size >= 30) this._forgetRetry(this._retryFiles.keys().next().value);
+        const entry = { file: state.file, expires: Date.now() + 15 * 60 * 1000 };
+        entry.timer = setTimeout(() => this._forgetRetry(state.meta.id), 15 * 60 * 1000);
+        entry.timer.unref?.();
+        this._retryFiles.set(state.meta.id, entry);
+    }
+    retryFile(id) {
+        const entry = this._retryFiles.get(id);
+        if (!entry) return false;
+        if (Date.now() >= entry.expires) { this._forgetRetry(id); return false; }
+        if (!this._canSend() || this._outgoing || this._queueWaitId || this._held)
+            return Events.fire('notify-user', '请等待当前文件结束，并重新确认直连和安全码后再发送');
+        if (this._filesQueue.length >= 100) return false;
+        this._filesQueue.unshift(entry.file); this._forgetRetry(id);
+        this._queueBlocked = false; this._dequeueFile(); return true;
+    }
+    continueQueue() { if (this._canSend()) { this._queueBlocked = false; this._dequeueFile(); } }
+    clearQueue() {
+        this._filesQueue = []; this._queueBlocked = false;
+        if (this._held) { this._held.pendingFiles = []; this._held.queueBlocked = false; }
+        this._queueEvent();
+    }
     sendFiles(files) {
-        if (!this._verified || !this._path?.direct || !this._remoteHello) return Events.fire('notify-user', '请先等待直连就绪并核对两台设备的安全码');
-        if (files.length + this._filesQueue.length > 100) return Events.fire('notify-user', '每次最多排队 100 个文件');
-        this._filesQueue.push(...Array.from(files)); this._dequeueFile();
+        if (!this._canSend()) return Events.fire('notify-user', '请先等待直连就绪并核对两台设备的安全码');
+        if (files.length + this._filesQueue.length + (this._outgoing ? 1 : 0) > 100) return Events.fire('notify-user', '每次最多排队 100 个文件');
+        if (!this._filesQueue.length) this._queueBlocked = false;
+        this._filesQueue.push(...Array.from(files)); this._dequeueFile(); return true;
     }
     _dequeueFile() {
-        if (this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._isConnected()
-            || !this._verified || !this._path?.direct || !this._remoteHello) return;
+        if (this._queueBlocked || this._outgoing || this._queueWaitId || !this._filesQueue.length || !this._canSend()) { this._queueEvent(); return; }
         const file = this._filesQueue.shift();
         const state = { file, meta: { id: crypto.randomUUID(), name: safeName(file.name), size: file.size, mime: safeMime(file.type) }, phase: 'offered', offset: 0, acked: 0, hash: window.ZeydropHash.create(), start: performance.now() };
         this._outgoing = state;
         state.timer = setTimeout(() => this.cancel(state.meta.id, '对方未确认，邀请接收已取消'), 120000);
         this.sendJSON({ type: 'offer', ...state.meta }); this._progress(state, 'offered');
+        this._queueEvent();
     }
     async _pump(state) {
         const epoch = state.sendEpoch || 0;
@@ -469,7 +512,7 @@ class TransferPeer {
         const first = samples[0], elapsed = first ? (now - first.at) / 1000 : 0;
         const speed = running && elapsed > 0 ? Math.max(0, (bytes - first.bytes) / elapsed) : 0;
         state.uiPhase = phase; state.lastUI = now;
-        Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, error: state.error || null, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
+        Events.fire('transfer-state', { peerId: this._peerId, id: state.meta.id, name: state.meta.name, phase, retryable: this._retryFiles.has(state.meta.id), error: state.error || null, bytes: phase === 'complete' ? state.meta.size : bytes, size: state.meta.size, progress: state.meta.size ? bytes / state.meta.size : 0, speed, eta: speed ? (state.meta.size - bytes) / speed : null });
     }
     pause(id, paused) {
         const state = [this._outgoing, this._incoming].find(s => s?.meta.id === id);
@@ -489,7 +532,10 @@ class TransferPeer {
         const state = outgoing || incoming;
         if (!state) return;
         clearTimeout(state.timer); state.error = reason;
-        if (outgoing) { state.sendEpoch = (state.sendEpoch || 0) + 1; this._outgoing = null; state.waiter?.reject(Error(reason)); this._filesQueue = []; }
+        if (outgoing) {
+            state.sendEpoch = (state.sendEpoch || 0) + 1; this._outgoing = null; state.waiter?.reject(Error(reason));
+            if (!this._aborting) { this._rememberRetry(state); this._queueBlocked = true; }
+        }
         if (incoming) {
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
             this._incoming = null;
@@ -502,12 +548,16 @@ class TransferPeer {
         this._progress(state, 'cancelled');
         Events.fire('file-offer-cancelled', { id, sender: this._peerId });
         Events.fire('notify-user', reason);
+        this._queueEvent();
     }
     abortAll(reason, keepDurable = false) {
+        this._aborting = true;
         if (this._outgoing) this.cancel(this._outgoing.meta.id, reason, false);
         if (this._incoming) this.cancel(this._incoming.meta.id, reason, false, keepDurable);
         this._filesQueue = []; this._queueWaitId = null; this._discard = null;
+        this._queueBlocked = false; this._clearRetries(); this._aborting = false;
         this._dropHeld(reason);
+        this._queueEvent();
     }
     sendText(text) {
         if (!this._verified || !this._path?.direct) return Events.fire('notify-user', '请先核对安全码');

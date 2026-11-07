@@ -59,16 +59,25 @@ async function main() {
         results.cases.push('sealed pair continues actual file transfers after the invitation deadline');
         const traffic = []; for (const peer of server.signaling.connections.values()) peer.socket.on('message', (bytes, binary) => traffic.push({ binary, text: bytes.toString(), bytes: bytes.length }));
         const file = { name: '闪投 & <视频> PRIVATE_FILE_SENTINEL.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_FILE_BODY_SENTINEL\n'.repeat(12000)) };
-        const send = () => a.locator('x-peer input[type=file]').setInputFiles(file);
-        await send(); await b.locator('#fileOfferDialog[show]').waitFor();
+        await a.locator('x-peer input[type=file]').setInputFiles([file, { name: 'queued-after-rejection.txt', mimeType: 'text/plain', buffer: Buffer.from('later') }]);
+        await b.locator('#fileOfferDialog[show]').waitFor();
+        const rejectedId = await a.evaluate(() => [...zeydrop.peers.peers.values()][0]._outgoing.meta.id);
         assert.equal(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
         await b.locator('#rejectFileOffer').click(); await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing);
         results.cases.push('receiver reject sends zero file bytes');
-        await send(); await b.locator('#fileOfferDialog[show]').waitFor(); await b.locator('#acceptFileOffer').click();
+        assert.equal(await a.evaluate(() => [...zeydrop.peers.peers.values()][0]._filesQueue.length), 1);
+        await a.locator('.retry-transfer:visible').click(); await b.locator('#fileOfferDialog[show]').waitFor();
+        assert.notEqual(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.meta.id), rejectedId);
+        assert.equal(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
+        await b.locator('#acceptFileOffer').click();
         await b.locator('#receiveDialog[show]').waitFor();
         const expected = crypto.createHash('sha256').update(file.buffer).digest('hex'); assert.ok((await b.locator('#fileSize').innerText()).includes(expected));
         const downloadPromise = b.waitForEvent('download'); await b.locator('#download').click(); const download = await downloadPromise;
         assert.deepEqual(await fs.readFile(await download.path()), file.buffer); results.cases.push('fallback save and independent downloaded SHA-256/content equality');
+        await b.locator('#fileOfferDialog[show]').waitFor();
+        assert.equal(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.meta.name), 'queued-after-rejection.txt');
+        await b.locator('#rejectFileOffer').click(); await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing);
+        results.cases.push('rejection preserves pending queue; manual retry uses fresh ID and explicit consent; next offer waits for Blob saving');
         // Synthetic storage failure must stop this file without breaking the direct channel.
         await b.evaluate(() => { window.showSaveFilePicker = async () => ({ createWritable: async () => ({ write: async () => { throw new DOMException('Test storage quota', 'QuotaExceededError'); }, close: async () => {}, abort: async () => {} }) }); });
         await a.locator('x-peer input[type=file]').setInputFiles({name:'quota-test.bin',mimeType:'application/octet-stream',buffer:Buffer.alloc(60000)});

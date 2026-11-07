@@ -52,3 +52,13 @@ E2E 通过时会记录实际 selected pair、独立下载 / 磁盘 SHA-256、服
 | Wi-Fi / 蜂窝切换、后台冻结与恢复 | 待测 | 待测 | 待测 | 待测 | 待测 | 待测 |
 
 每个可连接组合测试：文本、图片、视频、多个文件、100 MB 和 1 GiB（能力不足时验证拒绝）。记录双方版本、设备、网络、候选统计、selected pair、协议 / 地址族、时间、哈希、断线 / 拒绝 / 取消 / 暂停结果、服务端是否接收到文件正文。默认不记录完整公网地址及文件正文。
+
+## 本轮新增验收（2026-11-06，浏览器CI待运行）
+
+- tests/retry-queue.test.cjs：8项，失败不自动重offer/fresh ID/授权/expiry/断线/held清空/Blob屏障，已本地通过。
+- tests/send-queue-store.test.cjs：14项，完整内容重选/上限/TTL/损坏/CAS/配额/取消/有界读取，本地通过。
+- tests/server-capacity.test.cjs：3项实际WS，在hello原子分配容量及满表恢复；填充离线session夹具避免单测开千个socket，非压力结论。
+- tests/browser.cjs：新增真实重试、fresh接收同意、队列保留和保存屏障；tests/send-queue-browser.cjs新增跨刷新发送清单，待对应head的CI，不沿用旧通过状态。
+
+- tests/send-queue-ui.test.cjs：10项，直接执行真实UI class与实际store，验证撤回同意、跨标签、旧异步load/remove/clear/send隔离及最终哈希才删除；本地合计177项通过。
+- scripts/server-load.cjs：64/256/1000连接实际短profile精确收齐及资源回收，server RSS/CPU独立于负载发生器，原始报告见SERVER_PERFORMANCE。不是长期soak、真实WAN或文件速度证据。

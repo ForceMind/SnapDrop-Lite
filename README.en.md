@@ -24,7 +24,7 @@ Invitations have 128-bit random credentials in the URL fragment, expire after 15
 
 Files use 16 KiB chunks, a 256 KiB receiver-write ACK window, DataChannel backpressure, bounded receive queues, incremental SHA-256, and a multi-file queue. Pause/resume and cancellation work within a live connection. Supported desktop save pickers stream to the selected file; fallback memory reception is capped at **64 MiB in total**, including pending downloads.
 
-Same-page recovery is bounded to 120 seconds and requires the same locked identities/session, a newly verified direct path, fresh safety-code confirmation, and independent prefix hashing. Unaccepted offers need fresh receiver approval. A pending Blob download is not silently skipped. Queued sending File objects do not survive page refresh.
+Same-page recovery is bounded to 120 seconds and requires the same locked identities/session, a newly verified direct path, fresh safety-code confirmation, and independent prefix hashing. Unaccepted offers need fresh receiver approval. A pending Blob download is not silently skipped. Queued sending File objects do not survive page refresh. The opt-in local checklist can rebuild the order only after the user reselects all originals and full-content hashing matches; see the send queue update below.
 
 Experimental persistent recovery is **opt-in on the receiver**. Raw partial bytes are stored locally in browser OPFS, with committed checkpoints and exclusive handles. Records expire after 24 hours; cleanup is attempted while the site is open, so closing all pages does not schedule background deletion. After refresh the devices pair again, the sender reselects the original file, and the receiver explicitly chooses the matching local partial. Both endpoints verify the stored prefix; the full file is checked again at completion. Quota, permission loss, browser eviction, crashes and clearing site data may prevent recovery. [Storage details and cleanup](docs/RECOVERY_STORAGE.md).
 
@@ -91,3 +91,9 @@ Real cross-network devices, mobile/Safari storage/PWA behavior, production-trust
 ## License
 
 Derived from Snapdrop; the combined application is licensed under [GPL-3.0](LICENSE). Provenance and dependency notices are in [NOTICE](NOTICE) and [LICENSE_PROVENANCE](docs/LICENSE_PROVENANCE.md). The old Apache text is retained as historical provenance. Git history is preserved.
+
+## Send queue recovery update (pending this change’s CI)
+
+A rejected/failed file pauses and preserves the remaining in-page queue. Retry is manual, uses a fresh transfer ID, and requires receiver consent again. Failed File references are bounded to 30 entries/15 minutes and cleared on disconnect.
+
+The opt-in local send checklist stores only filenames, sizes, MIME, timestamps and full SHA-256, at most100 entries/128KiB for a fixed24hours. It never stores file bodies, handles, peer identities or invitations. After refresh, explicitly reselect all originals for full-content matching, establish/verify a new pairing, then click send; each receiver still consents. Only a fully verified completion removes an item. Web Locks/revision checks prevent silent cross-tab overwrites; unavailable storage leaves ordinary in-page transfers usable. See [local recovery](docs/RECOVERY_STORAGE.md). Hardware eviction, real Safari and WAN acceptance remain open.

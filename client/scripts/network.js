@@ -409,7 +409,7 @@ class RTCPeer extends TransferPeer {
         this._disconnectTimer = null; this._pathWaitTimer = null;
         this._reason = reason; this._connectionEvent();
     }
-    _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); }
+    _connectionEvent() { Events.fire('connection-state', { peerId: this._peerId, state: this._state, path: this._path, verified: this._verified, code: this._code, ready: this._remoteHello, candidates: this._candidateCounts, stunError: this._stunError, reason: this._reason }); this._queueEvent?.(); }
     _isConnected() { return !this._closed && this._channel?.readyState === 'open'; }
     close(reason = '连接已关闭，文件未完成', preserve = false) {
         if (this._closed) return null;
@@ -448,7 +448,12 @@ class PeersManager {
         Events.on('verify-peer', event => this.peers.get(event.detail)?.verify());
         Events.on('transfer-control', event => {
             const { peerId, id, action } = event.detail; const peer = this.peers.get(peerId);
-            if (action === 'cancel') peer?.cancel(id); else peer?.pause(id, action === 'pause');
+            if (action === 'cancel') peer?.cancel(id);
+            else if (action === 'retry') peer?.retryFile(id);
+            else if (action === 'forget') peer?._forgetRetry(id);
+            else if (action === 'continue-queue') peer?.continueQueue();
+            else if (action === 'clear-queue') peer?.clearQueue();
+            else peer?.pause(id, action === 'pause');
         });
         Events.on('retry-peer', event => {
             const old = this.peers.get(event.detail);
