@@ -32,7 +32,7 @@ async function offlineProbe(page){
     });
 }
 async function main(){
-    const report={schema:1,engine:'chromium',scope:'current-version cached shell and native hash/recovery Workers in a fresh offline document; not update activation, Safari, mobile hardware, or public-network evidence',
+    const report={schema:1,engine:'chromium',scope:'current-version cached shell and native hash/recovery Workers under explicit browser offline emulation; not physical link disconnection, update activation, Safari, mobile hardware, or public-network evidence',
         phase:'startup',checks:[],errors:[],offlineWorkers:[],passed:false};
     let server,browser,context,page,serviceWorker;
     try{
@@ -104,6 +104,19 @@ async function main(){
         await session.send('Network.clearBrowserCache');await session.send('Network.setCacheDisabled',{cacheDisabled:true});
         report.httpCacheCleared=true;
         report.phase='offline-reload';await context.setOffline(true);report.contextOfflineApplied=true;
+        // CI55/56 Chrome 156 rejected the real no-store network probe while
+        // navigator.onLine stayed true. Configure the renderer hint separately
+        // rather than weakening either the network or navigator assertions.
+        const navigatorState={offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1,connectionType:'none'};
+        report.emulation={requestBlocking:{driver:'Playwright BrowserContext.setOffline',offline:true,applied:true},
+            navigatorHint:{driver:'CDP Network.overrideNetworkState',parameters:navigatorState,applied:false},
+            priorEvidence:'CI55/56: uncached HTTP GET rejected TypeError without timeout, but navigator.onLine remained true',
+            interpretation:'request blocking and renderer connectivity state are browser test-driver settings; no operating-system network interface is changed'};
+        try{
+            await session.send('Network.overrideNetworkState',navigatorState);report.emulation.navigatorHint.applied=true;
+        }catch(error){
+            report.emulation.navigatorHint.failure='command-unavailable-or-rejected';throw error;
+        }
         await page.reload({waitUntil:'load'});
         report.readinessBeforeWait=await page.evaluate(readinessSnapshot);
         report.offlineNetworkProbe=await offlineProbe(page);

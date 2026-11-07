@@ -7,7 +7,7 @@ const turn = () => new Promise(resolve => setImmediate(resolve));
 const gate = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 
-async function harness({ failOn, errorName = 'QuotaExceededError', delayedWrite = false, delayedFinish = false, durable = true } = {}) {
+async function harness({ failOn, errorName = 'QuotaExceededError', delayedWrite = false, delayedFinish = false, durable = true, parkFails = true } = {}) {
     const { sha256 } = await import('@noble/hashes/sha2.js');
     const prefix = Buffer.alloc(16384, 7), tail = Buffer.from('new-tail'), frames = [], events = [], peers = [], timers = new Set();
     const failure = () => Object.assign(Error('storage failure'), { name: errorName });
@@ -34,6 +34,7 @@ async function harness({ failOn, errorName = 'QuotaExceededError', delayedWrite 
             disk.parks.push(hash);
             if (!disk.active) return false; // actual worker finish already closed/published the file
             disk.active = false;
+            if (!parkFails) { disk.committed = { offset: this.size, hash }; return true; }
             // The failed retry deliberately leaves the previously committed
             // metadata unchanged, as a quota/permission failure must do.
             throw failure();
@@ -235,5 +236,48 @@ test('foreign held cleanup revokes only the exact adopted state and waits for it
         assert.equal(h.disk.deleted, false); assert.equal(h.disk.aborts, 0);
         assert.deepEqual(h.disk.parks, [digest(Buffer.concat([h.prefix, h.tail]))]);
         assert.equal(state.offset, h.prefix.length + h.tail.length);
+    } finally { await h.cleanup(); }
+});
+
+for (const adopted of [false, true]) test('active keepDurable cancellation accounts for an unresolved write before publishing recoverable offset/hash ' + (adopted ? 'on an adopted owner' : 'on the same peer'), async () => {
+    const h = await harness({ delayedWrite: true, parkFails: false }), original = h.peer();
+    try {
+        const state = await h.accept(original); let validWire = true;
+        original._receive(h.tail.buffer.slice(h.tail.byteOffset, h.tail.byteOffset + h.tail.byteLength), () => validWire);
+        await h.disk.writeEntered.promise;
+        let owner = original;
+        if (adopted) {
+            validWire = false; original.suspendTransfers('old wire interrupted');
+            owner = h.peer(false); owner.adoptHeldTransfers(original.takeHeldTransfers()); owner._verified = true; owner.restoreTransfers();
+        }
+        h.frames.length = 0; h.events.length = 0;
+        owner.abortAll('terminal network failure', true); await turn();
+        assert.equal(h.disk.parks.length, 0, 'park must wait for the exact original write and hashing chain');
+        h.disk.writeGate.resolve(); await original._messageChain; await turn(); await turn();
+        const expected = digest(Buffer.concat([h.prefix, h.tail]));
+        assert.equal(state.offset, h.prefix.length + h.tail.length); assert.equal(h.sink.size, state.offset);
+        assert.equal(h.disk.aborts, 0); assert.equal(h.disk.deleted, false); assert.deepEqual(h.disk.parks, [expected]);
+        assert.deepEqual(h.disk.committed, { offset: h.prefix.length + h.tail.length, hash: expected });
+        assert.equal(h.frames.some(frame => ['ack', 'complete', 'resume-at'].includes(frame.message.type)), false);
+        assert.equal(h.events.some(event => event.type === 'file-received'), false);
+        const next = h.peer(); await h.accept(next);
+        assert.equal(next._incoming.offset, h.disk.body.length);
+        assert.equal(Buffer.from(next._incoming.hash.clone().digest()).toString('hex'), expected, 'a fresh explicit recovery independently hashes the published prefix');
+    } finally { await h.cleanup(); }
+});
+
+test('active durable cleanup hashes only its cancelled state while a fresh same-ID offer stays unchanged', async () => {
+    const h = await harness({ delayedWrite: true, parkFails: false }), p = h.peer();
+    try {
+        const old = await h.accept(p);
+        p._receive(h.tail.buffer.slice(h.tail.byteOffset, h.tail.byteOffset + h.tail.byteLength)); await h.disk.writeEntered.promise;
+        p.abortAll('network failure', true);
+        await p._onMessage(JSON.stringify({ type: 'offer', id: old.meta.id, ...h.meta, name: 'new-unaccepted.bin' }));
+        const fresh = p._incoming;
+        h.disk.writeGate.resolve(); await p._messageChain; await turn(); await turn();
+        assert.equal(p._incoming, fresh); assert.equal(fresh.offset, 0); assert.equal(fresh.sink, undefined); assert.equal(fresh.error, undefined);
+        assert.equal(old.offset, h.prefix.length + h.tail.length);
+        assert.deepEqual(h.disk.parks, [digest(Buffer.concat([h.prefix, h.tail]))]);
+        assert.equal(h.disk.aborts, 0);
     } finally { await h.cleanup(); }
 });

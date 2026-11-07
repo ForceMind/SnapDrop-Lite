@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "scope": "current-version cached shell and native hash/recovery Workers in a fresh offline document; not update activation, Safari, mobile hardware, or public-network evidence",
+  "phase": "offline-reload",
+  "checks": [
+    "the activated controlling service worker precaches both exact worker URLs with the current build revision"
+  ],
+  "errors": [],
+  "offlineWorkers": [
+    {
+      "script": "recovery-worker.js",
+      "version": "2c53dbe3fd8b8862",
+      "phase": "offline-reload"
+    }
+  ],
+  "passed": false,
+  "browserVersion": "156.0.8078.4",
+  "cache": {
+    "revision": "2c53dbe3fd8b8862",
+    "name": "zeydrop-shell-2c53dbe3fd8b8862",
+    "entryCount": 25,
+    "controllerActivated": true,
+    "workers": [
+      {
+        "script": "recovery-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "2c53dbe3fd8b8862"
+      },
+      {
+        "script": "file-hash-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "2c53dbe3fd8b8862"
+      }
+    ],
+    "hashWorkerStillLazy": true,
+    "peerCount": 0
+  },
+  "httpCacheCleared": true,
+  "contextOfflineApplied": true,
+  "readinessBeforeWait": {
+    "navigatorOnline": true,
+    "offline": false,
+    "readyState": "complete",
+    "controlled": true,
+    "controllerState": "activated",
+    "fileHashPresent": true,
+    "recoveryPresent": true,
+    "hashClassPresent": true,
+    "recoverySupported": true,
+    "hashWorkerLazy": true,
+    "peerCount": 0,
+    "startupOnline": true,
+    "connectivityEvents": []
+  },
+  "offlineNetworkProbe": {
+    "rejected": true,
+    "errorName": "TypeError",
+    "timedOut": false
+  },
+  "cacheObserverBeforeWait": {
+    "installed": true,
+    "hits": [
+      {
+        "script": "recovery-worker.js",
+        "version": "2c53dbe3fd8b8862",
+        "status": 200
+      }
+    ]
+  },
+  "cacheHits": [
+    {
+      "script": "recovery-worker.js",
+      "version": "2c53dbe3fd8b8862",
+      "status": 200
+    }
+  ],
+  "failure": "TimeoutError",
+  "failureLine": {
+    "line": 115,
+    "column": 20
+  },
+  "readinessAtFailure": {
+    "navigatorOnline": true,
+    "offline": false,
+    "readyState": "complete",
+    "controlled": true,
+    "controllerState": "activated",
+    "fileHashPresent": true,
+    "recoveryPresent": true,
+    "hashClassPresent": true,
+    "recoverySupported": true,
+    "hashWorkerLazy": true,
+    "peerCount": 0,
+    "startupOnline": true,
+    "connectivityEvents": []
+  },
+  "cacheObserverAtFailure": {
+    "installed": true,
+    "hits": [
+      {
+        "script": "recovery-worker.js",
+        "version": "2c53dbe3fd8b8862",
+        "status": 200
+      }
+    ]
+  }
+}

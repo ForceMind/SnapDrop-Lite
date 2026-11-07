@@ -53,3 +53,12 @@ RSS相加会重复计算共享页，PSS按共享比例分摊；两者不能混�
 CI55的242项Node、1GiB/100MiB、原生OPFS/跨刷新、三引擎Worker和清单、六组合及永久不读者均通过；整套失败，唯一失败为离线PWA重载后的组合就绪predicate超时。此前已验证两Worker精确revision已缓存，errors为空；不能确定哪个字段未就绪。原始evidence/ci55-pwa-workers-chromium.json保留，新增逐字段和无缓存HTTP断网探针，原断言不删除。
 
 Issue #6后续断点保留、RPC界限、深色面板/文本/焦点改动需自身CI。夹具故障和物理I/O限制见ENGINEERING_AUDIT_20261107；小时实测仍未结束。
+
+
+## CI56早期证据与追加修复（待CI57）
+
+CI56同样仅PWA predicate中navigatorOnline=true，其它就绪字段全真，实际无缓存HTTP请求已阻断；原JSON见evidence/ci56-pwa-workers-chromium.json。测试配置补独立renderer离线提示，原断言不降低。
+
+真实Chromium UI对比度检查通过：浅/深真实暂存记录文字和启用删除按钮为13.510761/13.778412；房间状态5.733300/6.600164；placeholder6.261687/8.312787；键盘焦点4.665182/5.546260，原始未取整值见evidence/ci56-ui-contrast-chromium.json。范围仅这些实际组件，不是完整无障碍认证。
+
+独立复审发现并修复active durable取消中旧write记账跳过的问题，同时覆盖adopt旧ready；5字节复验偏移与SHA一致且不提前park。新工作树285/285 Node、构建与资源检查通过，仍需自身完整CI。Issue #6保持open直到相应验证。

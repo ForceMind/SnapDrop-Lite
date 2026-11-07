@@ -695,14 +695,20 @@ class TransferPeer {
             if (!this._aborting) { this._rememberRetry(state); this._queueBlocked = true; }
         }
         if (incoming) {
+            const preserve = keepDurable && typeof state.sink?.park === 'function';
+            // Terminal route failure may cancel an active receive while its
+            // already-started write is still running. Keep exact-state
+            // accounting alive before clearing ownership, and include the old
+            // peer's adoption barrier as well as this peer's message queue.
+            const cleanup = preserve ? { ready: Promise.all([this._messageChain, this._resumeReady, state.heldCleanup?.ready]) } : null;
+            if (cleanup) state.heldCleanup = cleanup;
             if (state.sink) this._discard = { id, remaining: WINDOW_SIZE };
             this._incoming = null;
             this._cancelPrefixRead(state);
-            if (keepDurable && typeof state.sink?.park === 'function') {
+            if (preserve) {
                 state.preserveDurableResult = true;
                 const sink = state.sink;
-                const cleanup = state.heldCleanup;
-                Promise.all([this._messageChain, cleanup?.ready]).then(() => sink.park(this._checkpointHash(state)))
+                cleanup.ready.then(() => sink.park(this._checkpointHash(state)))
                     .catch(() => this._notifyCheckpointFailure())
                     .finally(() => { if (state.heldCleanup === cleanup) state.heldCleanup = null; });
             } else state.sink?.abort();

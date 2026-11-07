@@ -31,3 +31,16 @@ Blob读取没有通用Abort API；逻辑取消不等于终止底层I/O。四个�
 深色暂存面板原因surface未定义而白底近白字；主题变量、弱文字、placeholder和focus对比度已修，依据和边界见UI_ACCESSIBILITY_20261107。实际列表、启用按钮和两主题另有真实浏览器检查，不能只看首页截图。
 
 本轮仍需自身完整Node、原生OPFS/跨刷新、文件/浏览器矩阵、构建和独立候选核验。真实存储失败/驱逐、移动Safari、WAN与独立主机门槛继续开放。服务器源码和Direct-only通路未改，用户文件不进入HTTP/WSS/分析服务。
+
+
+## 追加复审：active durable取消的检查点一致性
+
+独立5字节夹具证实，旧实现和本轮初版都存在：已有3B前缀，2B write尚未完成时直接abortAll(keepDurable)，清除incoming使旧write的hash/offset记账跳过，park会将offset5与hash(prefix3)配对。adopt到新peer时，仅等新消息链还会提前park，必须同时等待旧_resumeReady。
+
+最终窄修在取消精确state前设置记账标记，barrier覆盖当前消息链、旧adopt ready及既有cleanup ready；只有已开始写入成功才更新原state，等待完成后park，再仅释放自己的标记。3项先红后绿，独立复验两条路径均无提前park、stateOffset=sinkSize=5、SHA一致且只清理一次，新同ID文件不受影响。原生OPFS与完整矩阵仍待新head CI。
+
+## PWA实际诊断与测试配置
+
+CI56实际证据：页面complete/controller activated、模块和Recovery均就绪；no-store /build.json真实请求立即TypeError且非timeout，Recovery Worker命中精确版本缓存，但navigator.onLine保持true。原失败是把网络请求模拟等同renderer状态的测试假设，未证明缓存失败。CI55/56原JSON均保留。
+
+依据安装的CDP协议，测试另用Network.overrideNetworkState设置renderer离线提示，同时保留Playwright请求阻断、原navigator全部断言、实际HTTP断网探针、真实缓存/Worker/SHA与pageerrors。未修改navigator属性或产品源码，也不冒充物理断网。此配置须在新CI实际复验。
