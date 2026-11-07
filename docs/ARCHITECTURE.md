@@ -146,10 +146,16 @@ CI60的原生OPFS故障组合验证写入后Worker异常、原metadata保留、�
 本机暂存清理 sweep 的句柄可幂等 start/stop：页面创建时立即 list 并每小时清理，pagehide 清空周期句柄；仅 persisted pageshow 立即 list 并重启一个周期，重复 pageshow 不叠加，普通 pageshow 不重复初始化。list 的拒绝消费，无可用 Recovery 时不设置计时器。缓存页面返回不自动显示管理面板，不重建旧 hash/下载 URL、不恢复文件绑定或配对授权。4 项实际 controller 生命周期回归通过，真实浏览器 BFCache 和移动冻结仍按实机门槛验证。
 
 
-## 后续 ICE 与暂存目录生命周期（本轮集成待验）
+## ICE 与暂存目录生命周期（CI67/CI68已验证）
 
 ICE 相关异步操作必须归属于精确 RTCPeerConnection 和当前身份/协商代次；旧 createOffer/setDescription/addIceCandidate 或 flush 的完成、失败和计时器都不能判定新轮协商成功/失败、清除新 restart 或提前核验路径。当前 SDP、实际 selected 非 relay、双方人工核码与逐文件同意仍分别必要；候选成功应用不是身份或路径授权。具体本轮回归结果见 TEST_REPORT_20261107_LIFECYCLE，不能沿用 CI65 认证新改动。
 
-OPFS 目录新增一个保留的零字节 `mutation-lock`，短操作取得原生 SyncAccessHandle 以序列化 start/resume/手动 erase/TTL 删除重查。它不在整段传输期间占用，也不替代活动 `.part` 的独占数据锁。listing 的旧快照只是线索，自动回收必须在目录锁内重读当前 header、正文和时间条件；erase 在关闭旧数据句柄到删除记录期间仍持有目录锁，防止新记录插入删除窗口。争用取得 guard 返回 NoModificationAllowedError，不关闭当前活动 writer；由用户重试或下次惰性清理再尝试。存储错误必须明确拒绝或跳过惰性清理，不能假报删除完成；guard close 失败会拒绝并使 start/resume 清除、尝试关闭本次新收养的数据句柄，保留主错误，但仍不能保证物理解锁。
+OPFS 目录新增一个保留的零字节 `mutation-lock`，短操作取得原生 SyncAccessHandle 以序列化 start/resume/手动 erase/TTL 删除重查。它不在整段传输期间占用，也不替代活动 `.part` 的独占数据锁。listing 的旧快照只是线索，自动回收必须同时取得目录锁与短时正文独占句柄，再重读当前header、正文和时间条件；关闭短时正文句柄后仍持有目录锁直到unlink结束；erase 在关闭旧数据句柄到删除记录期间仍持有目录锁，防止新记录插入删除窗口。争用取得 guard 返回 NoModificationAllowedError，不关闭当前活动 writer；由用户重试或下次惰性清理再尝试。存储错误必须明确拒绝或跳过惰性清理，不能假报删除完成；guard close 失败会拒绝并使 start/resume 清除、尝试关闭本次新收养的数据句柄，保留主错误，但仍不能保证物理解锁。
 
 该固定零字节文件不含用户数据，不作为断点列出、不作为恢复容量项，也不删除或每次重建；它不是新授权机制。旧 Worker 未使用此目录协议，升级前必须完成/停止传输并关闭本站所有旧标签，再打开同版本新 shell。旧文件格式、已提交检查点、主动删除语义、新邀请/核码/原件重选/明确断点同意均保持；不自动绑定历史文件。真实跨版本旧标签混用、磁盘故障和浏览器存储驱逐不能由锁协议本身保证。
+
+## 完整遗留release只读复用（CI68已验证）
+
+部署预检新装锁定依赖并构建后，若同revision目录已存在且不是current，只读校验完整dist、server入口/包元数据和整份server/node_modules，包括空目录、归一化权限、有效用户所有权、常规文件/无链接和精确字节。固定句柄每片256KiB、单文件64MiB、每棵树512MiB/100000项/64层，目录流式枚举，哈希后重查文件集合及元数据；围栏不是原子快照，读取可能更新atime。校验器不导入release代码、不联网、不修改或修复任何既有内容，通过后跳过release的mkdir/cp/chmod/chown，执行原配置/活动指针事务。
+
+current已是此版本时保持活动/previous指针和配置；残缺、不同、模式/所有权或路径不安全的目录继续拒绝并保留供人工检查，不自动清理。helper仅为部署本机脚本，参与build revision，不加入公共client清单或服务器文件接口。新增10项、当前全410项和原生完整套件已在3cdbeae/revisionc75833843f0b324f的CI68通过；真实systemd/TLS/失败主机恢复仍按外部门槛验收。

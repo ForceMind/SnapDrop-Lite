@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T20:12:32.792805+00:00",
+  "sourceCommit": "3cdbeae8e3c931c4c83f68c2510c4d321fec7ccb",
+  "revision": "c75833843f0b324f",
+  "workflow": {
+    "run": 68,
+    "id": 42409023529,
+    "jobId": 128512893992,
+    "status": "completed",
+    "conclusion": "success",
+    "finalLogsRead": true,
+    "node": {
+      "tests": 410,
+      "passed": 410,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "rawEvidence": {
+    "artifactId": 13589500135,
+    "bytes": 2210776,
+    "sha256": "223615e811da4968ac9d425cbdcd7fd8402e72b38b2bb46df1683fcd21679a42",
+    "safeMemberAndCrcCheck": true,
+    "permanentJsonCopies": 32
+  },
+  "pwa": {
+    "passed": true,
+    "versions": [
+      {
+        "stage": "initial-A",
+        "revision": "c75833843f0b324f",
+        "cacheEntries": 27,
+        "exactCacheBytes": true,
+        "checkpointUnchanged": true
+      },
+      {
+        "stage": "upgraded-B",
+        "revision": "9bb81e9863ff7e6f",
+        "cacheEntries": 27,
+        "exactCacheBytes": true,
+        "checkpointUnchanged": true
+      },
+      {
+        "stage": "rolled-back-A",
+        "revision": "c75833843f0b324f",
+        "cacheEntries": 27,
+        "exactCacheBytes": true,
+        "checkpointUnchanged": true
+      }
+    ],
+    "failedInstallRetainedPrevious": true,
+    "forcedActivation": false,
+    "hardwareOrOsProof": false
+  },
+  "retirement": {
+    "passed": true,
+    "cases": [
+      {
+        "case": "stale-orphan-retirement",
+        "prefixBytes": 16384,
+        "exactMetadataAndBodyPreserved": true,
+        "controlledInitialClockAdvance": true,
+        "restoredClockBeforeFreshPublication": true,
+        "restore": {
+          "offset": 16384,
+          "bytes": 16384,
+          "sha256": "60df7b24431bdead79a525237fe2e395b7d3948178600fbbaa16bf562c5212a0"
+        }
+      },
+      {
+        "case": "manual-part-unlink-gap",
+        "competingEraseRejected": "NoModificationAllowedError",
+        "originalMetadataPreservedDuringGap": true,
+        "freshStartRejectedDuringGap": true,
+        "replacementAfterRetirementRestored": {
+          "offset": 16384,
+          "bytes": 16384,
+          "sha256": "1e515854a45b809593ebe741e07aee6b6885b021b441637d270001013e18f6eb"
+        },
+        "nativeLockReacquiredWithoutReload": {
+          "controlBytes": 0,
+          "partBytes": 16384
+        }
+      },
+      {
+        "case": "manual-json-unlink-gap",
+        "competingEraseRejected": "NoModificationAllowedError",
+        "originalMetadataPreservedDuringGap": true,
+        "freshStartRejectedDuringGap": true,
+        "replacementAfterRetirementRestored": {
+          "offset": 16384,
+          "bytes": 16384,
+          "sha256": "1e515854a45b809593ebe741e07aee6b6885b021b441637d270001013e18f6eb"
+        },
+        "nativeLockReacquiredWithoutReload": {
+          "controlBytes": 0,
+          "partBytes": 16384
+        }
+      }
+    ],
+    "clockAndMethodTimingControlled": true
+  },
+  "largeFiles": {
+    "chromium": {
+      "ms": 145064,
+      "sha256": "49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14"
+    },
+    "firefox": {
+      "ms": 13144,
+      "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+    }
+  },
+  "strictPairs": [
+    {
+      "engines": [
+        "chromium",
+        "chromium"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "firefox"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "firefox"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "webkit",
+        "webkit"
+      ],
+      "passed": true,
+      "directions": 2
+    }
+  ],
+  "passed": true,
+  "scope": "same-host native browser component checks, disabled STUN, controlled clock and errors; not WAN/Safari/mobile/physical aging/storage or independent systemd deployment acceptance"
+}

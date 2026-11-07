@@ -92,10 +92,12 @@ node scripts/check-signaling.cjs --env /etc/zeydrop/signaling.env \
 
 本轮恢复 Worker 的短目录变更使用保留的零字节 mutation-lock；旧版本 Worker 不参与新锁协议。升级或回滚前先完成/停止传输并关闭本站全部旧标签，再打开同一次构建的 shell 和三个 Worker。不要只替换 recovery-worker.js，不要清站点数据来实现升级：清理会删除自愿保存的断点。新版本等待旧客户端退出、不强制接管正在传输的页面；失败安装应保留当前可用 shell。
 
-真实 A/B Service Worker 安装失败、waiting、关闭客户端后升级/回滚、同版本三个 Worker 离线启动和 OPFS 保留组合正在本轮 CI 集成，当前不得记为通过。即使云端组合通过，也须在授权测试主机/真实设备核验旧标签全部退出、离线表现及实际保存权限，不替代 TLS/systemd/证书续期。
+真实A/B Service Worker安装失败、waiting、关闭客户端后升级/回滚、三个同版本Worker离线启动及OPFS保留组合已在c4/CI67和3cd/CI68通过，JSON见本轮报告。仍须在授权测试主机/真实设备核验旧标签全部退出、离线表现及实际保存权限，不替代 TLS/systemd/证书续期。
 
 ## 完整遗留版本的只读重试
 
 发布中断后再次部署同一候选，脚本对非当前的既有release先执行scripts/verify-prepared-release.cjs：必须与本次新构建、server入口/包文件及整份新装的锁定依赖逐文件完全一致，目录/空目录、权限/所有权、字节、链接/类型和观察到的读取期变化均检查；通过后跳过既有release的mkdir/cp/chmod/chown，再执行普通配置/指针事务。校验器不导入release代码，不联网，也不删除或修复文件；有界读/枚举及元数据围栏不是原子快照，读取可能更新atime。
 
 已经是当前版本时不重置previous或发布配置；仍会先执行依赖/测试/构建预检。不完整、不同、越界、可写或含链接的残留目录拒绝，保留目录和备份供授权测试主机人工核查，不无条件删除，也不承诺自动恢复所有失败状态。只读复用及反例有隔离完整shell/本机文件回归，实际systemd/TLS/回滚仍须按真实主机门槛验收。新helper参与build revision但不进入公共客户端资源；不要单独替换旧包中的部署脚本。
+
+上述只读重试与完整生命周期在3cdbeae/revisionc75833843f0b324f的CI68（410项）全套通过；419文件候选独立重装/无Git重建及实际tar字节相同。仍不把隔离shell+模拟服务管理器称为真实systemd主机演练。见TEST_REPORT_20261107_LIFECYCLE。

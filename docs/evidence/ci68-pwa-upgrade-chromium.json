@@ -1,0 +1,441 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "phase": "complete",
+  "passed": true,
+  "checks": [
+    "a real 503 during B precache makes that installer redundant while A controls both old clients and retains every exact cached byte and the native OPFS checkpoint",
+    "upgrade-A-to-B: native waiting worker leaves old documents/controllers unchanged, then activates only after every old window closes",
+    "rollback-B-to-A: native waiting worker leaves old documents/controllers unchanged, then activates only after every old window closes",
+    "A, upgraded B and rolled-back A each reload the exact complete cached shell offline, create all three revision-bound native Workers, and independently verify SHA without automatically binding the stored file"
+  ],
+  "errors": [],
+  "scope": "native same-origin ServiceWorker failed install, waiting, all-clients-closed activation and rollback; exact copied-build Cache Storage and browser-emulated offline dedicated Workers; synthetic native OPFS checkpoint preserved without automatic binding; not physical network loss, installed/mobile PWA, Safari, OS upgrade or real-host deployment evidence",
+  "versions": [
+    {
+      "stage": "initial-A",
+      "revision": "c75833843f0b324f",
+      "cache": {
+        "revision": "c75833843f0b324f",
+        "entryCount": 27,
+        "manifestSha256": "f78ed711dec20ea77cfec0e6fea6a0c5325d4c096ef4b905beb0e49c8af35ba2",
+        "allBytesMatchFixture": true,
+        "shellCacheCount": 1
+      },
+      "offlineProbe": {
+        "rejected": true,
+        "timedOut": false,
+        "type": "TypeError"
+      },
+      "hashes": {
+        "file": {
+          "backend": "worker",
+          "bytes": 3,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "stream": {
+          "backend": "worker",
+          "bytes": 3,
+          "closed": true,
+          "prefix": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "recovery": {
+          "available": true,
+          "nativeWorker": true
+        }
+      },
+      "checkpointUnchanged": true,
+      "checkpoint": {
+        "phase": "partial",
+        "offset": 65536,
+        "prefixSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "physicalSize": 65536,
+        "dataSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "metadataSha256": "7e9fc9ba28bcdfb39c4eb885437ac0d5cdd8394f61a6c7ffb008623aee5fa2e5"
+      },
+      "noAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineNoAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineDriver": "Playwright BrowserContext.setOffline plus CDP Network.overrideNetworkState; HTTP cache cleared and disabled"
+    },
+    {
+      "stage": "upgraded-B",
+      "revision": "9bb81e9863ff7e6f",
+      "cache": {
+        "revision": "9bb81e9863ff7e6f",
+        "entryCount": 27,
+        "manifestSha256": "f5f8ab439d378f027fea175cfb6a688e9f7180728bf425358cd7042846e05cea",
+        "allBytesMatchFixture": true,
+        "shellCacheCount": 1
+      },
+      "offlineProbe": {
+        "rejected": true,
+        "timedOut": false,
+        "type": "TypeError"
+      },
+      "hashes": {
+        "file": {
+          "backend": "worker",
+          "bytes": 3,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "stream": {
+          "backend": "worker",
+          "bytes": 3,
+          "closed": true,
+          "prefix": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "recovery": {
+          "available": true,
+          "nativeWorker": true
+        }
+      },
+      "checkpointUnchanged": true,
+      "checkpoint": {
+        "phase": "partial",
+        "offset": 65536,
+        "prefixSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "physicalSize": 65536,
+        "dataSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "metadataSha256": "7e9fc9ba28bcdfb39c4eb885437ac0d5cdd8394f61a6c7ffb008623aee5fa2e5"
+      },
+      "noAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineNoAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineDriver": "Playwright BrowserContext.setOffline plus CDP Network.overrideNetworkState; HTTP cache cleared and disabled"
+    },
+    {
+      "stage": "rolled-back-A",
+      "revision": "c75833843f0b324f",
+      "cache": {
+        "revision": "c75833843f0b324f",
+        "entryCount": 27,
+        "manifestSha256": "f78ed711dec20ea77cfec0e6fea6a0c5325d4c096ef4b905beb0e49c8af35ba2",
+        "allBytesMatchFixture": true,
+        "shellCacheCount": 1
+      },
+      "offlineProbe": {
+        "rejected": true,
+        "timedOut": false,
+        "type": "TypeError"
+      },
+      "hashes": {
+        "file": {
+          "backend": "worker",
+          "bytes": 3,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "stream": {
+          "backend": "worker",
+          "bytes": 3,
+          "closed": true,
+          "prefix": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        "recovery": {
+          "available": true,
+          "nativeWorker": true
+        }
+      },
+      "checkpointUnchanged": true,
+      "checkpoint": {
+        "phase": "partial",
+        "offset": 65536,
+        "prefixSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "physicalSize": 65536,
+        "dataSha256": "bb449ae31d6bc138e616e164d93ddcd075d407739d2fea938b982fd4c816221c",
+        "metadataSha256": "7e9fc9ba28bcdfb39c4eb885437ac0d5cdd8394f61a6c7ffb008623aee5fa2e5"
+      },
+      "noAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineNoAutomaticBinding": {
+        "peers": 0,
+        "roomAbsent": true,
+        "held": 0,
+        "boundFilesAbsent": true,
+        "fileInputsEmpty": true,
+        "rememberUnchecked": true,
+        "storageMutations": {
+          "start": 0,
+          "resume": 0,
+          "append": 0,
+          "checkpoint": 0,
+          "park": 0,
+          "finish": 0,
+          "erase": 0
+        }
+      },
+      "offlineDriver": "Playwright BrowserContext.setOffline plus CDP Network.overrideNetworkState; HTTP cache cleared and disabled"
+    }
+  ],
+  "transitions": [
+    {
+      "stage": "upgrade-A-to-B",
+      "from": "c75833843f0b324f",
+      "to": "9bb81e9863ff7e6f",
+      "bothClients": [
+        {
+          "revision": "c75833843f0b324f",
+          "unchanged": true,
+          "controllerChanges": 0,
+          "active": "activated",
+          "waiting": "installed"
+        },
+        {
+          "revision": "c75833843f0b324f",
+          "unchanged": true,
+          "controllerChanges": 0,
+          "active": "activated",
+          "waiting": "installed"
+        }
+      ],
+      "oneClient": {
+        "revision": "c75833843f0b324f",
+        "unchanged": true,
+        "controllerChanges": 0,
+        "active": "activated",
+        "waiting": "installed"
+      },
+      "afterAllClientsClosed": {
+        "cache": "zeydrop-shell-9bb81e9863ff7e6f",
+        "active": "activated",
+        "waiting": null,
+        "installing": null,
+        "clients": 0
+      },
+      "cache": {
+        "revision": "9bb81e9863ff7e6f",
+        "entryCount": 27,
+        "manifestSha256": "f5f8ab439d378f027fea175cfb6a688e9f7180728bf425358cd7042846e05cea",
+        "allBytesMatchFixture": true,
+        "shellCacheCount": 1
+      },
+      "forcedActivation": false
+    },
+    {
+      "stage": "rollback-B-to-A",
+      "from": "9bb81e9863ff7e6f",
+      "to": "c75833843f0b324f",
+      "bothClients": [
+        {
+          "revision": "9bb81e9863ff7e6f",
+          "unchanged": true,
+          "controllerChanges": 0,
+          "active": "activated",
+          "waiting": "installed"
+        },
+        {
+          "revision": "9bb81e9863ff7e6f",
+          "unchanged": true,
+          "controllerChanges": 0,
+          "active": "activated",
+          "waiting": "installed"
+        }
+      ],
+      "oneClient": {
+        "revision": "9bb81e9863ff7e6f",
+        "unchanged": true,
+        "controllerChanges": 0,
+        "active": "activated",
+        "waiting": "installed"
+      },
+      "afterAllClientsClosed": {
+        "cache": "zeydrop-shell-c75833843f0b324f",
+        "active": "activated",
+        "waiting": null,
+        "installing": null,
+        "clients": 0
+      },
+      "cache": {
+        "revision": "c75833843f0b324f",
+        "entryCount": 27,
+        "manifestSha256": "f78ed711dec20ea77cfec0e6fea6a0c5325d4c096ef4b905beb0e49c8af35ba2",
+        "allBytesMatchFixture": true,
+        "shellCacheCount": 1
+      },
+      "forcedActivation": false
+    }
+  ],
+  "offlineWorkers": [
+    {
+      "phase": "offline-initial-A",
+      "script": "recovery-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-initial-A",
+      "script": "file-hash-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-initial-A",
+      "script": "stream-hash-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-initial-A",
+      "script": "recovery-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-upgraded-B",
+      "script": "recovery-worker.js",
+      "revision": "9bb81e9863ff7e6f"
+    },
+    {
+      "phase": "offline-upgraded-B",
+      "script": "file-hash-worker.js",
+      "revision": "9bb81e9863ff7e6f"
+    },
+    {
+      "phase": "offline-upgraded-B",
+      "script": "stream-hash-worker.js",
+      "revision": "9bb81e9863ff7e6f"
+    },
+    {
+      "phase": "offline-upgraded-B",
+      "script": "recovery-worker.js",
+      "revision": "9bb81e9863ff7e6f"
+    },
+    {
+      "phase": "offline-rolled-back-A",
+      "script": "recovery-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-rolled-back-A",
+      "script": "file-hash-worker.js",
+      "revision": "c75833843f0b324f"
+    },
+    {
+      "phase": "offline-rolled-back-A",
+      "script": "stream-hash-worker.js",
+      "revision": "c75833843f0b324f"
+    }
+  ],
+  "fixtures": {
+    "A": "c75833843f0b324f",
+    "B": "9bb81e9863ff7e6f",
+    "sourceInputSha256": "c75833843f0b324f9e0b1ca8d0668ea97be4be04acbcf74bd34bff9003ae6628",
+    "delta": "one fixed comment appended to the copied approved styles.css input",
+    "copiedSourceRealDirectories": true,
+    "sharedDependencyDirectoriesOnly": true,
+    "productionSourceOrDistMutated": false
+  },
+  "browserVersion": "156.0.8078.4",
+  "failedInstall": {
+    "rejectionObserved": true,
+    "asset": "stream-hash-worker.js",
+    "clients": [
+      {
+        "revision": "c75833843f0b324f",
+        "unchanged": true,
+        "controllerChanges": 0,
+        "active": "activated",
+        "waiting": null
+      },
+      {
+        "revision": "c75833843f0b324f",
+        "unchanged": true,
+        "controllerChanges": 0,
+        "active": "activated",
+        "waiting": null
+      }
+    ],
+    "cache": {
+      "revision": "c75833843f0b324f",
+      "entryCount": 27,
+      "manifestSha256": "f78ed711dec20ea77cfec0e6fea6a0c5325d4c096ef4b905beb0e49c8af35ba2",
+      "allBytesMatchFixture": true,
+      "shellCacheCount": 2
+    },
+    "checkpointUnchanged": true,
+    "states": [
+      "redundant"
+    ]
+  },
+  "server": {
+    "rejectedInstallAssetRequests": 1,
+    "nonReadMethods": 0,
+    "requestBodies": 0
+  }
+}

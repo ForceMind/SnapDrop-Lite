@@ -2,11 +2,11 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 本轮生命周期及部署重试（当前构建CI待验）
+## 本轮生命周期及部署重试（CI68全套通过）
 
-当前本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。当前新CI与独立候选待验；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪验证。
+当前本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。[CI68](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529)全套通过410项/0失败跳过，最终日志和32份JSON已读并归档。419文件候选独立重装410项/无Git重建/29dist复验通过，实际CI tar字节相同；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪这一精确范围；完整目录只读复用通过，残缺目录仍需人工检查。
 
-前阶段c4c7d6e/revisioncc281863f488aa68的[CI67](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42407825773)全套通过400项、原生PWA failed-install/等待/关闭所有旧客户端后升级回滚、原生暂存删除、三引擎Worker/清单、六组合、1GiB/100MiB、HTTPS/WSS/PWA/UI。32份原始JSON已归档，381文件候选独立重装400项/无Git重建并与实际CI tar字节一致。ICE旧回调、暂存三类删除竞态及首次部署current自环修复由这一精确版本认证，不替代新部署helper验收。旧Worker不使用新锁，升级须结束传输并关闭全部旧标签。本地socket EPERM未算原生成功。Issue #8跟踪集成；真实网络/设备/主机门槛仍开放。
+前阶段c4c7d6e/revisioncc281863f488aa68的[CI67](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42407825773)全套通过400项、原生PWA failed-install/等待/关闭所有旧客户端后升级回滚、原生暂存删除、三引擎Worker/清单、六组合、1GiB/100MiB、HTTPS/WSS/PWA/UI。32份原始JSON已归档，381文件候选独立重装400项/无Git重建并与实际CI tar字节一致。ICE旧回调、暂存三类删除竞态及首次部署current自环修复由这一精确版本认证，本轮后续3cd/CI68亦已独立验收新部署helper。旧Worker不使用新锁，升级须结束传输并关闭全部旧标签。本地socket EPERM未算原生成功。Issue #8已关闭代码/云端复现范围；真实网络/设备/主机门槛仍开放。
 
 ## 前轮进程恢复与初始化加固（CI65 全套通过）
 
@@ -34,7 +34,7 @@
 | 生命周期 | 自然会话结束保留自愿暂存、不保留身份；取消清理失败明确提示，显式删除失败不受面板隐藏/重开影响；面板代次/各自取消和URL总数20，已点击下载保留60秒宽限 |
 | UI/PWA | 深浅主题/键盘/暂存组件；三个同revision Worker从真实缓存离线启动；不是物理断网/硬件PWA升级证明 |
 | 资源 | 有界分块/队列，前缀共享4未结束I/O、恢复RPC32项；owning-browser资源观察、实际慢读者回收，不是整机或生产SLA |
-| 交付 | 25项公开输入快照、版本缓存/隐藏路径、manifest/有限秘密扫描；341文件候选独立解压重装369项、无Git重建、29项dist逐字节一致 |
+| 交付 | 25项公开输入快照、版本缓存/隐藏路径、manifest/有限秘密扫描；419文件候选独立解压重装410项、无Git重建、29项dist逐字节一致 |
 
 原生故障用例：1MiB已提交、额外16KiB写入后真实SHA Worker崩溃；metadata原样保留、无erase/错误ACK/完成；同一存储Worker重载前释放锁。新页面/邀请/核码/手动选择后只发送3MiB尾部，下载4MiB独立SHA一致。此为可控本机Worker故障，不是实际磁盘故障、WAN或Safari证据。
 
@@ -44,9 +44,9 @@
 
 ## 精确已验源码候选
 
-[CI65 artifact](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42388784628/artifacts/13580781957)，341普通文件（312源码/29构建），保留7天。ZIP851747字节，SHA-256为45fb7682dfdceaf2ace7757b6ffb512e9e98e7742f7706ecfc10701a59b515af；tar834496字节，SHA-256为a76db517fff94ca2c8160c1887fb2f7c835e80d2f288bc4c6d5847d89f4428f6。见evidence/process-recovery-ci65-candidate.json和process-recovery-runtime-extraction.json；全部成员、模式/大小/SHA、安全归档边界及实际临时合并父提交/树均核对，tar与独立重装369项/无Git重建的归档字节完全一致。
+[CI68 artifact](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529/artifacts/13588981140)，419普通文件（390源码/29构建），保留7天。ZIP989407字节，SHA-256为6fe25037daf92d2ae440c2967686d7d1dd0f1b172c6baf50850d39b63cba658a；tar971150字节，SHA-256为870b2032c95f69c89ec2e29ecfbe269f4f11b5a650aac3c385b8e6d4a0b21768。见evidence/prepared-release-ci68-candidate.json及prepared-release-runtime-extraction.json；全部成员/模式/大小/SHA/安全归档边界及实际临时合并父提交/树均核对，tar与独立重装410项/无Git重建的归档字节相同。
 
-manifest的932803071af62139e172939e232b1d2a29abee3f为e8ac72c进入原main2b4f75c的临时PR合并，不是main被合并。后续纯文档候选使用自己的manifest/SHA，PR记录最终链接/校验；不能用这里哈希核验另一包。main仍是旧版，部署请核对精确候选，不只依赖main或移动分支名。旧失败/通过记录与原始控制保留在各历史报告。
+manifest的019362a16d7895ff9237bcd805e25759e0de4853为3cdbeae进入未改main2b4f75c的临时PR合并，不是main被合并。后续纯文档候选使用自己的manifest/SHA，PR记录最终下载与校验；不能用这里哈希核验另一包。main仍是旧版，部署请核对精确候选，不只依赖main或移动分支名。历史失败与原始控制保留在对应报告。
 
 ## 尚未完成的正式验收
 
