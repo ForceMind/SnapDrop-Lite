@@ -97,7 +97,7 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 
 同一桥接最多一个活动任务和四个等待任务，含排队的总超时为五分钟。进度最多每秒十次，开始/结束强制反馈；取消、pagehide、崩溃和超时释放引用/终止旧 Worker。消息绑定当前 Worker 和递增任务号，格式、字节数、进度与最终 SHA-256 严格核验。仅浏览器没有 Worker 能力时使用 256 KiB 主线程回退；Worker 创建或运行失败明确失败，不偷偷重算。清单原有 opt-in、锁外计算/锁内 CAS、重选全部原件、跨标签失效及手动重新授权均保留。
 
-上述CI57结果只覆盖当时发送清单的全量哈希Worker，不能用它为后续实时/前缀Worker背书。当前实现已扩展到下面的状态式哈希路径，须以新提交的完整CI验证；OPFS写入Worker与SHA Worker职责不同，桌面响应时间也不代表移动真机表现。
+上述CI57结果只覆盖当时发送清单的全量哈希Worker，不能用它为后续实时/前缀Worker背书。当前实现已扩展到下面的状态式哈希路径，并由3e7fd6c/CI60独立完整验证；OPFS写入Worker与SHA Worker职责不同，桌面响应时间也不代表移动真机表现。
 
 
 ## 前缀准备与消息队列（2026-11-07，CI57已验证）
@@ -114,7 +114,7 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 数据保留最终修复在CI57通过：durable存储失败按原state/resumeOwner定位；活动取消、过期交接均等当前消息链、旧adopt ready及已开始write正确记账后park。真实最终SHA匹配后缓存用于finish失败清理，transient迟到locallyStored结果不自动删除/报远端完成。Worker park提交失败仍尝试关闭句柄并释放active，保留旧metadata与主错误；RPC最多32项且序号安全。主动取消/删除、确证损坏和普通sink保持对应策略。详见ENGINEERING_AUDIT_20261107与RECOVERY_STORAGE。
 
 
-## 状态式传输哈希与安全释放（2026-11-07，本轮待完整CI验证）
+## 状态式传输哈希与安全释放（2026-11-07，CI60已验证）
 
 `stream-hash.js`管理实时发送/接收及双方恢复前缀的独立本机Worker。每页最多4个状态句柄，每状态最多4个活动或排队操作；单次update只复制不超过256KiB，待处理应用数据每状态最多1MiB。调用方原始ArrayBuffer保持可用，不能因Worker转移而破坏随后DataChannel发送。Worker按顺序校验session、请求号和精确offset；状态留在Worker内，`digestHex()`只返回克隆摘要并允许继续，`final:true`消费并释放该状态，不导出Noble内部状态。
 
@@ -127,8 +127,10 @@ Worker延迟到首个操作才创建，每操作默认30秒截止；失败、取
 自然会话到期时服务端先发peers=[]再发room-expired，永久连接移除因此统一走保留自愿durable检查点的清理路径。旧身份和held授权随会话结束，不自动绑定历史文件。明确文件取消、手动删除及确证完整性失配仍走相应删除策略；普通非持久sink照常abort。
 
 
-### 清理失败与本机暂存面板生命周期（后续改动待独立完整CI）
+### 清理失败与本机暂存面板生命周期（CI60已验证）
 
 统一的sink清理助手消费同步abort异常和返回Promise的拒绝，覆盖活动取消、held释放及准备阶段。原生writer.abort失败不再被静默吞掉；用户看到固定的本机清理/删除失败提示，应检查暂存管理或保存位置。提示不序列化任意原生错误文本，不重新归属旧state、不改变新传输；错误已处理不等于底层删除或物理解锁成功。持久检查点保留路径仍按park/parkCommitted规则处理。
 
 完成暂存管理面板为每次显示/刷新维护独立代次，为每条校验使用自己的AbortController；隐藏、刷新、删除和pagehide使旧代次失效并取消相应校验；隐藏/刷新撤销未点击Blob URL，已点击URL保留最多60秒以便浏览器启动下载，删除/pagehide撤销全部并清理计时器。URL注册表最多20项，满时提示等待重试，不通过提前撤销正在启动的下载腾位。异步completed/hash返回后再检查代次，不能向已移除的行或新面板发布保存链接；只取消自身任务，不调用全局cancelAll影响发送清单。校验失败保留记录，撤销URL也不删除OPFS数据。未点击URL不依赖用户最终点击才释放，已点击的有界延迟撤销保留。
+
+CI60的原生OPFS故障组合验证写入后Worker异常、原metadata保留、重载前文件锁释放和新授权恢复的完整SHA；原始JSON见evidence/ci60-stream-hash-recovery-chromium.json。此为同机可控Worker故障，不等于硬件磁盘故障或Safari/移动测试。

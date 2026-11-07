@@ -1,19 +1,20 @@
 # 测试矩阵与证据范围
 
-## 本轮更改待验
+## 当前完整云端验收
 
-实时发送/接收及恢复前缀现已接入状态式SHA Worker，已完成本机文件复验使用全文件Worker；新增自然会话到期和写入后哈希失败保留旧checkpoint的路径。本轮必须执行对应提交的完整CI和候选复验，不能沿用以下基线绿灯。e2a2088基线本地324/324 Node、重复构建/语法、双方依赖audit通过；清理后续改动需再次验证，不能沿用该数量或CI59的旧提交结果。浏览器启动受socket EPERM限制，仍待GitHub Runner的实际执行。
+3e7fd6c / revision25c4bc95c5f8c577的[CI60](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42368690277)全套通过，339/339 Node、0失败/跳过；已读实际最终日志、下载JSON并独立复验候选。原始证据evidence/ci60-*，报告TEST_REPORT_20261107_STREAM_HASH。main/生产未改，真实外部门槛继续开放。
 
-| 新增范围 | 方法/门槛 | 当前状态 |
-|---|---|---|
-| 状态式SHA Worker | 独立Node摘要、快照继续/最终释放、调用方buffer不detach、4句柄/4操作/256KiB上限、故障/超时/取消及旧消息隔离 | 实现与自动化用例已加入，待完整CI |
-| 异步传输集成 | 写入后update失败、snapshot/final期间取消与断线、旧wire/新owner、无错误ACK/完成、精确已提交offset/SHA保留 | 新回归及原生文件矩阵待本轮验证 |
-| 发送前缀本机故障 | 读取/Worker失败只取消当前发送文件，同时接收文件与通道继续；保留独立内容校验 | 新2项回归本地通过，待完整CI |
-| 永久会话退出 | 真实server过期消息次序驱动network+transfer，不保留身份，普通sink/主动取消策略不变 | 新回归待完整CI |
-| 当前PWA Worker缓存 | 三个Worker均为批准源码、本地打包、精确revision及原生离线启动 | 新stream Worker须随本轮复验 |
-| 已完成暂存下载 | 全文件Worker大小/完整SHA通过后才建URL；代次/各自AbortController、有界URL/计时器释放、已点击下载启动宽限、迟到结果不发布 | 新UI回归待后续完整CI |
-| 取消清理异常 | active/held/准备sink同步抛出与异步拒绝均消费、固定本机清理提示、不泄漏原文、不影响新state | 新回归待后续完整CI |
-| 原生OPFS哈希故障恢复 | 实际Worker故障后原检查点/句柄释放、新接收同意/全前缀验证及独立完整SHA | 新集成用例正在加入，待后续完整CI |
+| 本轮范围 | 实际方法及结果 |
+|---|---|
+| 状态式SHA Worker | 三引擎原生快照继续/最终释放、独立SHA、调用方buffer不detach、4句柄/4操作/256KiB、故障/超时/隔离取消通过 |
+| 异步传输 | 旧wire/接管owner、写入后update失败、snapshot/final取消、无错误ACK/完成、双向故障隔离及4句柄并行前缀恢复通过 |
+| 原生OPFS故障恢复 | 真实SHA Worker在1MiB检查点后额外16KiB落盘时崩溃；原metadata保留、重载前取得锁、另一活动记录完成、新授权后3MiB尾部/4MiB完整SHA通过 |
+| 文件/浏览器 | Chromium1GiB、Firefox100MiB、0B/多文件/原生保存、8MiB同页恢复；全部live句柄为Worker、结束0租约；严格六组合双向SHA通过，STUN关闭/同机 |
+| 生命周期 | 自然会话过期、8项取消清理异常、10项暂存UI/代次/各自取消/20URL上限及60秒宽限通过；注入错误不是实际磁盘故障 |
+| PWA/UI/部署 | 三个精确revision Worker实际离线缓存启动、深浅/键盘/对比度、临时HTTPS/WSS/Nginx、audit/构建通过 |
+| 候选 | 304文件安全解压/manifest/权限/大小/SHA，独立重装339测试/无Git重建，29构建字节一致；实际CI归档相同 |
+
+真实WAN/NAT/IPv6/移动/Safari/存储驱逐/PWA升级和独立主机部署仍未验证，不从上述结果推断公网成功率、硬件表现或生产SLA。
 
 ## 既有完整云端基线
 

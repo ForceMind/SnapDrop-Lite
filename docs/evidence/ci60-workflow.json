@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:44:15.992424+00:00",
+  "runId": 42368690277,
+  "runNumber": 60,
+  "jobId": 128392106510,
+  "headCommit": "3e7fd6c1b03133d1e93484a8535d5e9ad804ddbe",
+  "revision": "25c4bc95c5f8c577",
+  "conclusion": "success",
+  "allJobStepsCompleted": 47,
+  "finalLogsRead": true,
+  "nodeTests": {
+    "passed": 339,
+    "failed": 0,
+    "skipped": 0
+  },
+  "rawEvidenceZip": {
+    "artifactId": 13572776970,
+    "bytes": 1958753,
+    "sha256": "a2e94f58db1227ae985703abb2d89f8a2771b044d3791ef841f40aa4b2ec7282"
+  },
+  "sourceArtifactId": 13572489502,
+  "checks": [
+    "native OPFS append -> actual SHA Worker crash -> lock reacquired before reload -> fresh consent resume -> independent SHA",
+    "three native stateful/whole-file/checklist Worker engines",
+    "Chromium 1 GiB and Firefox 100 MiB",
+    "six bidirectional engine pairs",
+    "HTTPS/WSS and offline-PWA Workers",
+    "audit/reproducible build/source verification"
+  ],
+  "scope": "same Linux CI host, STUN disabled; not WAN/Safari/mobile hardware, actual disk fault or production deployment"
+}
