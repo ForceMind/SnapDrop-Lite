@@ -1,5 +1,22 @@
 # Zeydrop 0.3.0-dev.1 · unreleased development candidate
 
+## 0.3.0-dev.1 · 2026-11-07 云端验收更新
+
+未发布开发候选，代码172adc8 / revision10c5794070ac6a1b，CI57全套285项与浏览器矩阵通过；完整范围见TEST_REPORT_20261107_FINAL。正式RC仍由真实WAN/设备/主机门槛阻断。
+
+- 保存/重选清单用专用本机SHA Worker，256KiB分块、可取消/有界队列；全量内容匹配后仍需新配对/核码/接收同意。实时/前缀SHA尚未迁移。
+- 修复断点读取/存储/park失败误删和锁泄漏，活动/过期/跨peer清理等待已授权旧write正确记账；保留已提交offset/SHA，迟到finish按原state处理。主动取消/删除、确证损坏、普通sink策略单独保持。
+- 恢复Worker继承已加载脚本版本，当前版离线SW/cache/原生Worker仿真通过；恢复RPC限32项，不强行终止共享Worker或假报磁盘I/O取消。
+- 修复深色暂存白底近白字、弱文字/placeholder/焦点对比度；真实记录组件light/dark复验通过。
+- 新增owning-browser RSS/PSS/CPU覆盖报告、真实慢读者和永久不读者超时，64连接一小时本机信令与真实grace。它们不是WAN成功率、整机内存界限或生产容量保证。
+- 干净源码manifest/哈希、246文件独立解压/重装285项/无Git重建验证。最终文档候选须使用自身manifest，不混归档哈希。
+
+Chrome/Firefox哈希基准100MiB OPFS，Linux WebKit仅8MiB Blob回退；所有物理设备/存储驱逐/独立部署限制公开保留，用户文件不进入服务器中继。
+
+## 历史开发记录
+
+以下保留此前时点的范围与编号；当前以顶部报告为准。
+
 This development branch provides private two-device invitations, manual DTLS-code verification, selected non-relay ICE-path validation and explicit receiver consent. File bytes, transfer metadata, hashes and recovery exchanges use RTCDataChannel, with no TURN/DERP or server file upload/storage/proxy fallback.
 
 The transfer engine includes bounded chunking/backpressure, persisted-write ACKs, complete SHA-256 verification, multi-file queuing, pause/cancel and explicit failure states. Same-page recovery and opt-in OPFS checkpoints support the documented browser capabilities and reauthorization requirements; they do not guarantee survival of storage eviction or recovery on all mobile devices.

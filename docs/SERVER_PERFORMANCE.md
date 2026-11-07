@@ -1,3 +1,5 @@
+> 本文保留短基线历史；当前CI57与小时正常信令证据见末尾及TEST_REPORT_20261107_FINAL。旧“未测/待CI”仅适用于对应历史工具/时点。
+
 # 服务端本机压力与资源短基线
 
 本工具仅在当前隔离测试主机上启动一个新的回环信令服务。**不连接外部或已有服务器，不测试 WebRTC/ICE/DataChannel，不发送用户文件，不代表公网 P2P、NAT 成功率或真实生产容量。**
@@ -118,3 +120,12 @@ node tests/slow-reader.cjs --permanent --out test-results/slow-reader.json
 精确上述命令在本地通过，报告 `test-results/slow-reader-permanent-final.json`：总32877ms，服务端关闭等待30000.706ms，父端观察等待30049ms。最后session/房间清理仍通过明确注入时钟完成，与1小时soak的真实grace分开。固定45秒硬截止，Python只调整测试socket缓冲；不是互联网慢客户端分布、文件吞吐或生产容量承诺。
 
 报告新 `source.serverSha256` / `source.toolSha256` 分别为 `b3aa2d2f4a3f6a547f3e6bb7661f010bcbf326702461c425657fddadd850e52f` / `900ddac825867eafdffeb6b0a99e91274ab70bf0643928061dfbc7947da8aa21`。启动前读取固定文件、结束后再次核对一致；哈希是版本关联信息，不是独立签名或远程证明。后续CI须验证本轮源码，不沿用旧版三秒用例的结果。
+
+
+## CI57最终云端与当前口径
+
+172adc8/285项完整CI57已通过。原始ci57-browser-chromium.json：1GiB每端82样本，5个owning-browser进程，82个RSS/PSS完整样本/81个CPU完整可比区间，issues为空。两个独立persistent profile的RSS观察峰673710080/660803584B，PSS峰302493696/298561536B，累计观察CPU121.38/123.66秒。所有逐字段coverage与limitations保留；RSS重复共享页、PSS比例分摊、CPU样本缺口、页面报告重叠和非硬内存上限限制仍适用。
+
+ci57-slow-reader.json保留默认TCP未达阈值、约束socket触发177429B并恢复读取确认1008、另一个永久不读者真实30000.425ms后4→3及健康房间通过。永久等待时未推进时钟；最终session清理仍明确注入时钟，与SERVER_SOAK的真实grace分开。工具900ddac8…、server b3aa2d2f…精确源哈希在报告内；没有改生产超时或全局内核设置。
+
+本机64连接一小时正常信令及真实121.902秒回收已完成，原始65快照/旧b19f工具监测边界和RSS增长见SERVER_SOAK。该结果不提升为生产容量、全流量/多日稳定或公网文件吞吐承诺。

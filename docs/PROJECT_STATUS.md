@@ -1,68 +1,45 @@
 # Zeydrop 当前工程状态
 
-记录：2026-11-07 UTC。版本 **0.3.0-dev.1 未发布开发候选**，开发分支 `feat/direct-first-workspace-20261019` / [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
+记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 本轮进行中（2026-11-07 00:33 PST）
+## 当前结论
 
-[CI54全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42355134135)，已推送运行代码4d617b1 / revision cac0d96fd4285f5d：223项、三引擎清单哈希Worker（WebKit基准实际8MiB，其它100MiB OPFS）、真实慢读者约束背压、owning-browser RSS/PSS/CPU、1GiB与六组合等。226文件候选已独立解压/重装/测试/无Git重建核验。见 [M8报告](TEST_REPORT_20261107_M8.md)。
+[CI57全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42357894421)，运行代码172adc8ae2bfc9dd577f56fb92c103a4ad64e78b，revision10c5794070ac6a1b：285/285 Node、完整audit、构建/PWA、临时HTTPS/WSS、三引擎清单/Worker、Chromium1GiB/Firefox100MiB、原生OPFS/跨刷新、严格六组合、离线PWA仿真与UI检查通过。[完整证据及限制](TEST_REPORT_20261107_FINAL.md)。
 
-后续发送端前缀可取消后台任务、真实ArrayBuffer与长度检查、4挂读上限、恢复Worker版本继承/离线PWA、永久不读者30秒回收与soak末尾检查修复，当前本地242项及构建通过，待自己的CI。实时传输/前缀SHA仍在主线程；接收准备与OPFS底层取消另行验收。
+可交付独立测试主机部署验证的开发候选，不是正式RC/稳定版。main未合并、生产和用户电脑未操作；仓库最后由用户手动更名，不假定拥有zeydrop.com。
 
-1小时/64连接实测自08:12:05 UTC运行中，完成及真实grace前不记通过。初版长测工具已在4d617b1保留；后续工具另有6秒/4连接、真实124秒自动清理通过，不将旧长测冒充新工具验收。详见SERVER_SOAK/SERVER_PERFORMANCE。下面CI52及候选保留为历史证据。
+## 已落地且形成云端证据
 
-## 上一完整候选结论
-
-[CI52全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42349478384)，运行代码 `a1dfef939cb2af1ab64fc987a84a9a18b996f685`、revision `6a2caec304bbd413`。196/196 Node、完整依赖审计、构建/PWA、实际临时Nginx HTTPS/WSS、三引擎发送清单、Chromium1GiB/Firefox100MiB、OPFS/恢复、WebKit UI及六组合双向文件/独立SHA-256均通过。
-
-可交付用户在**独立测试主机**部署验证的开发候选，**不是正式RC或稳定版**。main未合并，生产和用户电脑未操作；仓库最后由用户手动更名，不假定拥有zeydrop.com。完整范围见 [TEST_REPORT_20261107](TEST_REPORT_20261107.md)。
-
-## 已实现且本轮验证
-
-| 范围 | 当前行为与证据 |
+| 范围 | 行为与边界 |
 |---|---|
-| 邀请/直连 | 高熵双人邀请、锁定身份/期限、精确Origin与信令白名单、实际selected非relay、DTLS人工核码；同机真实WS/WebRTC验证 |
-| 协议握手 | 每通道随机nonce/实际处理后ACK/最多10次重发，新peer双向就绪后才能核码或发送；旧wire/epoch/nonce/计时器隔离、legacy v2兼容；10项回归及六组合通过 |
-| 文件 | 16KiB分块、256KiB写入ACK、背压、完整SHA-256、暂停/取消/多文件、64MiB合计回退；1GiB/100MiB/0B/中文特殊文件名通过 |
-| 失败任务 | 暂停并保留后续队列、独立手动重发/新ID/新接收同意、最多30引用/15分钟、断线释放；held清空与Blob ready-next屏障通过 |
-| 恢复/清单 | 同页120秒；接收方自愿OPFS断点；发送方自愿100项/128KiB/24小时元数据清单，完整哈希重选/新配对/手动发送/最终成功逐项移除；Web Locks/CAS/取消/配额/损坏与三引擎刷新通过 |
-| UI/兼容 | 响应式明暗/PWA/二维码/授权/进度/诊断；Firefox表单/BFCache不恢复许可，锁callback错误锁外传回；三引擎清单errors为空，390px组件无溢出 |
-| 资源 | 修复hello会话容量竞态/满表合法恢复；64/256/1000实际连接短基线；Chromium页面CDP有界采样。不是公网容量、总RSS/整机CPU或长期soak |
-| 构建/交付 | 21项公共输入快照、隐藏路径防护、干净源码/manifest/有限秘密扫描/可重复归档；203文件独立解压、重装196测试及无.git重建通过，CI归档逐字节一致 |
+| 配对/直连 | 128bit双人邀请、锁定身份/TTL、精确Origin/信令白名单；selected非relay、DTLS人工核码和接收同意；无文件中继 |
+| 文件 | 分块/背压/写入ACK、完整SHA、0B/多文件/暂停/取消/手动失败重试；完成含sink结束及双方哈希，不按100%进度判断 |
+| 恢复 | 同页120秒、用户主动选择OPFS断点和发送清单；新路径/身份确认、完整重选/前缀校验、无自动历史文件绑定 |
+| 数据保护 | Issue #6修复并通过：原checkpoint错误保留、旧write完整记账后park、过期交接和迟到finish按精确state清理、原生Worker失败释放active；物理I/O仍有下述限制 |
+| 资源/Worker | 清单全量SHA专用Worker；前缀256KiB/共享4未结束I/O，恢复RPC32项；实时/前缀SHA计算仍主线程 |
+| UI/PWA | 深浅主题可读暂存面板/placeholder/焦点，真实列表组件和键盘测试；当前版本SW/缓存/Worker离线仿真通过，非真机生命周期证明 |
+| 性能 | owning-browser RSS/PSS/CPU覆盖报告、实际慢读者128KiB阈值与永久不读者真实30秒回收；不是整机指标或生产容量 |
+| 交付 | 23项公共输入快照、版本缓存/隐藏路径、干净源码manifest/有限秘密扫描、可重复归档、独立246文件解压/重装285测试/无Git重建 |
 
-文件正文/名称/哈希/恢复元数据只在RTCDataChannel或明确选择的本机存储；无HTTP上传、WebSocket文件代理、TURN或DERP。网页/信令/心跳/STUN仍有少量流量，不能宣传服务器总流量为零。信令观察未见测试正文不等于真实部署抓包证明。
+小时本机信令已实际通过：3600秒、64连接/32房、15360条全部收齐、472次原身份恢复；真实121.902秒后自动清零。原b19f工具/新00f guard短测边界及RSS观察增长见SERVER_SOAK，不宣称无泄漏、生产容量或公网成功率。
 
-## 精确候选与证据
+用户文件正文不经HTTP/WSS，服务器仍有网页/信令/心跳/STUN相关少量流量。已提交断点的故障保留不等于备份保证；主动取消当前文件、手动删除及确证完整性失配保持对应策略。native close或restore/park挂起时不能保证物理锁立即释放。
 
-[CI52源码候选](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42349478384/artifacts/13564752556)，保留至2026-11-14。tar.gz SHA-256：
+## 精确已验源码候选
 
-```text
-972e76dbb6b389ed4abd47489d02ba80a14bb4d5c4c448f1d50db08e07ccf851
-```
+[CI57 artifact](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42357894421/artifacts/13568541404)，246文件，保留7天；tar SHA-256为766331d11154ab649cd4796003f4caf9a27b77026c2e7e4fd868959ba2bf0f52。完整ZIP校验、manifest临时合并来源及独立复验见最终报告和evidence/candidate-extraction-ci57.json。
 
-外部manifest记录CI临时合并commit045db8f，branch source是a1dfef9；全部文件和tar与独立核验的本地候选一致。SHA-256不是签名，有限扫描不保证识别所有秘密。原始去敏JSON与汇总见evidence/ci52-*；无Git解压核验见candidate-extraction-a1dfef9-20261107.json。以后运行时代码改动须重验，不能沿用本次绿灯。
+后续文档候选以自身manifest/Actions artifact为准；PR保留最新下载/校验，不能将上面的归档哈希用于不同文件包。main仍是旧版，部署不要仅依赖main或移动分支名。
 
 ## 未完成与验收阻断
 
-| 项目 | 状态 |
+| 项目 | 真实状态 |
 |---|---|
-| 真实跨网络/NAT/IPv6/双栈/严格防火墙/切网 | **正式RC阻断**；需两个真实设备与链路，成功/失败样本、selected非relay、双方哈希及服务器正文观测，Issue #4 |
-| Edge/macOS与iOS Safari/Android、真实picker/磁盘/驱逐/后台/PWA/无障碍 | **正式RC阻断**；Linux WebKit不是Safari硬件，Issue #5 |
-| 独立主机可信证书/续期、WSS/systemd、安装升级/迁移/重启/失败恢复/回滚 | **正式RC阻断**；需用户自有已授权测试主机；当前只有隔离夹具 |
-| 小时级soak、慢读者WS背压、真实等待后回收、全进程RSS/CPU | 未完整验收；短基线推进恢复时钟，CDP仅页面采样，不冒充这些指标 |
-| 大文件/前缀哈希移到专用Worker | 尚未实现；当前主线程增量且有界，OPFS写入Worker不等于哈希Worker。性能增强，真机卡顿需据实优化 |
-| 显式授权LAN自动发现 | 尚未实现；邀请/二维码可用，不以相同公网IP/CGNAT冒充可信邻居，非Web MVP硬前提 |
+| WAN/NAT/IPv6/双栈/严格防火墙/切网 | 正式RC阻断；需两个真实设备与链路、selected非relay、独立SHA和服务端流量证据，Issue #4 |
+| Edge/移动/macOS与iOS Safari/真实picker/磁盘/驱逐/后台/PWA升级/无障碍 | 正式RC阻断；Linux WebKit不是Safari硬件，Issue #5；WK哈希基准只有8MiB回退 |
+| 独立主机TLS/证书续期/WSS/systemd/升级迁移/重启回滚 | 正式RC阻断；需用户自行授权测试主机，当前只是隔离夹具 |
+| 12小时/多日、真实生产并发SLA、弱移动设备资源 | 未验证；小时本机信令和短1000连接不替代 |
+| 实时/恢复前缀SHA专用Worker | 未实现；当前有界主线程，清单Worker不能冒充全迁移 |
+| 显式授权LAN发现 | 未实现，非Web MVP硬前提；邀请/二维码可用，不以相同公网IP冒充可信邻居 |
 
-实际步骤见 [REAL_DEVICE_TESTING](REAL_DEVICE_TESTING.md)、[RELEASE_GATES](RELEASE_GATES.md)、[DEPLOYMENT](DEPLOYMENT.md)。main仍是旧版本，部署请使用上述精确候选/commit。
-
-## 历史与交接
-
-CI47/48是139项旧完整基线；CI49首条E2E TypeError未获得完整定位，后续增强驱动时序/安全源码定位后未复现，原失败保留。CI50暴露Firefox勾选恢复与应用hello未就绪；CI51清单功能完成但Firefox锁callback全局error失败。均保留原始证据，未删测试或降低路径/授权门槛；CI52对应实际修复后完整通过。
-
-main的既有历史计划原文与开发分支逐字相同；86c6ae4只将main同步入开发分支并保留历史说明，解决add/add冲突，未修改main。Git历史与前期审计保留，旧报告见TEST_REPORT_20261106及history/；当前状态以本文件和CI52报告为准。
-
-
-## CI55与后续数据保留审计
-
-CI55整套失败，仅离线PWA重载就绪等待超时；242项Node、原生OPFS/恢复、1GiB/100MiB、六组合与永久慢读者通过。两Worker版本已预缓存，具体哪个字段未就绪待新增逐字段和实际断网探针，原失败保留，不猜测原因。
-
-Issue #6追踪读取/park/实时存储失败、transient finishing及expired handoff的数据保留缺陷；修复与接收侧逻辑取消进入下一批验证。新增RPC32项界限、深色暂存可读性和真实UI对比度检查。见ENGINEERING_AUDIT_20261107，不能用CI55给这些改动背书。PR保持Draft。
+下一步按REAL_DEVICE_TESTING采集真实网络/设备/主机证据；软件增强依据实际性能继续推进。发布门槛不因CI成功自动打勾，不转Ready/合并main。历史报告、失败JSON和Git提交均保留。

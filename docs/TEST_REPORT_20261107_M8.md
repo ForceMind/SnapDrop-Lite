@@ -1,3 +1,5 @@
+> 本文件保留研发过程；当前结论见 [最终云端报告](TEST_REPORT_20261107_FINAL.md)。以下“进行中/待CI”均按相应历史时点阅读。
+
 # M8 资源、哈希与取消验收（进行中）
 
 记录：2026-11-07 00:33 PST。最新完整云端结果为 [CI54](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42355134135)，源分支 `4d617b13e9c0553a358c8deb111a8c8dbb80448e`，revision `cac0d96fd4285f5d`。后续恢复取消/PWA改动仅有本地242项与构建通过，尚待自身CI。1小时实测仍运行，不预填通过。

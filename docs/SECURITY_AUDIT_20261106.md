@@ -34,3 +34,10 @@ Send-task follow-up: failed File references stay page-local, bounded to30/15minu
 A reproduced capacity race allowed already-upgraded sockets to exceed the1000-session limit if hello allocation relied only on upgrade-time counting. The server now checks capacity synchronously immediately before allocating each new session; bounded transports still allow an existing offline session to resume when the session table is full. Three actual WS regressions cover this boundary with prefilled offline session fixtures. This is not a thousand-client pressure measurement; the separate isolated load tool records actual resource counts/RSS/CPU.
 
 Full dependency review follow-up: local `npm audit` (including development/build dependencies) and `npm --prefix server audit` also returned zero known vulnerabilities on2026-11-06. This is a point-in-time registry advisory result, not proof that dependencies are free of all defects.
+
+
+## 2026-11-07 数据保留及资源审计
+
+Issue #6在172adc8/CI57修复并通过285项、原生OPFS/跨刷新和完整文件矩阵。读取/计算/存储失败不是旧partial损坏证明；旧state写入结算、offset/hash一致后park；transient迟到finish不删除已验证本机结果或伪造远端成功。Worker park失败尝试关闭自身句柄、保留主错误和旧metadata；RPC32项/安全序号、前缀256KiB/4挂读约束保留。主动取消/删除及确证完整性拒绝保持策略；共享Worker不被强制终止，native close或RPC挂起不保证立即解锁。
+
+新故障均在隔离夹具先红后绿，并有独立5字节跨peer复验；未声称发现真实用户已丢失文件，也不是实际磁盘耗尽/设备驱逐证明。CI57完整依赖audit为零已知漏洞，是当日咨询结果，不保证所有缺陷不存在。Direct-only/身份/接收同意/CSP/Origin门槛未放宽，未新增用户正文/哈希/IP/令牌分析上传。细节及外部门槛见ENGINEERING_AUDIT_20261107和最终报告。

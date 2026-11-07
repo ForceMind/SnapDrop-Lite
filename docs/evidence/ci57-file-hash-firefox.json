@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "engine": "firefox",
+  "scope": "built native hash Worker, bounded main fallback and synthetic file benchmark; not mobile hardware or WAN evidence",
+  "checks": [
+    "built native Worker hashes 0 B, abc and 256 KiB+113 B against independent Node SHA-256 without calling main factory",
+    "abort after real Worker read progress terminates that task; the next task succeeds with a new native Worker",
+    "forcing Worker absence uses the explicit main backend with native reads bounded to 256 KiB",
+    "a native Worker runtime exception rejects with HashWorkerError and never rehashes through the main factory",
+    "worker and main benchmark outputs both match independent Node SHA-256; reported source capability and actual byte count are explicit"
+  ],
+  "errors": [],
+  "phase": "complete",
+  "passed": true,
+  "browserVersion": "157.0",
+  "network": {
+    "httpRequests": 16,
+    "uploadAttempts": 0,
+    "externalAttempts": 0,
+    "signalingMessages": 2,
+    "signalingBytes": 31,
+    "fileDataObserved": false
+  },
+  "capabilities": {
+    "worker": true,
+    "blob": true,
+    "file": true,
+    "opfs": true,
+    "chunkBytes": 262144,
+    "versionQueryMatches": true
+  },
+  "vectors": {
+    "results": [
+      {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "backend": "worker",
+        "firstProgress": 0,
+        "lastProgress": 0,
+        "validProgress": true
+      },
+      {
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "bytes": 3,
+        "backend": "worker",
+        "firstProgress": 0,
+        "lastProgress": 3,
+        "validProgress": true
+      },
+      {
+        "sha256": "73d78b8f43261b4441c1dab4e83388b9be77464170adbee3d4bfbd3089976eaa",
+        "bytes": 262257,
+        "backend": "worker",
+        "firstProgress": 0,
+        "lastProgress": 262257,
+        "validProgress": true
+      }
+    ],
+    "factoryCalls": 0
+  },
+  "cancellation": {
+    "progressed": true,
+    "errorName": "AbortError",
+    "newWorker": true,
+    "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "bytes": 3,
+    "backend": "worker"
+  },
+  "fallback": {
+    "sha256": "73d78b8f43261b4441c1dab4e83388b9be77464170adbee3d4bfbd3089976eaa",
+    "bytes": 262257,
+    "backend": "main",
+    "largestRead": 262144,
+    "reads": 2
+  },
+  "crash": {
+    "resolved": false,
+    "errorName": "HashWorkerError",
+    "factoryCalls": 0,
+    "workerReleased": true
+  },
+  "benchmark": {
+    "intendedBytes": 104857600,
+    "bytes": 104857600,
+    "kind": "opfs-file",
+    "opfsApi": true,
+    "createWritableApi": true,
+    "fallbackReason": null,
+    "runs": [
+      {
+        "sha256": "052e99cc1b63288693dde3dba4ace7f7e1afa58c45e78085a85a995250920efb",
+        "bytes": 104857600,
+        "backend": "worker",
+        "wallMs": 2312,
+        "intervalTargetMs": 16,
+        "ticks": 143,
+        "maxIntervalMs": 17,
+        "p95IntervalMs": 17,
+        "intervalSamples": 143,
+        "intervalSampleCap": 4096
+      },
+      {
+        "sha256": "052e99cc1b63288693dde3dba4ace7f7e1afa58c45e78085a85a995250920efb",
+        "bytes": 104857600,
+        "backend": "main",
+        "wallMs": 2265,
+        "intervalTargetMs": 16,
+        "ticks": 133,
+        "maxIntervalMs": 21,
+        "p95IntervalMs": 18,
+        "intervalSamples": 133,
+        "intervalSampleCap": 4096
+      }
+    ],
+    "interpretation": "16 ms interval and wall-time observations only; no speed/responsiveness winner assertion, CPU/RSS claim, or mobile hardware evidence"
+  },
+  "nativeWorkersCreated": 4
+}

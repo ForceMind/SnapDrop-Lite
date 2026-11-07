@@ -91,7 +91,7 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 本机发送清单的Web Locks回调只返回成功/失败结果，不把配额或损坏异常抛出原生callback；锁释放后向调用方重抛同一错误对象。这样保留错误、原子提交和并发检查，同时避免把已处理的失败暴露为浏览器全局异常。Firefox最终errors[]断言继续保留，以后续实际CI验证。
 
 
-## 发送清单全量哈希 Worker（2026-11-07，待本轮真实浏览器 CI）
+## 发送清单全量哈希 Worker（2026-11-07，CI57已验证）
 
 保存清单和重新选择原件时，原生 File 交给本机专用 `file-hash-worker.js`；桥接先转换成不含文件名/修改时间的 Blob 视图再 structured clone，Worker 用锁定的本地 Noble SHA-256 逐个读取 256 KiB 切片。不会先创建完整 ArrayBuffer，不访问网络。构建从批准源码快照打包 Worker，继承 shell revision 查询参数并纳入同版本 PWA 预缓存。
 
@@ -100,12 +100,15 @@ selected UDP/DTLS/DataChannel已连接，不保证首条应用hello已被处理�
 这只是发送清单的全量哈希迁移。实时 RTCDataChannel 发送/接收增量哈希及断点前缀哈希仍使用现有主线程可克隆状态；OPFS 写入 Worker 和本模块互不等价。不能据此宣称全部大文件计算已离开主线程，也不把桌面 CI 的响应时间当作移动真机表现。
 
 
-## 前缀准备与消息队列（2026-11-07，待本轮 CI）
+## 前缀准备与消息队列（2026-11-07，CI57已验证）
 
 发送方处理resume-at时启动独立的前缀准备任务，保留原始wire有效性回调、路径与sendEpoch、state身份。256KiB本机读取不再占住入站串行消息队列，当前wire的cancel仍按原队列顺序处理；旧wire不能越过有效性检查。准备期间phase/resumeBusy阻止accept/resume/ACK触发发送，重复确认被拒绝。前缀完整SHA匹配前不提交offset/hash或发送resume-confirm。
 
 每次取消/断线/超时使任务取消等待；原生Blob I/O本身没有Abort API，迟到结果必须消费且不能更新新状态。全页最多四个尚未结束的前缀读取，每次不超过256KiB；仅底层读取真正完成才释放名额，超限只取消该文件的恢复并提示稍后重试或完整重发。读取结果须为真实ArrayBuffer且长度精确，防止短读搭配伪造摘要跳过内容。恢复后pump错误仍绑定原wire/epoch，不能取消新代任务。
 
-本段先覆盖发送端；接收端本地OPFS准备与restore RPC的取消/存储锁释放另外验收，不把逻辑任务取消等同于底层磁盘I/O立即终止。
+接收侧快照也采用相同的256KiB/4挂读任务；只park精确原sink一次，完整校验后原子交接。restore/park RPC本身挂起及物理锁释放仍另有边界，不把逻辑取消等同于终止磁盘I/O。
 
 恢复Worker在recovery.js模块求值时捕获脚本URL和revision，延后创建也使用相邻路径和同一查询参数，命中同版本PWA缓存；不接受跨源/带凭据脚本地址。服务器query参数本身不是不可变文件版本，Service Worker更新策略及真机离线体验仍分别验证。
+
+
+数据保留最终修复在CI57通过：durable存储失败按原state/resumeOwner定位；活动取消、过期交接均等当前消息链、旧adopt ready及已开始write正确记账后park。真实最终SHA匹配后缓存用于finish失败清理，transient迟到locallyStored结果不自动删除/报远端完成。Worker park提交失败仍尝试关闭句柄并释放active，保留旧metadata与主错误；RPC最多32项且序号安全。主动取消/删除、确证损坏和普通sink保持对应策略。详见ENGINEERING_AUDIT_20261107与RECOVERY_STORAGE。
