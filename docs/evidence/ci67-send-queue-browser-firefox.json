@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "engine": "firefox",
+  "network": "same-host, two contexts, STUN disabled",
+  "scope": "opt-in metadata queue, full-hash reselect and manually authorized file transfer; not WAN or real hardware",
+  "queueFlowExecuted": true,
+  "checks": [
+    "explicit opt-in persists only metadata and independently matching complete SHA-256 for two files",
+    "expanded stored queue has no horizontal page/component overflow at a 390px viewport; screenshot is not mobile hardware evidence",
+    "sender refresh preserves metadata but discards File bindings and old pairing identity; a new invitation does not send files",
+    "same-metadata different-content original is rejected by full SHA-256 without binding or sending any file",
+    "correct originals selected in reverse order are rebound only after full hashes match; fresh matching safety codes still gate manual sending",
+    "manual send requires explicit acceptance per file, final verified completion removes one entry at a time, and Blob saving gates the next offer",
+    "both downloaded files independently match local Node SHA-256 and byte lengths",
+    "synthetic localStorage quota failure is visible and never binds files or sends an offer",
+    "corrupt metadata remains unsendable and is deleted only after an explicit clear action"
+  ],
+  "errors": [],
+  "passed": true,
+  "browserVersion": "157.0",
+  "capabilities": {
+    "webLocks": true,
+    "storeSupported": true,
+    "hash": true,
+    "secureUuid": true,
+    "textEncoder": true
+  },
+  "queueCapability": "supported",
+  "phase": "complete",
+  "hashTiming": {
+    "fileCount": 2,
+    "bytesPerPass": 81976,
+    "saveWallMs": 269,
+    "configuredChunkBytes": 262144,
+    "scope": "small synthetic files on one CI host; wall time includes file chooser/UI/IPC; not CPU, RSS, mobile hardware or WAN performance",
+    "reselectWallMs": 89,
+    "totalHashBytes": 163952,
+    "countedOperations": "successful save and correct reselect only; deliberate wrong-file and quota passes excluded"
+  },
+  "mobileLayout": {
+    "viewportWidth": 390,
+    "pageOverflow": false,
+    "queueOverflow": false,
+    "screenshot": "send-queue-mobile-firefox.png"
+  },
+  "signaling": {
+    "messages": 31,
+    "bytes": 5450,
+    "fileDataObserved": false
+  },
+  "transferredBytes": 81976
+}

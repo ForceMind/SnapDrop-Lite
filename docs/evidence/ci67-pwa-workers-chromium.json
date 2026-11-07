@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "scope": "current-version cached shell and native hash/recovery Workers under explicit browser offline emulation; not physical link disconnection, update activation, Safari, mobile hardware, or public-network evidence",
+  "phase": "complete",
+  "checks": [
+    "the activated controlling service worker precaches all three exact worker URLs with the current build revision",
+    "after clearing the HTTP cache, the full application shell reloads offline under its real service worker",
+    "an offline native stateful hash Worker snapshots a prefix, continues and finalizes without main fallback",
+    "a first hash Worker in the offline document matches cached built code and hashes abc against independent Node SHA-256",
+    "the offline document creates its recovery Worker from the exact cached revision and probes/lists native OPFS without user files"
+  ],
+  "errors": [],
+  "offlineWorkers": [
+    {
+      "script": "recovery-worker.js",
+      "version": "cc281863f488aa68",
+      "phase": "offline-reload"
+    },
+    {
+      "script": "file-hash-worker.js",
+      "version": "cc281863f488aa68",
+      "phase": "offline-workers"
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "version": "cc281863f488aa68",
+      "phase": "offline-workers"
+    }
+  ],
+  "passed": true,
+  "browserVersion": "156.0.8078.4",
+  "cache": {
+    "revision": "cc281863f488aa68",
+    "name": "zeydrop-shell-cc281863f488aa68",
+    "entryCount": 27,
+    "controllerActivated": true,
+    "workers": [
+      {
+        "script": "recovery-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "cc281863f488aa68"
+      },
+      {
+        "script": "file-hash-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "cc281863f488aa68"
+      },
+      {
+        "script": "stream-hash-worker.js",
+        "count": 1,
+        "exactVersionCached": true,
+        "version": "cc281863f488aa68"
+      }
+    ],
+    "hashWorkerStillLazy": true,
+    "peerCount": 0
+  },
+  "httpCacheCleared": true,
+  "contextOfflineApplied": true,
+  "emulation": {
+    "requestBlocking": {
+      "driver": "Playwright BrowserContext.setOffline",
+      "offline": true,
+      "applied": true
+    },
+    "navigatorHint": {
+      "driver": "CDP Network.overrideNetworkState",
+      "parameters": {
+        "offline": true,
+        "latency": 0,
+        "downloadThroughput": -1,
+        "uploadThroughput": -1,
+        "connectionType": "none"
+      },
+      "applied": true
+    },
+    "priorEvidence": "CI55/56: uncached HTTP GET rejected TypeError without timeout, but navigator.onLine remained true",
+    "interpretation": "request blocking and renderer connectivity state are browser test-driver settings; no operating-system network interface is changed"
+  },
+  "readinessBeforeWait": {
+    "navigatorOnline": false,
+    "offline": true,
+    "readyState": "complete",
+    "controlled": true,
+    "controllerState": "activated",
+    "fileHashPresent": true,
+    "recoveryPresent": true,
+    "hashClassPresent": true,
+    "recoverySupported": true,
+    "hashWorkerLazy": true,
+    "peerCount": 0,
+    "startupOnline": false,
+    "connectivityEvents": []
+  },
+  "offlineNetworkProbe": {
+    "rejected": true,
+    "errorName": "TypeError",
+    "timedOut": false
+  },
+  "cacheObserverBeforeWait": {
+    "installed": true,
+    "hits": [
+      {
+        "script": "recovery-worker.js",
+        "version": "cc281863f488aa68",
+        "status": 200
+      }
+    ]
+  },
+  "cacheHits": [
+    {
+      "script": "recovery-worker.js",
+      "version": "cc281863f488aa68",
+      "status": 200
+    },
+    {
+      "script": "file-hash-worker.js",
+      "version": "cc281863f488aa68",
+      "status": 200
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "version": "cc281863f488aa68",
+      "status": 200
+    }
+  ],
+  "offlineDocument": {
+    "offline": true,
+    "controlled": true,
+    "hashWorkerStillLazy": true,
+    "recoverySupported": true,
+    "peerCount": 0
+  },
+  "hash": {
+    "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "bytes": 3,
+    "backend": "worker",
+    "mainFactoryCalls": 0
+  },
+  "streamHash": {
+    "backend": "worker",
+    "bytes": 3,
+    "closed": true,
+    "prefix": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+    "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "mainFactoryCalls": 0
+  },
+  "recovery": {
+    "available": true,
+    "records": 0,
+    "nativeWorker": true
+  },
+  "recoveryLifecycle": "the UI also probes recovery online during setup; the offline navigation creates a new document and a new offline recovery Worker"
+}

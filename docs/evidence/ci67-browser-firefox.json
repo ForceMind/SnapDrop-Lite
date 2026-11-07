@@ -1,0 +1,273 @@
+{
+  "engine": "firefox",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "sealed pair continues actual file transfers after the invitation deadline",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "rejection preserves pending queue; manual retry uses fresh ID and explicit consent; next offer waits for Blob saving",
+    "storage quota failure reports cancellation without closing the direct channel",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "real WebSocket peer rebuild resumes 8 MiB native OPFS sink after fresh matching safety codes and SHA-256 prefix check",
+    "actual transfer and reconnection prefix hashes use native Workers, with no main fallback and no remaining leases",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P",
+    "real delayed discovery: earlier SDP/ICE buffered until authorized peer appears",
+    "local diagnostic download records selected path without identities, invitation, tokens or file metadata"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "profiles": "two ephemeral contexts",
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "family": "地址族未公开",
+      "rtt": 0
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 0
+    }
+  ],
+  "storageBefore": {
+    "quota": 10737418240,
+    "usage": 919833
+  },
+  "resourceObservations": {
+    "0": {
+      "sender": {
+        "schema": 2,
+        "engine": "firefox",
+        "status": "unsupported",
+        "supported": false,
+        "scope": "test-only Chromium target and owning-browser observations; same-host workflow, not machine totals or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 0,
+          "count": 0,
+          "limitReached": false,
+          "elapsedMs": 169
+        },
+        "availableFields": [],
+        "issues": {
+          "cdp-unsupported-engine": 1
+        },
+        "summary": {},
+        "samples": [],
+        "processes": {
+          "status": "unsupported",
+          "supported": false,
+          "reason": "cdp-unsupported-engine",
+          "source": "owning browser CDP SystemInfo.getProcessInfo; same-uid Linux proc stat identity and smaps_rollup",
+          "maxListedPids": 128,
+          "sampleCount": 0,
+          "partialCoverageObserved": false,
+          "issues": {}
+        },
+        "limitations": [
+          "Heap and renderer duration samples retain their target-page/isolate scope; the separate process observations cover only processes reported by that owning browser CDP endpoint.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Process RSS sums double-count shared resident pages; PSS sums apportion shared pages and are not machine-wide memory usage or an exclusive physical-memory total.",
+          "Browser-process CPU is the observed sum of same-PID/starttime counter differences across all threads; new, exited, unreadable, reused or reset processes leave gaps, and processes that appear and exit between samples are unobserved. It is not whole-machine CPU.",
+          "Process measurements may include other pages of the same browser. Sender/receiver reports for a shared browser overlap and must not be added as independent device totals.",
+          "Linux proc measurements require the tested browser and test runner to share the local PID namespace; these readings are not remote-browser process evidence.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "receiver": {
+        "schema": 2,
+        "engine": "firefox",
+        "status": "unsupported",
+        "supported": false,
+        "scope": "test-only Chromium target and owning-browser observations; same-host workflow, not machine totals or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 0,
+          "count": 0,
+          "limitReached": false,
+          "elapsedMs": 169
+        },
+        "availableFields": [],
+        "issues": {
+          "cdp-unsupported-engine": 1
+        },
+        "summary": {},
+        "samples": [],
+        "processes": {
+          "status": "unsupported",
+          "supported": false,
+          "reason": "cdp-unsupported-engine",
+          "source": "owning browser CDP SystemInfo.getProcessInfo; same-uid Linux proc stat identity and smaps_rollup",
+          "maxListedPids": 128,
+          "sampleCount": 0,
+          "partialCoverageObserved": false,
+          "issues": {}
+        },
+        "limitations": [
+          "Heap and renderer duration samples retain their target-page/isolate scope; the separate process observations cover only processes reported by that owning browser CDP endpoint.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Process RSS sums double-count shared resident pages; PSS sums apportion shared pages and are not machine-wide memory usage or an exclusive physical-memory total.",
+          "Browser-process CPU is the observed sum of same-PID/starttime counter differences across all threads; new, exited, unreadable, reused or reset processes leave gaps, and processes that appear and exit between samples are unobserved. It is not whole-machine CPU.",
+          "Process measurements may include other pages of the same browser. Sender/receiver reports for a shared browser overlap and must not be added as independent device totals.",
+          "Linux proc measurements require the tested browser and test runner to share the local PID namespace; these readings are not remote-browser process evidence.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "window": "before automated file selection/consent until verified complete; excludes subsequent independent disk rehash"
+    },
+    "104857600": {
+      "sender": {
+        "schema": 2,
+        "engine": "firefox",
+        "status": "unsupported",
+        "supported": false,
+        "scope": "test-only Chromium target and owning-browser observations; same-host workflow, not machine totals or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 0,
+          "count": 0,
+          "limitReached": false,
+          "elapsedMs": 7936
+        },
+        "availableFields": [],
+        "issues": {
+          "cdp-unsupported-engine": 1
+        },
+        "summary": {},
+        "samples": [],
+        "processes": {
+          "status": "unsupported",
+          "supported": false,
+          "reason": "cdp-unsupported-engine",
+          "source": "owning browser CDP SystemInfo.getProcessInfo; same-uid Linux proc stat identity and smaps_rollup",
+          "maxListedPids": 128,
+          "sampleCount": 0,
+          "partialCoverageObserved": false,
+          "issues": {}
+        },
+        "limitations": [
+          "Heap and renderer duration samples retain their target-page/isolate scope; the separate process observations cover only processes reported by that owning browser CDP endpoint.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Process RSS sums double-count shared resident pages; PSS sums apportion shared pages and are not machine-wide memory usage or an exclusive physical-memory total.",
+          "Browser-process CPU is the observed sum of same-PID/starttime counter differences across all threads; new, exited, unreadable, reused or reset processes leave gaps, and processes that appear and exit between samples are unobserved. It is not whole-machine CPU.",
+          "Process measurements may include other pages of the same browser. Sender/receiver reports for a shared browser overlap and must not be added as independent device totals.",
+          "Linux proc measurements require the tested browser and test runner to share the local PID namespace; these readings are not remote-browser process evidence.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "receiver": {
+        "schema": 2,
+        "engine": "firefox",
+        "status": "unsupported",
+        "supported": false,
+        "scope": "test-only Chromium target and owning-browser observations; same-host workflow, not machine totals or WAN measurement",
+        "sampling": {
+          "intervalMs": 1000,
+          "maxSamples": 360,
+          "commandTimeoutMs": 1500,
+          "attempts": 0,
+          "count": 0,
+          "limitReached": false,
+          "elapsedMs": 7936
+        },
+        "availableFields": [],
+        "issues": {
+          "cdp-unsupported-engine": 1
+        },
+        "summary": {},
+        "samples": [],
+        "processes": {
+          "status": "unsupported",
+          "supported": false,
+          "reason": "cdp-unsupported-engine",
+          "source": "owning browser CDP SystemInfo.getProcessInfo; same-uid Linux proc stat identity and smaps_rollup",
+          "maxListedPids": 128,
+          "sampleCount": 0,
+          "partialCoverageObserved": false,
+          "issues": {}
+        },
+        "limitations": [
+          "Heap and renderer duration samples retain their target-page/isolate scope; the separate process observations cover only processes reported by that owning browser CDP endpoint.",
+          "Runtime backingStorageSize includes ArrayBuffer backing storage AND external strings; it is not an ArrayBuffer-only measurement.",
+          "Renderer TaskDuration is not whole-process CPU usage, a CPU percentage or a hardware power measurement.",
+          "Process RSS sums double-count shared resident pages; PSS sums apportion shared pages and are not machine-wide memory usage or an exclusive physical-memory total.",
+          "Browser-process CPU is the observed sum of same-PID/starttime counter differences across all threads; new, exited, unreadable, reused or reset processes leave gaps, and processes that appear and exit between samples are unobserved. It is not whole-machine CPU.",
+          "Process measurements may include other pages of the same browser. Sender/receiver reports for a shared browser overlap and must not be added as independent device totals.",
+          "Linux proc measurements require the tested browser and test runner to share the local PID namespace; these readings are not remote-browser process evidence.",
+          "Peaks are observed sampled values, not a memory hard limit or proof that no larger transient allocation occurred.",
+          "The observation window includes test workflow and measurement overhead; it is not a WAN throughput benchmark.",
+          "Unsupported, missing or failed fields are omitted, never replaced with zero; metrics do not override file-integrity or direct-path assertions."
+        ]
+      },
+      "window": "before automated file selection/consent until verified complete; excludes subsequent independent disk rehash"
+    }
+  },
+  "stream0": {
+    "ms": 175,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 10117,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "resume": {
+    "name": "恢复文件 & 空 格",
+    "size": 8388608,
+    "writtenAtBreak": 131072,
+    "dataChannelBytes": 8503296,
+    "sha256": "6b59425c5bf6585e132f7e6b520623ea2ac76484f1a4bde550313c5a05c08140"
+  },
+  "liveHashWorkers": [
+    {
+      "handles": 8,
+      "mainCalls": 0,
+      "workerHandles": 8,
+      "active": 0
+    },
+    {
+      "handles": 7,
+      "mainCalls": 0,
+      "workerHandles": 7,
+      "active": 0
+    }
+  ],
+  "peakReceiveQueues": [
+    156,
+    163922
+  ],
+  "signaling": {
+    "messages": 9,
+    "bytes": 1312,
+    "fileBodyObserved": false
+  },
+  "delayedEarlySignals": [
+    4,
+    0
+  ],
+  "passed": true
+}

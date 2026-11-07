@@ -7,7 +7,7 @@ const root = path.resolve(import.meta.dirname, '..');
 process.chdir(root);
 const publicClient = await snapshotPublicClient(root);
 const inputs = new Map(publicClient);
-for (const file of ['package.json', 'package-lock.json', 'server/index.js', 'server/package.json', 'server/package-lock.json', 'scripts/build.mjs', 'scripts/public-assets.mjs', 'deploy.sh', 'scripts/rollback.sh', 'scripts/check-signaling.cjs', 'deployment/nginx.conf', 'deployment/zeydrop.service', 'LICENSE', 'NOTICE']) inputs.set(file, await readApprovedSourceFile(root, file));
+for (const file of ['package.json', 'package-lock.json', 'server/index.js', 'server/package.json', 'server/package-lock.json', 'scripts/build.mjs', 'scripts/public-assets.mjs', 'deploy.sh', 'scripts/rollback.sh', 'scripts/check-signaling.cjs', 'scripts/verify-prepared-release.cjs', 'deployment/nginx.conf', 'deployment/zeydrop.service', 'LICENSE', 'NOTICE']) inputs.set(file, await readApprovedSourceFile(root, file));
 const hash = createHash('sha256');
 for (const [file, bytes] of inputs) { hash.update(file); hash.update(bytes); }
 const revision = hash.digest('hex').slice(0, 16);

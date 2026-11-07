@@ -2,9 +2,11 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 本轮ICE、暂存删除与部署生命周期（原生CI待验）
+## 本轮生命周期及部署重试（当前构建CI待验）
 
-本地400/400（0失败/跳过）、构建cc281863f488aa68、check-build/shell/diff及两侧audit0通过。修复ICE旧协商异步回调污染新代、过期/重叠删除与活动提交之间的断点丢失，以及首次部署current自环；新增原生PWA failed-install/等待/升级回滚与暂存删除组合待新CI。见[本轮报告](TEST_REPORT_20261107_LIFECYCLE.md)。[Issue #8](https://github.com/ForceMind/SnapDrop-Lite/issues/8)跟踪集成，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)保留失败release同版本重试限制，未做不安全自动删除。旧Worker不采用新锁，升级前须结束传输并关闭全部旧标签。本地真实浏览器启动再次socket EPERM，未算通过。
+当前本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。当前新CI与独立候选待验；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪验证。
+
+前阶段c4c7d6e/revisioncc281863f488aa68的[CI67](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42407825773)全套通过400项、原生PWA failed-install/等待/关闭所有旧客户端后升级回滚、原生暂存删除、三引擎Worker/清单、六组合、1GiB/100MiB、HTTPS/WSS/PWA/UI。32份原始JSON已归档，381文件候选独立重装400项/无Git重建并与实际CI tar字节一致。ICE旧回调、暂存三类删除竞态及首次部署current自环修复由这一精确版本认证，不替代新部署helper验收。旧Worker不使用新锁，升级须结束传输并关闭全部旧标签。本地socket EPERM未算原生成功。Issue #8跟踪集成；真实网络/设备/主机门槛仍开放。
 
 ## 前轮进程恢复与初始化加固（CI65 全套通过）
 

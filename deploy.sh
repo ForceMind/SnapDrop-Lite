@@ -50,7 +50,6 @@ npm run build
 revision=$(node -p "require('./dist/build.json').revision")
 [[ $revision =~ ^[a-f0-9]{16}$ ]] || { echo 'Invalid build revision' >&2; exit 1; }
 release="/opt/zeydrop/releases/$revision"
-[[ ! -e $release ]] || { echo 'Release already exists; use rollback.sh to select it.' >&2; exit 1; }
 # Snapshot managed configuration and active target before changing either.
 previous=''
 if [[ -e /opt/zeydrop/current || -L /opt/zeydrop/current ]]; then
@@ -62,6 +61,14 @@ if [[ -e /opt/zeydrop/current || -L /opt/zeydrop/current ]]; then
     [[ $previous =~ ^/opt/zeydrop/releases/[a-f0-9]{16}$ && -f $previous/dist/build.json && -f $previous/server/index.js ]] || {
         echo 'Invalid current release pointer' >&2; exit 1;
     }
+fi
+[[ $previous != "$release" ]] || { echo 'This release is already current; active pointer and configuration were not changed.' >&2; exit 1; }
+reuse_release=0
+if [[ -e $release || -L $release ]]; then
+    # Retry a complete prepared release without changing any of its contents.
+    # Partial, unsafe or different directories require explicit host diagnosis.
+    node scripts/verify-prepared-release.cjs "$release" /opt/zeydrop "$revision"
+    reuse_release=1
 fi
 was_active=$(systemctl is-active zeydrop 2>/dev/null || true)
 was_enabled=$(systemctl is-enabled zeydrop 2>/dev/null || true)
@@ -92,16 +99,19 @@ rollback_failed_deploy() {
 }
 trap rollback_failed_deploy ERR
 id zeydrop >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin zeydrop
-mkdir -p "$release/server" /etc/zeydrop
+mkdir -p /etc/zeydrop
 # Do not copy local server/.env* or other checkout-only files into the service.
 for source in server/index.js server/package.json server/package-lock.json; do
     [[ -f $source && ! -L $source ]] || { echo 'Invalid server source file' >&2; exit 1; }
 done
-cp -r dist "$release/"
-cp server/index.js server/package.json server/package-lock.json "$release/server/"
-cp -r server/node_modules "$release/server/"
-normalize_release_permissions "$release"
-chown -R root:root "$release"
+if [[ $reuse_release == 0 ]]; then
+    mkdir -p "$release/server"
+    cp -r dist "$release/"
+    cp server/index.js server/package.json server/package-lock.json "$release/server/"
+    cp -r server/node_modules "$release/server/"
+    normalize_release_permissions "$release"
+    chown -R root:root "$release"
+fi
 cat > /etc/zeydrop/signaling.env <<ENV
 NODE_ENV=production
 PORT=3001

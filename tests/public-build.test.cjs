@@ -7,7 +7,7 @@ async function fixture(t) {
     const { PUBLIC_CLIENT_FILES } = await import(path.join(sourceRoot,'scripts/public-assets.mjs'));
     const root=await fs.mkdtemp(path.join(os.tmpdir(),'zeydrop-public-build-test-'));
     t.after(()=>fs.rm(root,{recursive:true,force:true}));
-    const sourceFiles=[...PUBLIC_CLIENT_FILES,'package.json','package-lock.json','server/index.js','server/package.json','server/package-lock.json','scripts/build.mjs','scripts/public-assets.mjs','scripts/check-signaling.cjs','deploy.sh','scripts/rollback.sh','deployment/nginx.conf','deployment/zeydrop.service','LICENSE','NOTICE'];
+    const sourceFiles=[...PUBLIC_CLIENT_FILES,'package.json','package-lock.json','server/index.js','server/package.json','server/package-lock.json','scripts/build.mjs','scripts/public-assets.mjs','scripts/check-signaling.cjs','scripts/verify-prepared-release.cjs','deploy.sh','scripts/rollback.sh','deployment/nginx.conf','deployment/zeydrop.service','LICENSE','NOTICE'];
     for(const name of sourceFiles){const target=path.join(root,name);await fs.mkdir(path.dirname(target),{recursive:true});await fs.copyFile(path.join(sourceRoot,name),target);}
     // Reuse the same already-installed locked dependency tree only for reads.
     // The source fixture intentionally has no .git metadata or private files.

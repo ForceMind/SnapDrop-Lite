@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "phase": "complete",
+  "passed": true,
+  "scope": "actual built recovery Worker and native OPFS same-ID start contention across two pages; test-only native-method timing gate, not mocked files, remote authorization, WAN or Safari evidence",
+  "cases": [
+    {
+      "phase": "partial",
+      "secondStartRejected": true,
+      "beforeBytes": 16384,
+      "afterBytes": 16384,
+      "rawMetadataUnchanged": true,
+      "bodyUnchanged": true,
+      "metadata": {
+        "offset": 16384,
+        "phase": "partial",
+        "sha256": "7f7d7f621694cdc133548e9a3eb50d7f1dfdf6abd00bef37d46d18bc7967a433"
+      },
+      "gateExecuted": true,
+      "destructiveRemovals": 0,
+      "lock": {
+        "reacquired": true,
+        "bytes": 16384
+      },
+      "restore": {
+        "offset": 16384,
+        "bytes": 16384,
+        "sha256": "7f7d7f621694cdc133548e9a3eb50d7f1dfdf6abd00bef37d46d18bc7967a433"
+      }
+    },
+    {
+      "phase": "complete",
+      "secondStartRejected": true,
+      "beforeBytes": 16384,
+      "afterBytes": 16384,
+      "rawMetadataUnchanged": true,
+      "bodyUnchanged": true,
+      "metadata": {
+        "offset": 16384,
+        "phase": "complete",
+        "sha256": "d50a93568452c9d57f6f5f9d05ba15982abf05dda19c352b9609e7e074b92469"
+      },
+      "gateExecuted": true,
+      "destructiveRemovals": 0,
+      "lock": {
+        "reacquired": true,
+        "bytes": 16384
+      },
+      "completed": {
+        "bytes": 16384,
+        "phase": "complete"
+      }
+    },
+    {
+      "phase": "corrupt",
+      "secondStartRejected": true,
+      "beforeBytes": 16384,
+      "afterBytes": 16384,
+      "rawMetadataUnchanged": true,
+      "bodyUnchanged": true,
+      "metadata": null,
+      "gateExecuted": true,
+      "destructiveRemovals": 0,
+      "lock": {
+        "reacquired": true,
+        "bytes": 16384
+      }
+    }
+  ],
+  "errors": [],
+  "checks": [
+    "two actual same-origin dedicated Workers contend for one remote-chosen file ID using a native getFileHandle timing gate",
+    "partial, completed and corrupt records published by another worker survive stale start without metadata replacement, body truncation or erase",
+    "rejection closes the losing native data handle immediately; original partial restore, completed lookup and manual corrupt-record deletion remain available"
+  ],
+  "network": {
+    "uploadAttempts": 0,
+    "externalAttempts": 0,
+    "signalingMessages": 2,
+    "signalingBytes": 32,
+    "fileDataObserved": false
+  },
+  "browserVersion": "156.0.8078.4",
+  "nativeWorkers": [
+    {
+      "actualDedicatedWorker": true,
+      "revision": "cc281863f488aa68"
+    },
+    {
+      "actualDedicatedWorker": true,
+      "revision": "cc281863f488aa68"
+    }
+  ]
+}

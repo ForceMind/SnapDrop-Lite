@@ -1,8 +1,10 @@
 # 测试矩阵与证据范围
 
-## 本轮生命周期集成（原生CI待验）
+## 当前部署重试与前阶段生命周期
 
-本地400/400、0失败/跳过，revision cc281863f488aa68；新增14项ICE、12项暂存删除、5项完整隔离shell回归。两侧audit0、构建/check-build/shell/diff通过；原生双Worker删除三场景及PWA failed-install/等待/关闭全部旧客户端后升级和回滚正在加入CI，尚不记为成功。见TEST_REPORT_20261107_LIFECYCLE及evidence/lifecycle-local-20261107.json；真实WAN/Safari/移动/systemd门槛继续开放。
+当前本地410/410、0失败/跳过，revision c75833843f0b324f；新增10项只读发布目录校验/完整shell重试，相关24项通过。固定句柄分块比对、受限枚举/类型/模式/有效用户所有权、内容与最后元数据围栏；完整精确非当前目录可复用，当前版本及部分/不同/不安全目录拒绝且保留原状。新CI/独立候选待验，不是实际systemd/TLS或原子文件快照。
+
+前阶段c4c7d6e/revisioncc281863f488aa68的CI67已全套通过400项，含ICE14、暂存12、首次部署5项回归；真实SW failed-install/双单客户端等待/全关闭后A-B-A、三阶段各27项精确缓存及3Worker离线/SHA、OPFS检查点保留通过；原生跨Worker过时orphan及两种unlink间隙通过（有控制时钟/计时门，不是自然24h）。三引擎/六组合/大文件/HTTPS/WSS均通过，见evidence/ci67-*和TEST_REPORT_20261107_LIFECYCLE。真实WAN/Safari/移动/主机门槛不因此打勾。
 
 ## 前轮进程恢复与并发初始化加固
 

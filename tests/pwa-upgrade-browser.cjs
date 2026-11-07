@@ -25,7 +25,7 @@ async function fixtures(temporary) {
     // non-symlink source/parent validation, also without a .git directory.
     const names = [...PUBLIC_CLIENT_FILES, 'package.json', 'package-lock.json', 'server/index.js',
         'server/package.json', 'server/package-lock.json', 'scripts/build.mjs', 'scripts/public-assets.mjs',
-        'deploy.sh', 'scripts/rollback.sh', 'scripts/check-signaling.cjs', 'deployment/nginx.conf',
+        'deploy.sh', 'scripts/rollback.sh', 'scripts/check-signaling.cjs', 'scripts/verify-prepared-release.cjs', 'deployment/nginx.conf',
         'deployment/zeydrop.service', 'LICENSE', 'NOTICE'];
     const source = path.join(temporary, 'source'); await fs.mkdir(source);
     const inputHash = crypto.createHash('sha256');
