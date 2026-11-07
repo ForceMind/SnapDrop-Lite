@@ -25,6 +25,10 @@ jobs:
       - run: npm audit && npm --prefix server audit
       - run: npm test
       - run: node scripts/server-load.cjs --connections 64 --signals 20 --duration-ms 1000 --cycles 2 --out test-results/server-load.json
+      # Actual slow-reader sockets exercise the production output threshold.
+      # Default TCP buffers may absorb this bounded batch; a constrained test
+      # socket is then explicit in the evidence, never a mocked bufferedAmount.
+      - run: node tests/slow-reader.cjs --out test-results/slow-reader.json
       - run: bash -n build.sh deploy.sh scripts/rollback.sh
       - run: npm run build && node scripts/check-build.mjs
       # The Azure package mirror exhausted CI #44's install budget. Use the
@@ -76,6 +80,12 @@ jobs:
       - run: node tests/interoperability.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/persistent-flow-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/file-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/file-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/file-hash-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/send-queue-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}

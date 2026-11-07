@@ -17,6 +17,8 @@ export const PUBLIC_CLIENT_FILES = Object.freeze([
     'client/index.html',
     'client/manifest.json',
     'client/scripts/diagnostics.js',
+    'client/scripts/file-hash.js',
+    'client/scripts/file-hash-worker.js',
     'client/scripts/network.js',
     'client/scripts/recovery-worker.js',
     'client/scripts/recovery.js',

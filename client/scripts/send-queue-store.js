@@ -14,6 +14,7 @@ class ZeydropSendQueueStore {
         this._locks = options.locks || globalThis.navigator?.locks;
         this._now = options.now || Date.now;
         this._hash = options.hashFactory || (window.ZeydropHash?.create ? () => window.ZeydropHash.create() : null);
+        this._fileHasher = options.fileHasher || window.ZeydropFileHash;
         this._uuid = options.randomUUID || (globalThis.crypto?.randomUUID ? () => crypto.randomUUID() : null);
         this.supported = !!this._locks?.request && !!this._hash && !!this._uuid && typeof TextEncoder === 'function';
     }
@@ -118,16 +119,34 @@ class ZeydropSendQueueStore {
             lastProgress = now; onProgress({phase,fileIndex:index,fileCount:selected.length,hashedBytes:hashed,totalBytes:total});
         };
         for (let i = 0; i < selected.length; i++) {
-            this._abort(signal); const file = selected[i], hash = this._hash(); report(i,true);
-            for (let offset = 0; offset < file.size; offset += ZeydropSendQueueStore.HASH_CHUNK) {
-                this._abort(signal); const end = Math.min(file.size,offset + ZeydropSendQueueStore.HASH_CHUNK);
-                const bytes = await file.slice(offset,end).arrayBuffer(); this._abort(signal);
-                const chunk = bytes && new Uint8Array(bytes);
-                if (!chunk || chunk.byteLength !== end-offset) throw this._error('QueueFileMismatchError', '原文件读取长度已变化，请重新选择');
-                hash.update(chunk); hashed += chunk.byteLength; report(i);
+            this._abort(signal); const file = selected[i]; report(i,true);
+            let nativeBlob = false;
+            try { if (typeof Blob === 'function') { Object.getOwnPropertyDescriptor(Blob.prototype,'size').get.call(file); nativeBlob = true; } } catch {}
+            let sha256;
+            if (nativeBlob && typeof this._fileHasher?.hash === 'function') {
+                const base = hashed;
+                const result = await this._fileHasher.hash(file, { signal, onProgress: progress => {
+                    if (Number.isSafeInteger(progress?.bytes) && progress.bytes >= 0 && progress.bytes <= file.size) {
+                        hashed = base + progress.bytes; report(i);
+                    }
+                } });
+                this._abort(signal);
+                if (result?.bytes !== file.size || typeof result.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(result.sha256))
+                    throw this._error('QueueFileMismatchError', '原文件校验结果无效，请重新选择');
+                sha256 = result.sha256; hashed = base + file.size;
+            } else {
+                const hash = this._hash();
+                for (let offset = 0; offset < file.size; offset += ZeydropSendQueueStore.HASH_CHUNK) {
+                    this._abort(signal); const end = Math.min(file.size,offset + ZeydropSendQueueStore.HASH_CHUNK);
+                    const bytes = await file.slice(offset,end).arrayBuffer(); this._abort(signal);
+                    const chunk = bytes && new Uint8Array(bytes);
+                    if (!chunk || chunk.byteLength !== end-offset) throw this._error('QueueFileMismatchError', '原文件读取长度已变化，请重新选择');
+                    hash.update(chunk); hashed += chunk.byteLength; report(i);
+                }
+                sha256 = Array.from(hash.digest(),n=>n.toString(16).padStart(2,'0')).join('');
             }
             descriptors.push({name:file.name,size:file.size,mime:/^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : 'application/octet-stream',
-                lastModified:file.lastModified,sha256:Array.from(hash.digest(),n=>n.toString(16).padStart(2,'0')).join('')});
+                lastModified:file.lastModified,sha256});
             report(i,true);
         }
         this._abort(signal); return {selected,descriptors};

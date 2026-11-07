@@ -6,12 +6,12 @@ const {webcrypto,createHash}=require('node:crypto');
 const source=fs.readFileSync('client/scripts/send-queue-store.js','utf8');
 const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);return{promise,resolve};};
 const checksum=value=>createHash('sha256').update(value).digest('hex');
-async function rig() {
+async function rig({nativeBlob = false} = {}) {
     const{sha256}=await import('@noble/hashes/sha2.js');let now=1794000000000;
     const values=new Map();let writeError=null,readError=null,writes=0;
     const storage={getItem(key){if(readError)throw readError;return values.get(key)??null;},setItem(key,value){if(writeError)throw writeError;writes++;values.set(key,value);},removeItem(key){values.delete(key);}};
     const locks={tail:Promise.resolve(),request(name,options,fn){assert.equal(options.mode,'exclusive');const job=this.tail.then(fn);this.tail=job.catch(()=>{});return job;}};
-    const window={ZeydropHash:sha256},context=vm.createContext({window,navigator:{locks},crypto:webcrypto,TextEncoder,Uint8Array,Date});
+    const window={ZeydropHash:sha256},context=vm.createContext({window,navigator:{locks},crypto:webcrypto,TextEncoder,Uint8Array,Date,...(nativeBlob?{Blob}:{})});
     vm.runInContext(source+'\nthis.Store=ZeydropSendQueueStore;',context);
     const make=options=>new context.Store({storage,locks,hashFactory:()=>sha256.create(),randomUUID:()=>webcrypto.randomUUID(),now:()=>now,...options});
     return{store:make(),make,values,storage,locks,window,setNow:value=>now=value,now:()=>now,
@@ -169,4 +169,52 @@ test('file count, safe numeric size, metadata bytes and unsupported lock boundar
     const oversized=Array.from({length:100},()=>({name:'\ud800'.repeat(255),size:0,type:'text/plain',lastModified:0,slice(){throw Error('zero-size file has no IO');}}));
     await assert.rejects(h.store.save(oversized,{optIn:true,expectedRevision:null}),{name:'QueueLimitError'});
     const unsupported=h.make({locks:{}});assert.equal(unsupported.supported,false);await assert.rejects(unsupported.load(),{name:'QueueUnsupportedError'});assert.equal(h.values.size,0);
+});
+
+test('native Files use the bounded hasher only after consent; the main factory is not invoked',async()=>{
+    const h=await rig({nativeBlob:true}),calls=[],selected=[file('secret','原件.txt'),file('','empty.bin')],progress=[];
+    const hasher={async hash(value,{signal,onProgress}){
+        calls.push(value);assert.equal(signal,undefined);onProgress({bytes:value.size,total:value.size});
+        return{bytes:value.size,sha256:checksum(Buffer.from(await value.arrayBuffer())),backend:'worker'};
+    }};
+    const store=h.make({fileHasher:hasher,hashFactory(){throw Error('unexpected main hash');}});
+    await assert.rejects(store.save(selected,{expectedRevision:null}),{name:'QueueConsentError'});assert.equal(calls.length,0);
+    const saved=await store.save(selected,{optIn:true,expectedRevision:null,onProgress:value=>progress.push(value)});
+    assert.deepEqual(calls,selected);assert.equal(saved.files[0].sha256,checksum('secret'));
+    assert.equal(saved.files[1].sha256,checksum(''));assert.equal(progress.at(-1).hashedBytes,selected[0].size);
+    assert.equal(progress.at(-1).totalBytes,selected[0].size);
+    await assert.rejects(store.reselect(saved.revision,selected),{name:'QueueConsentError'});assert.equal(calls.length,2);
+    const restored=await store.reselect(saved.revision,selected,{confirmed:true});assert.equal(restored.files[0],selected[0]);assert.equal(calls.length,4);
+});
+test('worker errors and malformed digests preserve the prior checklist without main-thread retry',async()=>{
+    const h=await rig({nativeBlob:true}),saved=await h.store.save([file('old')],{optIn:true,expectedRevision:null}),before=h.values.get(h.store.storageKey);
+    const failed=Object.assign(Error('fixture worker error'),{name:'HashWorkerError'});
+    for(const result of [{bytes:1,sha256:checksum('new')},{bytes:3,sha256:'F'.repeat(64)},{bytes:3,sha256:'bad'},null,failed]){
+        const store=h.make({fileHasher:{async hash(){if(result===failed)throw failed;return result;}},hashFactory(){throw Error('unexpected retry');}});
+        await assert.rejects(store.save([file('new')],{optIn:true,expectedRevision:saved.revision}),{name:result===failed?'HashWorkerError':'QueueFileMismatchError'});
+        assert.equal(h.values.get(h.store.storageKey),before);
+    }
+});
+test('cancellation after a Worker result cannot commit a checklist',async()=>{
+    const h=await rig({nativeBlob:true}),controller=new AbortController();let seen;
+    const store=h.make({fileHasher:{async hash(value,{signal}){seen=signal;controller.abort();return{bytes:value.size,sha256:checksum('new'),backend:'worker'};}}});
+    await assert.rejects(store.save([file('new')],{optIn:true,expectedRevision:null,signal:controller.signal}),{name:'AbortError'});
+    assert.equal(seen,controller.signal);assert.equal(h.values.size,0);
+});
+test('a late Worker hash result cannot overwrite a checklist changed by another tab',async()=>{
+    const h=await rig({nativeBlob:true}),started=deferred(),release=deferred(),first=await h.store.save([file('old')],{optIn:true,expectedRevision:null});
+    const store=h.make({fileHasher:{async hash(value){started.resolve();await release.promise;return{bytes:value.size,sha256:checksum('late'),backend:'worker'};}}});
+    const saving=store.save([file('late')],{optIn:true,expectedRevision:first.revision});await started.promise;
+    const newer=await h.store.save([file('newer')],{optIn:true,expectedRevision:first.revision});release.resolve();
+    await assert.rejects(saving,{name:'QueueConflictError'});assert.equal((await h.store.load()).revision,newer.revision);
+});
+test('Worker progress remains bounded to the current file and total checklist',async()=>{
+    const h=await rig({nativeBlob:true}),seen=[];let clock=h.now();
+    const store=h.make({now:()=>clock+=101,fileHasher:{async hash(value,{onProgress}){
+        for(const bytes of [-1,Infinity,NaN,value.size+1,1,value.size])onProgress({bytes,total:value.size});
+        return{bytes:value.size,sha256:checksum('abc'),backend:'worker'};
+    }}});
+    await store.save([file('abc','a'),file('abc','b')],{optIn:true,expectedRevision:null,onProgress:value=>seen.push(value)});
+    assert.equal(seen.at(-1).hashedBytes,6);assert.ok(seen.every(value=>Number.isSafeInteger(value.hashedBytes)&&value.hashedBytes>=0&&value.hashedBytes<=6));
+    assert.ok(seen.every((value,index)=>index===0||value.hashedBytes>=seen[index-1].hashedBytes));
 });

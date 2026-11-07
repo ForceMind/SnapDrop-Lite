@@ -283,6 +283,11 @@ class SendQueueUI {
             QueueLimitError: '清单最多 100 个文件，记录总量须小于 128 KiB',
             QuotaExceededError: '浏览器存储空间不足，未保存待发清单',
             SecurityError: '浏览器不允许本机存储，请使用普通文件选择发送',
+            HashTimeoutError: '校验耗时过长，请重试，或使用普通文件选择发送',
+            HashBusyError: '正在校验其它文件，请稍后重试',
+            HashWorkerError: '本机文件校验已中断，请重试；没有发送文件',
+            HashProtocolError: '本机文件校验已中断，请重试；没有发送文件',
+            NotReadableError: '无法读取原文件，可能已移动或被修改，请重新选择',
             AbortError: '已停止校验，没有自动发送文件'
         };
         if (error.name === 'QueueCorruptError') { this.invalid = true; this.snapshot = null; }
@@ -304,8 +309,14 @@ class SendQueueUI {
         const sequence = ++this.sequence;
         this.busy = true; this.boundFiles = null; this.bindings = new WeakMap();
         this.hashController = new AbortController();
-        const options = { signal: this.hashController.signal, onProgress: () => {
-            if (sequence === this.sequence) this.render('正在分块校验原文件，请稍候；尚未发送');
+        const options = { signal: this.hashController.signal, onProgress: info => {
+            if (sequence !== this.sequence) return;
+            const valid = Number.isSafeInteger(info?.hashedBytes) && Number.isSafeInteger(info?.totalBytes)
+                && info.hashedBytes >= 0 && info.hashedBytes <= info.totalBytes && Number.isSafeInteger(info.fileIndex)
+                && Number.isSafeInteger(info.fileCount) && info.fileIndex >= 0 && info.fileIndex < info.fileCount;
+            const percent = valid ? (info.totalBytes ? Math.floor(info.hashedBytes * 100 / info.totalBytes) : 100) : null;
+            this.render(percent === null ? '正在分块校验原文件，请稍候；尚未发送'
+                : `正在核验原文件 · ${percent}% · ${info.fileIndex + 1}/${info.fileCount} 个 · 尚未发送`);
         } };
         this.render('正在分块校验原文件，请稍候；尚未发送');
         try {

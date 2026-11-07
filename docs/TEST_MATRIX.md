@@ -1,6 +1,14 @@
 # 测试矩阵与证据范围
 
-## 当前完整验收（CI52）
+## 当前工作树新增验证（2026-11-07，尚待本轮 CI）
+
+- Node 223 项本地通过：新增哈希 Worker/清单接缝、浏览器进程采样、soak 参数及真实短连接回归；构建与资源引用检查通过。
+- `tests/file-hash-browser.cjs` 将对 Chromium/Firefox/Linux WebKit 使用真实原生 Worker，独立 SHA-256、取消/故障隔离、明确无 Worker 回退以及有界哈希响应性观察。必须看本轮 head 的实际 CI，不能沿用下方 CI52。
+- `tests/slow-reader.cjs` 两次本地真实 socket 测试触发服务端 128 KiB 背压；默认 TCP 缓冲未达阈值，受约束测试 socket 达 177429B，独立房间正常。不是永久不读取客户端回收证据。
+- `scripts/server-soak.cjs` 1 小时/64连接真实墙钟实测正在运行，真实两分钟 grace 短集成已通过；长测结束前不记通过。详见 [SERVER_SOAK](SERVER_SOAK.md)。
+- `tests/browser-resources.cjs` 新增 owning-browser CDP 进程的 Linux RSS/PSS/CPU 差额；当前只有夹具边界通过，真实浏览器数据待 CI。缺测/partial 与重叠范围必须随原始报告保留。
+
+## 上一完整验收（CI52）
 
 [a1dfef9 / revision 6a2caec304bbd413 全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42349478384)：196项、三引擎发送清单且errors为空、1GiB/100MiB、六组合双向独立哈希、恢复/OPFS、UI与HTTPS/WSS。实际范围/原始JSON见 [TEST_REPORT_20261107](TEST_REPORT_20261107.md)。所有实机/公网/生产/长时验证仍开放；下面较早的数量和“待下轮”均为历史过程。
 

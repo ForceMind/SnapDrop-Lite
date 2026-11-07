@@ -2,7 +2,13 @@
 
 记录：2026-11-07 UTC。版本 **0.3.0-dev.1 未发布开发候选**，开发分支 `feat/direct-first-workspace-20261019` / [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 当前结论
+## 本轮进行中（2026-11-07 00:19 PST）
+
+基线开发头 87953ed 的 CI53 全套通过；以下新改动尚未推送/未取得本轮浏览器 CI：发送清单专用分块哈希 Worker（含取消/错误/本机进度）、23项公开输入构建、owning-browser 进程 RSS/PSS/CPU 观察、真实慢读者 WS 保护及墙钟 soak 工具。本地 Node 223 项与构建通过。实时传输/断点前缀哈希仍在主线程。
+
+1 小时/64连接实测已于08:12:05 UTC启动，结束及真实 grace 回收前不判通过。短 CLI 已真实等待124秒、原生 sweep 将连接/session/房间全部清零。原始数据和源码哈希见 [SERVER_SOAK](SERVER_SOAK.md)。新代码必须取得自身 CI，下面保留上一完整候选证据而不冒充新结果。
+
+## 上一完整候选结论
 
 [CI52全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42349478384)，运行代码 `a1dfef939cb2af1ab64fc987a84a9a18b996f685`、revision `6a2caec304bbd413`。196/196 Node、完整依赖审计、构建/PWA、实际临时Nginx HTTPS/WSS、三引擎发送清单、Chromium1GiB/Firefox100MiB、OPFS/恢复、WebKit UI及六组合双向文件/独立SHA-256均通过。
 

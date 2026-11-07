@@ -16,6 +16,9 @@ await rm('dist', { recursive: true, force: true });
 await writePublicClient(publicClient, path.join(root, 'dist'));
 // Use the validated entry bytes, rather than reopening a changed source path.
 await build({ stdin: { contents: publicClient.get('client/scripts/vendor.js').toString('utf8'), resolveDir: path.join(root, 'client/scripts'), sourcefile: 'vendor.js' }, outfile: 'dist/scripts/vendor.js', bundle: true, format: 'iife', minify: true, legalComments: 'eof', target: ['es2022'] });
+// The dedicated hasher uses the same validated source snapshot and locked
+// Noble implementation; no runtime module/CDN fetch is required by the worker.
+await build({ stdin: { contents: publicClient.get('client/scripts/file-hash-worker.js').toString('utf8'), resolveDir: path.join(root, 'client/scripts'), sourcefile: 'file-hash-worker.js' }, outfile: 'dist/scripts/file-hash-worker.js', bundle: true, format: 'iife', minify: true, legalComments: 'eof', target: ['es2022'] });
 let notices = '';
 for (const [label, file] of [['ws', 'server/node_modules/ws/LICENSE'], ['@noble/hashes', 'node_modules/@noble/hashes/LICENSE'], ['qrcode', 'node_modules/qrcode/license'], ['dijkstrajs', 'node_modules/dijkstrajs/LICENSE.md'], ['pngjs', 'node_modules/pngjs/LICENSE']]) {
     notices += label + '\n' + await readFile(file, 'utf8') + '\n\n';
