@@ -1,27 +1,31 @@
 'use strict';
-// Actual UI, two isolated Chromium contexts and RTCDataChannel. Same host,
+// Actual UI, two isolated browser contexts and RTCDataChannel. Same host,
 // STUN disabled: this is not public NAT, Safari hardware or picker evidence.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
-const { chromium } = require('playwright');
+const { chromium, firefox, webkit } = require('playwright');
 const { startDev } = require('../scripts/dev.cjs');
 const { installRtcTrace, rtcEndpointSnapshot } = require('./rtc-diagnostics.cjs');
 
 const KEY = 'zeydrop-send-queue-v1';
 const errorType = error => ['TimeoutError','AssertionError','TypeError','RangeError','QuotaExceededError'].includes(error?.name) ? error.name : 'Error';
 async function main() {
-    const report = { schema: 1, engine: 'chromium', network: 'same-host, two contexts, STUN disabled',
+    const engineName = process.env.BROWSER_TYPE || 'chromium';
+    if (!['chromium','firefox','webkit'].includes(engineName)) throw new TypeError('Unknown browser engine');
+    const engine = { chromium, firefox, webkit }[engineName];
+    const report = { schema: 1, engine: engineName, network: 'same-host, two contexts, STUN disabled',
         scope: 'opt-in metadata queue, full-hash reselect and manually authorized file transfer; not WAN or real hardware',
-        checks: [], errors: [], passed: false };
+        queueFlowExecuted: false, checks: [], errors: [], passed: false };
     const contexts = [], pages = [];
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'zeydrop-send-queue-'));
     let server, browser;
     try {
+        await fs.mkdir('test-results', { recursive: true });
         server = await startDev(0);
-        browser = await chromium.launch({ headless: true });
+        browser = await engine.launch({ headless: true });
         report.browserVersion = browser.version();
         const bodies = [
             Buffer.concat([Buffer.from('ZEYDROP_QUEUE_BODY_ONE_'), crypto.randomBytes(32771)]),
@@ -91,8 +95,10 @@ async function main() {
             assert.ok(codes[0]); assert.equal(codes[0], codes[1], 'both endpoints must display the same DTLS-bound code');
             for (const page of pages) {
                 assert.equal(await page.evaluate(() => [...zeydrop.peers.peers.values()][0]._verified), false);
+                assert.equal(await page.locator('x-peer input[type=file]').isDisabled(), true, 'ordinary file selection also requires safety-code verification');
                 await page.locator('.verify-peer').click();
                 await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._verified === true);
+                await page.waitForFunction(() => !document.querySelector('x-peer input[type=file]').disabled);
                 const route = await page.evaluate(() => [...zeydrop.peers.peers.values()][0]._path);
                 assert.equal(route.direct, true); assert.equal(route.status, 'selected');
                 assert.equal(route.protocol, 'udp'); assert.notEqual(route.localType, 'relay'); assert.notEqual(route.remoteType, 'relay');
@@ -100,17 +106,62 @@ async function main() {
         }
         await sender.goto(server.origin);
         await sender.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected');
-        await openQueue();
-        assert.equal(await sender.locator('#rememberSendQueue').isChecked(), false);
-        assert.equal(await sender.locator('#saveSendQueue').isDisabled(), true, 'metadata persistence must require explicit opt-in');
-        assert.equal(await queue(), null);
+        await sender.waitForFunction(() => !!window.ZeydropSendQueue);
+        report.capabilities = await sender.evaluate(() => ({ webLocks: typeof navigator.locks?.request === 'function',
+            storeSupported: window.ZeydropSendQueue?.supported === true, hash: typeof window.ZeydropHash?.create === 'function',
+            secureUuid: typeof crypto.randomUUID === 'function', textEncoder: typeof TextEncoder === 'function' }));
+        assert.equal(report.capabilities.hash, true); assert.equal(report.capabilities.secureUuid, true); assert.equal(report.capabilities.textEncoder, true);
+        if (report.capabilities.webLocks) {
+            assert.equal(report.capabilities.storeSupported, true, 'available prerequisites must enable the metadata queue');
+            report.queueCapability = 'supported';
+            await openQueue();
+            assert.equal(await sender.locator('#rememberSendQueue').isChecked(), false);
+            assert.equal(await sender.locator('#saveSendQueue').isDisabled(), true, 'metadata persistence must require explicit opt-in');
+            assert.equal(await queue(), null);
+        } else {
+            assert.equal(report.capabilities.storeSupported, false);
+            assert.equal(await sender.locator('#sendQueueSection').isHidden(), true);
+            report.queueCapability = 'unsupported'; report.unsupportedReason = 'web-locks-unavailable';
+        }
         await sender.locator('#createRoomBtn').click();
         await sender.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
         const firstInvitation = await sender.locator('#inviteUrl').inputValue();
+        report.phase = 'initial-pair-verification';
         await receiver.goto(firstInvitation); await verifyPair();
+        if (report.queueCapability === 'unsupported') {
+            // A missing capability is not a passed queue test. Verify that the
+            // feature stays hidden while ordinary, authorized P2P still works.
+            assert.equal(await receiver.locator('#sendQueueSection').isHidden(), true);
+            await sender.locator('x-peer input[type=file]').setInputFiles(files[0]);
+            await receiver.locator('#fileOfferDialog[show]').waitFor();
+            assert.equal(await receiver.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
+            await receiver.locator('#acceptFileOffer').click();
+            await receiver.locator('#receiveDialog[show]').waitFor();
+            await sender.waitForFunction(name => window.__queueTransfers[name]?.phase === 'complete', names[0]);
+            const downloaded = receiver.waitForEvent('download'); await receiver.locator('#download').click();
+            const disk = await fs.readFile(await (await downloaded).path());
+            assert.equal(disk.length, bodies[0].length);
+            assert.equal(crypto.createHash('sha256').update(disk).digest('hex'), hashes[0]);
+            assert.equal(await sender.evaluate(key => localStorage.getItem(key), KEY), null);
+            assert.equal(traffic.fileDataObserved, false); assert.deepEqual(report.errors, []);
+            report.checks.push('Web Locks unavailable: persistent queue hidden on both endpoints; queue flow not executed');
+            report.checks.push('ordinary file selection still requires real selected UDP path, matching safety codes, receiver acceptance and independent downloaded SHA-256');
+            report.normalFileTransferPassed = true; report.signaling = traffic; report.transferredBytes = bodies[0].length; report.passed = true;
+            console.log('Send-queue browser evidence:', JSON.stringify(report)); return;
+        }
+        report.queueFlowExecuted = true;
+        report.phase = 'first-save-user-consent';
         const originalSession = await sender.evaluate(() => zeydrop.server._peerId);
         await sender.locator('#rememberSendQueue').check();
+        const saveStarted = Date.now();
         await choose('#saveSendQueue'); await queueCount(2);
+        report.phase = 'first-save-metadata-validation';
+        await sender.waitForFunction(() => !zeydrop.sendQueue.busy);
+        report.hashTiming = { fileCount: files.length, bytesPerPass: bodies.reduce((sum, bytes) => sum + bytes.length, 0),
+            saveWallMs: Date.now() - saveStarted,
+            configuredChunkBytes: await sender.evaluate(() => ZeydropSendQueueStore.HASH_CHUNK),
+            scope: 'small synthetic files on one CI host; wall time includes file chooser/UI/IPC; not CPU, RSS, mobile hardware or WAN performance' };
+        assert.equal(report.hashTiming.configuredChunkBytes, 256 * 1024);
         const saved = await queue();
         assert.deepEqual(saved.files.map(file => file.name), names);
         assert.deepEqual(saved.files.map(file => file.sha256), hashes, 'persisted hashes must match independent Node SHA-256');
@@ -127,6 +178,20 @@ async function main() {
         assert.deepEqual((await queue()).files, saved.files);
         assert.equal(await sender.locator('#sendStoredQueue').isDisabled(), true, 'refresh must not restore File references or authorization');
         assert.equal(await sender.locator('#rememberSendQueue').isChecked(), false, 'the opt-in control is not a stored send permission');
+        await sender.setViewportSize({ width: 390, height: 844 });
+        await sender.locator('#sendQueueSection').scrollIntoViewIfNeeded();
+        report.mobileLayout = await sender.evaluate(() => {
+            const queue = document.querySelector('#sendQueueSection');
+            return { viewportWidth: innerWidth, pageOverflow: document.documentElement.scrollWidth > innerWidth,
+                queueOverflow: queue.scrollWidth > queue.clientWidth };
+        });
+        assert.equal(report.mobileLayout.pageOverflow, false); assert.equal(report.mobileLayout.queueOverflow, false);
+        report.mobileLayout.screenshot = 'send-queue-mobile-' + engineName + '.png';
+        // Component-only capture avoids invitation URLs, QR codes and safety codes.
+        await sender.locator('#sendQueueSection').screenshot({ path: 'test-results/' + report.mobileLayout.screenshot });
+        if (engineName === 'chromium') await fs.copyFile('test-results/' + report.mobileLayout.screenshot, 'test-results/send-queue-mobile.png');
+        await sender.setViewportSize({ width: 1440, height: 1080 });
+        report.checks.push('expanded stored queue has no horizontal page/component overflow at a 390px viewport; screenshot is not mobile hardware evidence');
         await receiver.locator('#leaveRoomBtn').click();
         await receiver.waitForFunction(() => zeydrop.server._desiredRoomId === null && zeydrop.peers.peers.size === 0);
         await sender.locator('#createRoomBtn').click();
@@ -152,8 +217,12 @@ async function main() {
         report.checks.push('same-metadata different-content original is rejected by full SHA-256 without binding or sending any file');
         // Selection order can differ from the original manifest. Only the
         // content-verified File references may be reordered into that manifest.
-        await writeFile(0, bodies[0]); await choose('#reselectSendQueue', [...files].reverse());
+        await writeFile(0, bodies[0]); const reselectStarted = Date.now();
+        await choose('#reselectSendQueue', [...files].reverse());
         await sender.waitForFunction(() => zeydrop.sendQueue?.boundFiles?.length === 2 && !zeydrop.sendQueue.busy);
+        report.hashTiming.reselectWallMs = Date.now() - reselectStarted;
+        report.hashTiming.totalHashBytes = report.hashTiming.bytesPerPass * 2;
+        report.hashTiming.countedOperations = 'successful save and correct reselect only; deliberate wrong-file and quota passes excluded';
         assert.equal(await sender.locator('#sendStoredQueue').isDisabled(), true,
             'even correctly rebound original files cannot send before fresh identity verification');
         assert.equal(await receiver.evaluate(() => window.__queueOffers), 0, 'successful reselect is not permission to send');
@@ -258,12 +327,18 @@ async function main() {
         report.passed = true;
     } catch (error) {
         report.failure = errorType(error); report.lastCompletedCase = report.checks.at(-1) || 'startup';
-        report.debug = await Promise.all(pages.map(page => page.evaluate(rtcEndpointSnapshot, 'chromium').catch(() => ({ unavailable: true }))));
+        // Source coordinates and identifier-only error hints locate a failing
+        // assertion/API without logging raw URLs, tokens, paths or file names.
+        const location = String(error?.stack || '').match(/send-queue-browser\.cjs:(\d+):(\d+)/);
+        if (location) report.failureSource = { line: Number(location[1]), column: Number(location[2]) };
+        const hint = String(error?.message || '').match(/(?:reading '([A-Za-z_$][\w$]*)'|\b([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*) is not a function)/);
+        if (hint) report.failureIdentifier = (hint[1] || hint[2]).slice(0, 80);
+        report.debug = await Promise.all(pages.map(page => page.evaluate(rtcEndpointSnapshot, engineName).catch(() => ({ unavailable: true }))));
         throw error;
     } finally {
         try {
             await fs.mkdir('test-results', { recursive: true });
-            await fs.writeFile('test-results/send-queue-browser.json', JSON.stringify(report, null, 2) + '\n');
+            await fs.writeFile('test-results/send-queue-browser-' + engineName + '.json', JSON.stringify(report, null, 2) + '\n');
         } finally {
             await Promise.allSettled(contexts.map(context => context.close()));
             await Promise.allSettled([browser?.close(), server?.close(), fs.rm(directory, { recursive: true, force: true })]);

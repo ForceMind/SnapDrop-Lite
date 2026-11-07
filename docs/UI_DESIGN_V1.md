@@ -1,9 +1,11 @@
 # Zeydrop（闪投）UI 设计系统与交互说明
 
+> 本文保留2026-10-19初版设计背景，后续传输/恢复/诊断/本机发送清单已进入真实代码。当前组件及实测范围以 [PROJECT_STATUS](PROJECT_STATUS.md)、[TEST_MATRIX](TEST_MATRIX.md)、[RECOVERY_STORAGE](RECOVERY_STORAGE.md) 为准；初稿状态不代表最新功能完成度。
+
 > 日期：2026-10-19  
 > 状态：V0.1 已实现的 UI/交互草案；非发布验收稿  
 > 工作分支：`feat/direct-first-workspace-20261019`  
-> **品牌：** Zeydrop（闪投），Direct by design.；原地仓库更名仍受登录会话阻碍。
+> **品牌：** Zeydrop（闪投），Direct by design.；原地仓库更名由用户最后手动完成。
 
 ## 1. 产品定位
 
