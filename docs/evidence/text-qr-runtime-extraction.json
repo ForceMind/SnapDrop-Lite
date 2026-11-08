@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "scope": "independent local clean-HEAD archive extraction, dependency reinstall, full Node and Git-free deterministic build; no native-browser/WAN/device/deployment claim",
+  "recordedAt": "2026-11-08T02:50:07.101828+00:00",
+  "sourceCommit": "033d88beffc1c6b390f378dbb22fc86234b3ea90",
+  "revision": "b46de331c87a6628",
+  "version": "0.3.0-dev.1",
+  "savedPackage": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/verified-local-package",
+  "extractedRoot": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b/zeydrop-candidate",
+  "gitMetadataAbsent": true,
+  "nodeVersion": "v24.22.1",
+  "archive": {
+    "sha256": "893a4415569bed6d2a1d3f151d401896a44625d1412994a00665465fa055c800",
+    "bytes": 1044902,
+    "regularFiles": 459,
+    "sourceFiles": 430,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 7013055,
+    "exactManifestMembers": true,
+    "exactCleanCommitSourceWhitelist": true,
+    "exactClientDerivedBuildWhitelist": true,
+    "duplicateMembers": false,
+    "linksOrSpecialFiles": false,
+    "modeSizeShaMatch": true,
+    "sourceBytesAndModesMatchGitCommit": true,
+    "normalizedOwnerMtime": true,
+    "twoPackagesByteIdenticalIncludingManifest": true
+  },
+  "checks": {
+    "sourceBuild": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/source-build.log",
+      "logSha256": "b9d3bbd9ac0f542fbd4c539f3776a423005f63e8e247601e106d007058690be3"
+    },
+    "package1": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/package-1.log",
+      "logSha256": "9419a6ece44950304ce0b53173719a9a194e1567caca1ab296fbed1a9486c9df"
+    },
+    "package2": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/package-2.log",
+      "logSha256": "9419a6ece44950304ce0b53173719a9a194e1567caca1ab296fbed1a9486c9df"
+    },
+    "rootNpmCiIgnoreScripts": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/npm-root.log",
+      "logSha256": "581b926f6b375e77ea271352eafd83f583de86a805a299c7317a8b32b4108a8c"
+    },
+    "serverNpmCiIgnoreScripts": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/npm-server.log",
+      "logSha256": "99a4141c9f4408ff012d3c21f36cdeaf90dfc3fe9f121907a0d112565551cea2"
+    },
+    "nodeTestCommand": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/node-tests.log",
+      "logSha256": "eb8d1d85a5ea4abfc3f51adf8b245ced772dc4ef4e3e85d0115ce6ec6afc67f3"
+    },
+    "nodeTests": {
+      "passed": 427,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "gitFreeBuild": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/git-free-build.log",
+      "logSha256": "b9d3bbd9ac0f542fbd4c539f3776a423005f63e8e247601e106d007058690be3"
+    },
+    "repeatBuildAndLocalReferences": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/repeat-build.log",
+      "logSha256": "1ce50cd69a43581acd5bfb18a32021c7357ad80e9dd865383e28105b9f8bbafb"
+    },
+    "shellSyntax": {
+      "exitCode": 0,
+      "log": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/shell-syntax.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "allRebuiltDistFilesByteMatchArchive": {
+      "count": 29,
+      "passed": true
+    },
+    "allSourceAndBuildBytesModesStillMatchManifest": {
+      "count": 459,
+      "passed": true
+    }
+  },
+  "passed": true,
+  "distDigestMapSha256": "6842a1941f2d16849f751a8164f57064bdcf950ddaa7c2ac32ce5f4d874aefab",
+  "completedAt": "2026-11-08T02:50:22.429955+00:00"
+}

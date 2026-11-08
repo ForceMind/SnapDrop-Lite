@@ -1,0 +1,462 @@
+{
+  "schema": 1,
+  "recordedAtUTC": "2026-11-08",
+  "runtimeCommit": "033d88beffc1c6b390f378dbb22fc86234b3ea90",
+  "revision": "b46de331c87a6628",
+  "run": {
+    "id": 42440165523,
+    "name": "Zeydrop verification",
+    "status": "completed",
+    "conclusion": "success",
+    "run_number": 70,
+    "jobs_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/runs/42440165523/jobs",
+    "logs_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/runs/42440165523/logs",
+    "workflow_id": 389092368
+  },
+  "jobs": [
+    {
+      "id": 128607487259,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 42440165523,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm ci --ignore-scripts && npm --prefix server ci --ignore-scripts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm audit && npm --prefix server audit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run node scripts/server-load.cjs --connections 64 --signals 20 --duration-ms 1000 --cycles 2 --out test-results/server-load.json",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run node tests/slow-reader.cjs --permanent --out test-results/slow-reader.json",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Run bash -n build.sh deploy.sh scripts/rollback.sh",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Run npm run build && node scripts/check-build.mjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Run sudo --preserve-env=CI,GITHUB_ACTIONS,RUNNER_OS,RUNNER_ENVIRONMENT \"$(command -v node)\" scripts/configure-ci-apt.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Run sudo apt-get update && sudo apt-get install -y nginx",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Run bash scripts/check-nginx.sh",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Run node tests/https-proxy.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Run node scripts/package-candidate.mjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Run actions/cache/restore@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Run npx playwright install --with-deps chromium firefox webkit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Run actions/cache/save@v6",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Run node tests/pwa-workers-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20
+        },
+        {
+          "name": "Run node tests/pwa-upgrade-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21
+        },
+        {
+          "name": "Run node tests/ui-contrast-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Run node tests/webrtc-primitives.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Run sudo apt-get install -y avahi-daemon libnss-mdns avahi-utils dbus libglib2.0-bin libzbar0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Run node tests/text-qr-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Run BROWSER_TYPE=firefox node tests/text-qr-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27
+        },
+        {
+          "name": "Run BROWSER_TYPE=webkit node tests/text-qr-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        },
+        {
+          "name": "Run node tests/interoperability.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Run node tests/recovery-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Run node tests/recovery-start-race-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Run node tests/recovery-retirement-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33
+        },
+        {
+          "name": "Run node tests/persistent-flow-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 34
+        },
+        {
+          "name": "Run node tests/file-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35
+        },
+        {
+          "name": "Run BROWSER_TYPE=firefox node tests/file-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36
+        },
+        {
+          "name": "Run BROWSER_TYPE=webkit node tests/file-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37
+        },
+        {
+          "name": "Run node tests/stream-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38
+        },
+        {
+          "name": "Run BROWSER_TYPE=firefox node tests/stream-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39
+        },
+        {
+          "name": "Run BROWSER_TYPE=webkit node tests/stream-hash-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 40
+        },
+        {
+          "name": "Run node tests/stream-hash-recovery-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 41
+        },
+        {
+          "name": "Run node tests/browser-crash-recovery.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 42
+        },
+        {
+          "name": "Run node tests/send-queue-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 43
+        },
+        {
+          "name": "Run BROWSER_TYPE=firefox node tests/send-queue-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44
+        },
+        {
+          "name": "Run BROWSER_TYPE=webkit node tests/send-queue-browser.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46
+        },
+        {
+          "name": "Run LARGE_FILE_TEST=1 npm run test:browser",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47
+        },
+        {
+          "name": "Run BROWSER_TYPE=firefox npm run test:browser",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 48
+        },
+        {
+          "name": "Run BROWSER_TYPE=webkit npm run test:smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 49
+        },
+        {
+          "name": "Run RTC_PROBE_ENVIRONMENT=linux-avahi-nss BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 50
+        },
+        {
+          "name": "Run RTC_PROBE_ENVIRONMENT=linux-avahi-nss node tests/webrtc-primitives.cjs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 51
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 52
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 103
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 104
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 105
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 13601870660,
+      "name": "zeydrop-test-evidence",
+      "size_in_bytes": 10551196,
+      "url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601870660",
+      "archive_download_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601870660/zip",
+      "expired": false,
+      "created_at": "2026-11-08T02:58:12Z",
+      "expires_at": "2026-11-15T02:58:10Z",
+      "updated_at": "2026-11-08T02:58:12Z",
+      "digest": "sha256:0173efcc8730bce7c02630cabe44b7aec1d25a690b804eb438525238b9cbbc52",
+      "workflow_run": {
+        "id": 42440165523,
+        "repository_id": 1255852392,
+        "head_repository_id": 1255852392,
+        "head_branch": "feat/direct-first-workspace-20261019",
+        "head_sha": "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+      }
+    },
+    {
+      "id": 13601501855,
+      "name": "zeydrop-unreleased-source-candidate",
+      "size_in_bytes": 1064753,
+      "url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601501855",
+      "archive_download_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601501855/zip",
+      "expired": false,
+      "created_at": "2026-11-08T02:51:04Z",
+      "expires_at": "2026-11-15T02:51:03Z",
+      "updated_at": "2026-11-08T02:51:04Z",
+      "digest": "sha256:15530918484cdd1cead8958031bc3c7db1a2284aabd5d6384657210028506b77",
+      "workflow_run": {
+        "id": 42440165523,
+        "repository_id": 1255852392,
+        "head_repository_id": 1255852392,
+        "head_branch": "feat/direct-first-workspace-20261019",
+        "head_sha": "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+      }
+    },
+    {
+      "id": 13601432003,
+      "name": "zeydrop-local-ui-evidence",
+      "size_in_bytes": 36931,
+      "url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601432003",
+      "archive_download_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601432003/zip",
+      "expired": false,
+      "created_at": "2026-11-08T02:52:12Z",
+      "expires_at": "2026-11-15T02:52:11Z",
+      "updated_at": "2026-11-08T02:52:12Z",
+      "digest": "sha256:e579132af3f402530e8d0d72fa52aaea8f926e772ac040b7c0d2650d662b361c",
+      "workflow_run": {
+        "id": 42440165523,
+        "repository_id": 1255852392,
+        "head_repository_id": 1255852392,
+        "head_branch": "feat/direct-first-workspace-20261019",
+        "head_sha": "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+      }
+    },
+    {
+      "id": 13601291797,
+      "name": "zeydrop-send-queue-evidence",
+      "size_in_bytes": 187675,
+      "url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601291797",
+      "archive_download_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601291797/zip",
+      "expired": false,
+      "created_at": "2026-11-08T02:55:39Z",
+      "expires_at": "2026-11-15T02:55:38Z",
+      "updated_at": "2026-11-08T02:55:39Z",
+      "digest": "sha256:7e579eb6d9b198901c051ab97c0746c54311743f529b758e18a00b7024c4c5ee",
+      "workflow_run": {
+        "id": 42440165523,
+        "repository_id": 1255852392,
+        "head_repository_id": 1255852392,
+        "head_branch": "feat/direct-first-workspace-20261019",
+        "head_sha": "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+      }
+    },
+    {
+      "id": 13601241660,
+      "name": "zeydrop-text-qr-evidence",
+      "size_in_bytes": 8221467,
+      "url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601241660",
+      "archive_download_url": "https://api.github.com/repos/ForceMind/SnapDrop-Lite/actions/artifacts/13601241660/zip",
+      "expired": false,
+      "created_at": "2026-11-08T02:54:36Z",
+      "expires_at": "2026-11-15T02:54:34Z",
+      "updated_at": "2026-11-08T02:54:36Z",
+      "digest": "sha256:98e1e1e5d35bf8a76e7b47a9f2e6b9b2bb84297e9789f25f375587e9355d7ea1",
+      "workflow_run": {
+        "id": 42440165523,
+        "repository_id": 1255852392,
+        "head_repository_id": 1255852392,
+        "head_branch": "feat/direct-first-workspace-20261019",
+        "head_sha": "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+      }
+    }
+  ],
+  "nodeTests": {
+    "tests": 427,
+    "passed": 427,
+    "failed": 0,
+    "skipped": 0
+  },
+  "scope": "Same-host Linux browser evidence; STUN disabled in transfer tests. Not WAN, Safari/mobile hardware, physical offline or deployment acceptance."
+}

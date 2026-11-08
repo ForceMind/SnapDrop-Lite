@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-08T02:53:43.956952+00:00",
+  "scope": "Downloaded CI70 source-candidate package verification only: safe ZIP members, normalized tar/manifest, exact merge Git source whitelist, and byte identity to independently reinstalled/full-Node-tested/Git-free rebuilt runtime archive; no CI completion, native-browser, WAN, hardware or production-deployment claim",
+  "passed": true,
+  "ciRunId": 42440165523,
+  "ciArtifactId": 13601501855,
+  "ciRunCompletionEvaluated": false,
+  "ciBrowserResultsEvaluated": false,
+  "sourceRuntimeCommit": "033d88beffc1c6b390f378dbb22fc86234b3ea90",
+  "artifactManifestCommit": "7c969df64ce4d9e904a86d0bd14e6d84690c7439",
+  "gitMergeParents": [
+    "2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "033d88beffc1c6b390f378dbb22fc86234b3ea90"
+  ],
+  "gitTree": "84d9855e8dd9a85d429e2e78d79d98b0588d8bca",
+  "mergeTreeEqualsRuntimeTree": true,
+  "revision": "b46de331c87a6628",
+  "version": "0.3.0-dev.1",
+  "downloadedZip": {
+    "path": "/workspace/scratch/322a85615223/zeydrop-0.3.0-dev.1-033d88b.zip",
+    "bytes": 1064753,
+    "sha256": "15530918484cdd1cead8958031bc3c7db1a2284aabd5d6384657210028506b77",
+    "exactThreeRegularMembers": true,
+    "noDuplicateUnsafeEncryptedLinkSpecialOrDirectoryMembers": true,
+    "normalizedMode644": true,
+    "members": [
+      {
+        "path": "candidate-manifest.json",
+        "bytes": 100809,
+        "compressedBytes": 22023,
+        "mode": "644",
+        "sha256": "ef76d0c07ef460a903eabeb6e3785b5325a357dbb88f80ac6ea6a81dd4f2d526",
+        "crcVerifiedByZipReader": true
+      },
+      {
+        "path": "zeydrop-candidate.tar.gz.sha256",
+        "bytes": 91,
+        "compressedBytes": 80,
+        "mode": "644",
+        "sha256": "bb80faed59e68d0167273c2d2d20b255965bdebcd65cf462164da50c8afe1b59",
+        "crcVerifiedByZipReader": true
+      },
+      {
+        "path": "zeydrop-candidate.tar.gz",
+        "bytes": 1044902,
+        "compressedBytes": 1042196,
+        "mode": "644",
+        "sha256": "893a4415569bed6d2a1d3f151d401896a44625d1412994a00665465fa055c800",
+        "crcVerifiedByZipReader": true
+      }
+    ]
+  },
+  "archive": {
+    "bytes": 1044902,
+    "sha256": "893a4415569bed6d2a1d3f151d401896a44625d1412994a00665465fa055c800",
+    "regularFiles": 459,
+    "sourceFiles": 430,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 7013055,
+    "exactManifestMembers": true,
+    "exactMergeGitSourceWhitelistBytesAndModes": true,
+    "exactClientDerivedBuildWhitelist": true,
+    "noDuplicateUnsafeLinkOrSpecialMembers": true,
+    "modeSizeShaMatch": true,
+    "normalizedOwnerMtime": true
+  },
+  "independentRuntimeEquivalence": {
+    "referenceReport": "/workspace/scratch/322a85615223/text-qr-runtime-extraction.json",
+    "referenceReportSha256": "31da96dbbb149dd63790f97009b4618a72e97c67c33d70ea8eba4ac3fd5f8e9d",
+    "referenceSavedPackage": "/workspace/scratch/322a85615223/verify-text-qr-runtime-033d88b-logs/verified-local-package",
+    "fullArchiveByteIdentical": true,
+    "all459FilePathsBytesAndModesIdentical": true,
+    "all29BuildFilesByteIdentical": true,
+    "manifestOnlyDifferentField": "commit",
+    "independentNodeTests": 427,
+    "independentNodeFailed": 0,
+    "independentNodeSkipped": 0,
+    "repeatedInstallOrTests": false,
+    "reason": "The complete tar is byte-for-byte identical to the independent runtime archive; manifest differs only by the documented CI synthetic merge commit with identical Git tree."
+  }
+}

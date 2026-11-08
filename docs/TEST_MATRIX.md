@@ -83,7 +83,7 @@
 
 ## 历史失败与可追溯性
 
-本轮文本/本地QR：新增8项Node文本边界回归，本地全套427/427通过；原生三引擎文字直传、二维码ZBar独立解码、离线/容量/异步旧结果/手机布局和HTTP/WSS正文观察将在新CI执行，状态暂为待验。见TEST_REPORT_20261107_TEXT_QR.md。普通控制保持8192，只有精确text帧有界支持JSON转义扩展；失败不截断草稿，不把发送入队当对端已读。
+本轮文本/本地QR：协议8项+工具9项新增回归，全套427/427，CI70完整成功。Chromium/Firefox/Linux WebKit三引擎均实际通过文字直传、原生画布/下载PNG的ZBar独立解码、已加载页HTTP离线转换、800字节边界、旧异步/复制/单模态、320/390px布局、真实文件SHA及HTTP/WSS正文观察。各7张真实截图，后续仅捕获层将QR改为viewport。35份JSON与workflow在evidence/ci70-*；详见TEST_REPORT_20261107_TEXT_QR.md。普通控制保持8192，仅精确text帧有界扩展；失败不截断草稿，发送入队不是对端已读。
 
 CI49未充分定位的首条E2E异常、CI50/51 Firefox许可/hello/锁回调问题及原始证据保留；后续修复不改安全门槛。CI55唯一PWA timeout，CI56逐字段证明只差navigator提示，后被新提交替代；CI57配置正确的浏览器请求/renderer仿真后原断言全通过。原始失败JSON留在evidence/ci55-*、ci56-*。
 

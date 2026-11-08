@@ -1,14 +1,18 @@
 # Zeydrop 当前工程状态
 
-记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
+记录：2026-11-08 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
-## 2026-11-08 UTC：文本与二维码改动（原生CI待执行）
+## 2026-11-08 UTC：文字、二维码及真实UI复核（CI70全套通过）
 
-已有核码后DataChannel文字直传，新增主页无需配对的本机文本二维码、发送/收到文本转二维码、PNG保存、UTF-8容量反馈、编辑撤旧码及关闭清空。修复合法4096换行/控制字符因JSON转义超出接收限制的问题，非text控制仍维持8192边界；发送失败保留草稿。当前本地427/427通过（新增17项：文本协议8项、工具/模态9项），构建/check-build通过；本轮原生三引擎、独立解码、真实截图和正文通路检查尚待新CI，不沿用旧410项声明覆盖新UI。详见[文本与直传复核](TEST_REPORT_20261107_TEXT_QR.md)。全部正式功能/UI验收仍未完成，下方真实网络、移动Safari和独立主机门槛保留。
+运行代码033d88beffc1c6b390f378dbb22fc86234b3ea90 / revisionb46de331c87a6628，[CI70](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42440165523)已完整成功，job128607487259最终日志与35份原始JSON已读并归档。427/427 Node（0失败/跳过）、两侧audit0、三引擎真实文字/本机QR/独立ZBar像素解码、21张真实深浅/手机宽度/配对截图、1GiB/100MiB、严格六组合/恢复/HTTPS/PWA全套通过。
 
-## 本轮生命周期及部署重试（CI68全套通过）
+新工具无需配对，原文最多800 UTF-8字节，支持PNG，不上传/不自动存储、不截断、不替换坏Unicode；编辑撤旧码、关闭清空。核码后文字仍走DataChannel，最多4096 UTF-16单位，失败保留草稿；非text控制维持8192。手机按钮换行、单活动模态/20条收文队列和复制异步隔离有回归。三引擎各126976B文件完整SHA一致；HTTP请求体0、无WS二进制/正文，WSS仅3640/5140/3683B控制流量。同机/STUN关闭证据不等于真实WAN或服务器总流量0。
 
-当前本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。[CI68](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529)全套通过410项/0失败跳过，最终日志和32份JSON已读并归档。419文件候选独立重装410项/无Git重建/29dist复验通过，实际CI tar字节相同；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪这一精确范围；完整目录只读复用通过，残缺目录仍需人工检查。
+459文件运行候选（430源码/29dist）独立重装427项及无Git重建通过，实际CI tar逐字节一致；报告/原始证据在[文本与直传复核](TEST_REPORT_20261107_TEXT_QR.md)与evidence/ci70-*。本轮后续仅更新文档/归档与截图捕获：QR弹窗改用当前viewport，配对图等真实提示自然消失，不修改应用代码或安全断言；最终CI/包哈希见PR的精确提交。全部产品/设计验收仍未完成，下方真实网络、移动Safari、独立主机及长时门槛保留。
+
+## 前阶段生命周期及部署重试（CI68全套通过）
+
+当时本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。[CI68](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529)全套通过410项/0失败跳过，最终日志和32份JSON已读并归档。419文件候选独立重装410项/无Git重建/29dist复验通过，实际CI tar字节相同；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪这一精确范围；完整目录只读复用通过，残缺目录仍需人工检查。
 
 前阶段c4c7d6e/revisioncc281863f488aa68的[CI67](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42407825773)全套通过400项、原生PWA failed-install/等待/关闭所有旧客户端后升级回滚、原生暂存删除、三引擎Worker/清单、六组合、1GiB/100MiB、HTTPS/WSS/PWA/UI。32份原始JSON已归档，381文件候选独立重装400项/无Git重建并与实际CI tar字节一致。ICE旧回调、暂存三类删除竞态及首次部署current自环修复由这一精确版本认证，本轮后续3cd/CI68亦已独立验收新部署helper。旧Worker不使用新锁，升级须结束传输并关闭全部旧标签。本地socket EPERM未算原生成功。Issue #8已关闭代码/云端复现范围；真实网络/设备/主机门槛仍开放。
 

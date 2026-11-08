@@ -6,10 +6,9 @@
 
 无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
 
-当前为 **0.3.0-dev.1 未发布开发候选**，位于[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。运行代码3cdbeae / revisionc75833843f0b324f完成[CI68全套通过](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529)：**410/410项Node**、两侧audit、三引擎原生Worker/清单、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、OPFS/恢复、临时HTTPS/WSS、PWA离线/升级回滚及UI检查。[本轮报告](docs/TEST_REPORT_20261107_LIFECYCLE.md)与[精确源码候选/校验](docs/PROJECT_STATUS.md)。
+当前为 **0.3.0-dev.1 未发布开发候选**，位于[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。运行代码033d88b / revisionb46de331c87a6628已完成[CI70全套](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42440165523)：**427/427项Node**、两侧audit0、三引擎文字直传/本地二维码独立ZBar解码/真实UI截图、Chromium1GiB/Firefox100MiB、严格六组合双向SHA、恢复、临时HTTPS/WSS与PWA检查。已读实际最终日志及35份原始JSON；[本轮报告](docs/TEST_REPORT_20261107_TEXT_QR.md)。
 
-本轮修复旧ICE异步回调干扰新协商、过期/重叠删除与活动提交之间的断点丢失、首次部署current自环；完整匹配的遗留发布目录可经只读核验后重试，已是当前版本或残缺/不安全目录则保留并拒绝。升级须结束传输并关闭全部旧标签，旧Worker不自动获得新锁。419文件候选已独立重装410项、无Git重建，29项构建字节一致。
-
+新增无需配对的本机文字二维码和发送/收到文字转码，修复长转义文字误断链、手机操作行与弹窗/异步复制竞态。459文件运行候选已独立解压重装427项、无Git重建，29构建字节及实际CI tar一致。后续README/docs及截图捕获方式更新不改此运行代码；每个源码包必须核对自己的manifest和SHA。此前生命周期、暂存删除及部署重试修复继续由完整回归覆盖；升级仍须结束传输并关闭全部旧标签。
 真实Service Worker安装失败会保留旧版，新版等待所有旧客户端退出后才激活；A→B→A的三个阶段均核验缓存字节、三个Worker离线启动和本机检查点保留，历史文件没有自动绑定。整Chromium进程强杀及重新手动授权后的完整SHA也通过。它们是同机受控浏览器证据，不保证真实断电、磁盘故障、移动/已安装PWA或正式RC。实时/恢复前缀SHA仍在有界本机Worker完成，错误不静默回退。
 
 此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。

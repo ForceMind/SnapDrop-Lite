@@ -73,8 +73,17 @@ async function main() {
         const [a,b] = pages;
         const screenshot = async (page, name, scheme, viewport) => {
             await page.emulateMedia({ colorScheme: scheme }); await page.setViewportSize(viewport); await page.evaluate(() => document.fonts.ready);
+            const verifiedPair = name.startsWith('verified-pair-');
+            if (verifiedPair) await page.waitForFunction(() => {
+                const toast = document.getElementById('toast');
+                return !toast || (!toast.hasAttribute('show') && Number(getComputedStyle(toast).opacity) === 0);
+            }, null, { timeout: 7000 }); // Observe its own timer/CSS; never hide or alter the toast.
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); await layout(page);
-            const path = 'test-results/text-qr-' + engine + '-' + name + '.png'; await page.screenshot({ path, fullPage: true }); report.screenshots.push(path);
+            // A fixed QR overlay covers this viewport. Full-page stitching can
+            // append offscreen background that was never part of the screen.
+            const fullPage = !name.startsWith('qr-');
+            const path = 'test-results/text-qr-' + engine + '-' + name + '.png'; await page.screenshot({ path, fullPage }); report.screenshots.push(path);
+            (report.screenshotModes ||= {})[name] = { fullPage, viewport, ...(verifiedPair ? { toastHiddenNaturally: true } : {}) };
         };
         const qrBytes = async page => Buffer.from((await page.locator('#textQR').evaluate(canvas => canvas.toDataURL('image/png'))).split(',')[1], 'base64');
         const generate = async (page, text) => {

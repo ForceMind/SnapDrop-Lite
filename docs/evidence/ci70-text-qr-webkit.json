@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "engine": "webkit",
+  "phase": "complete",
+  "cases": [
+    "loaded page generates/independently decodes native QR preview and downloaded PNG while HTTP is offline; UTF-8/whitespace/800-byte boundary and invalidation verified",
+    "explicitly delayed real encoder cannot publish over a changed draft or reopen a closed tool; no connection/UI-success fixture used",
+    "real native selected non-relay UDP path and matching DTLS codes; each user confirmation clicked before sending",
+    "controlled late clipboard resolution/rejection cannot consume the real received message or select/focus behind QR",
+    "two delayed copies of the first real message cannot consume its queued successor",
+    "real Unicode/newline/HTML-literal text arrives intact; QR return preserves original drafts, incoming text does not steal QR focus, 4097 remains a draft and 4096 newlines transfer",
+    "real file offer waits behind QR without focus theft or pre-consent bytes; downloaded content and independent SHA-256 match",
+    "a real native DataChannel close makes send fail while retaining the draft; UI does not claim delivered acknowledgement",
+    "observed server WS and browser HTTP contain no text/file body or file hash; no binary WS, upload or external request"
+  ],
+  "screenshots": [
+    "test-results/text-qr-webkit-home-desktop-light.png",
+    "test-results/text-qr-webkit-home-desktop-dark.png",
+    "test-results/text-qr-webkit-home-mobile-light.png",
+    "test-results/text-qr-webkit-qr-desktop-light.png",
+    "test-results/text-qr-webkit-qr-desktop-dark.png",
+    "test-results/text-qr-webkit-qr-mobile-light.png",
+    "test-results/text-qr-webkit-verified-pair-desktop-light.png"
+  ],
+  "errors": [],
+  "passed": true,
+  "scope": "actual built UI + native same-host two-context UDP P2P + local PNG/ZBar; STUN disabled; not WAN, Safari/mobile hardware, delivery-ACK protocol, physical offline or camera scanning evidence",
+  "decoder": {
+    "decoder": "native libzbar via standard-library ctypes",
+    "utf8AndBoundaryVectors": 2,
+    "blankAndInvalidRejected": true
+  },
+  "browserVersion": "27.2",
+  "revision": "b46de331c87a6628",
+  "paths": [
+    {
+      "selected": true,
+      "method": "selected RTCStats pair",
+      "localType": "host",
+      "remoteType": "host",
+      "protocol": "udp",
+      "direct": true
+    },
+    {
+      "selected": true,
+      "method": "selected RTCStats pair",
+      "localType": "host",
+      "remoteType": "host",
+      "protocol": "udp",
+      "direct": true
+    }
+  ],
+  "file": {
+    "bytes": 126976,
+    "sha256": "5741d8db80eb69cf38661bcb8435afc5249d6ecad497cd211f4f9494568c1e5f"
+  },
+  "receivedTextEvents": 3,
+  "network": {
+    "websocketFrames": 17,
+    "websocketBytes": 3683,
+    "binaryFrames": 0,
+    "websocketPayloadObserved": false,
+    "httpRequests": 32,
+    "httpBodyBytes": 0,
+    "httpPayloadObserved": false,
+    "uploadAttempts": 0,
+    "externalRequests": 0
+  }
+}
