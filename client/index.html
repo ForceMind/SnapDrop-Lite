@@ -101,6 +101,12 @@
                     <p id="roomStatus" class="room-status" role="status" aria-live="polite">房间尚未建立 · 仅连接双方直接传输文件</p>
                 </div>
 
+                <div class="text-tools-entry">
+                    <span class="text-tools-symbol" aria-hidden="true">▦</span>
+                    <div><strong>文字，也能轻松分享</strong><small>文本转二维码 · 无需配对 · 本机生成</small></div>
+                    <button id="openTextTools" type="button">打开工具 <span aria-hidden="true">↗</span></button>
+                </div>
+
                 <div class="devices-section">
                     <div class="devices-heading"><div><span class="step-token step-token-secondary">02</span><strong>选择要发送的设备</strong></div><span class="devices-count" id="peerCount">0 台设备</span></div>
                     <div class="devices-stage">
@@ -178,10 +184,13 @@
         <form action="#">
             <x-background class="full center">
                 <x-paper shadow="2">
-                    <h3>发送消息</h3>
-                    <div id="textInput" class="textarea" role="textbox" placeholder="输入消息" autocomplete="off" autofocus contenteditable></div>
+                    <h3>发送文字</h3>
+                    <p class="text-help">核对过安全码的设备间直传，不经过服务器。最多 4096 字符。</p>
+                    <textarea id="textInput" class="textarea" rows="5" aria-label="要发送的文字" placeholder="粘贴链接、笔记或一段文字…" autocomplete="off" autofocus spellcheck="false"></textarea>
+                    <p id="textSendStatus" class="text-help" role="status" aria-live="polite">输入要发送的文字</p>
                     <div class="row-reverse">
-                        <button class="button" type="submit" close>发送</button>
+                        <button class="button" type="submit">发送</button>
+                        <button class="button" type="button" id="sendTextQR">转二维码</button>
                         <button class="button" type="button" close>取消</button>
                     </div>
                 </x-paper>
@@ -196,8 +205,31 @@
                 <div class="font-subheading" id="text"></div>
                 <div class="row-reverse">
                     <button class="button" id="copy" autofocus>复制</button>
+                    <button class="button" type="button" id="receiveTextQR">转二维码</button>
                     <button class="button" close>关闭</button>
                 </div>
+            </x-paper>
+        </x-background>
+    </x-dialog>
+    <x-dialog id="textQrDialog">
+        <x-background class="full center">
+            <x-paper shadow="2" class="text-qr-paper">
+                <div class="section-eyebrow">LOCAL TEXT TOOL</div>
+                <h3>文字，扫一扫就带走</h3>
+                <p class="text-help">无需配对。本机生成明文二维码，不上传文字。</p>
+                <label class="text-input-label" for="qrTextInput">想分享的文字</label>
+                <textarea id="qrTextInput" class="textarea" rows="4" placeholder="链接、笔记，或一段想分享的文字…" autocomplete="off" spellcheck="false" autofocus aria-describedby="qrTextStatus qrPrivacy"></textarea>
+                <p id="qrTextStatus" class="text-help" role="status" aria-live="polite">最多 800 字节，文字越短越容易扫描</p>
+                <div class="text-qr-actions">
+                    <button id="generateTextQR" class="button" type="button">生成二维码</button>
+                    <button id="clearTextQR" class="button" type="button">清空</button>
+                    <button id="closeTextQR" class="button" type="button" close>关闭</button>
+                </div>
+                <div class="text-qr-preview" id="textQRPreview" hidden>
+                    <canvas id="textQR" width="512" height="512" role="img" aria-label="当前文字的二维码" hidden></canvas>
+                    <a id="saveTextQR" class="button" download="zeydrop-text-qr.png" hidden>保存二维码 PNG</a>
+                </div>
+                <p class="text-help text-qr-privacy" id="qrPrivacy">二维码内是原文，扫码者可读取。请只分享给信任的人；关闭工具会清空本次文字。</p>
             </x-paper>
         </x-background>
     </x-dialog>

@@ -1147,4 +1147,30 @@ x-dialog:not([show]) { display:none; }
 .queue-storage-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .queue-storage-actions button, .send-queue button { min-height: 44px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
 .queue-storage-actions button:disabled, .send-queue button:disabled { cursor: default; opacity: .5; }
+
+/* Local text sharing uses the same palette and touch targets as pairing. */
+.text-tools-entry { display:flex; align-items:center; gap:12px; margin:20px 0; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.text-tools-symbol { display:grid; place-items:center; flex:none; width:40px; height:40px; border-radius:12px; background:var(--soft-surface); color:var(--ink); font-size:26px; }
+.text-tools-entry > div { flex:1; min-width:0; }
+.text-tools-entry strong { display:block; font-size:14px; }
+.text-tools-entry small { display:block; margin-top:5px; color:var(--muted); font-size:11px; line-height:1.6; }
+.text-tools-entry button { min-height:44px; padding:8px 12px; flex:none; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); font:inherit; font-size:12px; }
+#sendTextDialog x-paper, #receiveTextDialog x-paper, #textQrDialog x-paper { border:1px solid var(--line); border-radius:24px; color:var(--ink); background:var(--card); max-height:calc(100dvh - 32px); overflow-y:auto; }
+#sendTextDialog .row-reverse, #receiveTextDialog .row-reverse { flex-wrap:wrap; }
+#sendTextDialog .button, #receiveTextDialog .button { min-height:44px; }
+#textQrDialog .text-qr-paper { max-width:520px; padding:26px; }
+#textQrDialog h3 { font-size:24px; margin:10px 0; line-height:1.4; }
+.text-help { font-size:12px; line-height:1.65; color:var(--muted); margin:8px 0 14px; }
+.text-input-label { display:block; margin-top:18px; font-size:13px; font-weight:600; }
+#textInput, #qrTextInput { width:100%; border:1px solid var(--line); background:var(--soft-surface); color:var(--ink); min-height:110px; max-height:200px; padding:14px; line-height:1.65; resize:vertical; }
+.text-qr-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.text-qr-actions .button { min-height:44px; border:1px solid var(--line); border-radius:12px; font:inherit; font-size:13px; background:var(--card); color:var(--ink); }
+.text-qr-actions #generateTextQR { background:#236b53; color:#fff; border-color:#236b53; }
+.text-qr-preview { margin-top:18px; display:grid; justify-items:center; gap:8px; padding:16px 0; border:1px solid var(--line); border-radius:16px; background:var(--soft-surface); }
+#textQR { width:256px; height:auto; max-width:100%; aspect-ratio:1; object-fit:contain; background:#fff; }
+#saveTextQR { min-height:44px; color:var(--ink); text-decoration:underline; }
+.text-qr-privacy { margin:16px 0 0; }
+.text-help[data-error="true"] { color:#a12d2d; }
+@media (prefers-color-scheme:dark) { .text-help[data-error="true"] { color:#ffa9a9; } }
+@media (max-width:380px) { .text-tools-entry { flex-wrap:wrap; } .text-tools-entry button { margin-left:52px; } #textQrDialog .text-qr-paper { padding:20px; } }
 .send-queue-storage ul { padding-left: 20px; }

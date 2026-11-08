@@ -3,6 +3,12 @@
 // All transfer messages, including hashes and metadata, travel over DataChannel.
 const CHUNK_SIZE = 16 * 1024;
 const WINDOW_SIZE = 256 * 1024;
+const MAX_CONTROL_CHARS = 8192;
+const MAX_TEXT_CHARS = 4096;
+// JSON may expand each text code unit to six characters (for example NUL).
+// Only exact text frames receive this larger, still bounded parsing budget.
+const MAX_TEXT_FRAME_CHARS = 32768;
+const validText = text => typeof text === 'string' && text.length > 0 && text.length <= MAX_TEXT_CHARS;
 // Blob.arrayBuffer() has no abort API. Retired prefix reads remain counted
 // until their underlying I/O settles, so repeated cancellation stays bounded.
 const MAX_PREFIX_READS = 4;
@@ -149,10 +155,15 @@ class TransferPeer {
             if (this._incoming === state) this._progress(state, 'receiving');
             return;
         }
-        if (data.length > 8192) throw Error('控制消息超限');
+        if (data.length > MAX_TEXT_FRAME_CHARS) throw Error('控制消息超限');
         let msg;
         try { msg = JSON.parse(data); } catch { throw Error('无效的传输消息'); }
         if (!msg || typeof msg !== 'object' || Array.isArray(msg)) throw Error('无效的传输消息');
+        if (msg.type === 'text') {
+            const keys = Object.keys(msg);
+            if (keys.length !== 2 || keys.some(key => key !== 'type' && key !== 'text') || !validText(msg.text))
+                throw Error('无效的文本消息');
+        } else if (data.length > MAX_CONTROL_CHARS) throw Error('控制消息超限');
         if (msg.type === 'hello') {
             if (msg.version !== 2) throw Error('双方版本不兼容，请刷新网页');
             const first = !this._remoteHello;
@@ -298,7 +309,7 @@ class TransferPeer {
         if (msg.type === 'ready-next' && msg.id === this._queueWaitId) { this._queueWaitId = null; this._dequeueFile(); return; }
         if (['pause', 'resume'].includes(msg.type) && outgoing?.meta.id === msg.id) { outgoing.remotePaused = msg.type === 'pause'; return; }
         if (msg.type === 'cancel' && typeof msg.id === 'string') { this.cancel(msg.id, '对方取消传输', false); return; }
-        if (msg.type === 'text' && this._verified && typeof msg.text === 'string' && msg.text.length <= 4096) Events.fire('text-received', { text: msg.text, sender: this._peerId });
+        if (msg.type === 'text' && this._canSend()) Events.fire('text-received', { text: msg.text, sender: this._peerId });
     }
     // Retain only accepted in-page File objects and opened native/memory sinks.
     // No storage-backed persistence: page reload or browser exit cancels recovery.
@@ -833,9 +844,11 @@ class TransferPeer {
         this._queueEvent();
     }
     sendText(text) {
-        if (!this._canSend()) return Events.fire('notify-user', '请等待对方就绪并核对安全码');
-        if (text.length > 4096) return Events.fire('notify-user', '文本最多 4096 字符');
-        this.sendJSON({ type: 'text', text });
+        if (!this._canSend()) { Events.fire('notify-user', '请等待对方就绪并核对安全码'); return false; }
+        if (!validText(text)) { Events.fire('notify-user', '请输入 1 至 4096 字符的文本'); return false; }
+        try { this.sendJSON({ type: 'text', text }); }
+        catch { Events.fire('notify-user', '文本未发送，请检查直连状态后重试'); return false; }
+        return true;
     }
     _protocolError(reason) { this.abortAll(reason); this.close(reason); Events.fire('notify-user', reason); }
 }

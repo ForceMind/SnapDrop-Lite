@@ -36,6 +36,10 @@ Experimental persistent recovery is **opt-in on the receiver**. Raw partial byte
 
 ## Privacy and direct-only behavior
 
+**Quick text:** choose “发送文字” on the verified peer card. Up to 4096 UTF-16 code units travel over the same direct DataChannel, never signaling; failed sends retain the draft. The notification means the channel accepted the message, not a remote read/save receipt.
+
+**Local text QR:** open the home-page tool without pairing, or convert a sending/received text. The locally bundled encoder creates a plain-text QR and downloadable PNG, with an 800 UTF-8 byte limit and no truncation, URL rewriting or QR service. Editing immediately removes the old code; closing clears the tool. Conversion works offline after the app loads. A QR image reveals its original text to anyone who scans it.
+
 STUN can reveal mapping addresses but cannot overcome every NAT/CGNAT/firewall combination. Default STUN addresses and their official sources are documented in [STUN_CONFIGURATION](docs/STUN_CONFIGURATION.md). No third-party analytics or runtime CDN is used. Users can download bounded, allowlisted connection diagnostics locally; exports omit IPs, raw SDP, invitations, credentials, safety codes and file metadata/content.
 
 Zero server **file-body** traffic does not mean zero server traffic: pages, signaling, heartbeats and STUN probes consume bandwidth. The server cannot prevent every covert encoding inside otherwise bounded signaling; it does not implement a file-relay protocol.

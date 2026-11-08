@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 const fmt = bytes => bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + ' GiB' : bytes >= 1024 ** 2 ? (bytes / 1024 ** 2).toFixed(1) + ' MiB' : bytes >= 1024 ? (bytes / 1024).toFixed(1) + ' KiB' : bytes + ' B';
 const labels = { offered: '等待对方同意', sending: '正在发送', receiving: '正在接收', paused: '已暂停', verifying: '正在校验并保存', reconnecting: '等待原设备恢复（最多 2 分钟）', resuming: '正在核对续传进度', complete: 'SHA-256 校验通过', cancelled: '传输已停止' };
 let toastTimer;
+const waitingDialogs = [];
 Events.on('notify-user', event => {
     $('toast').textContent = event.detail; $('toast').setAttribute('show', '1');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').removeAttribute('show'), 5000);
@@ -27,9 +28,99 @@ class Dialog {
                 && !['hidden','collapse'].includes(getComputedStyle(el).visibility)
                 && (el.tabIndex >= 0 || (el.isContentEditable && !el.hasAttribute('tabindex'))));
     }
-    show() { this.previous = document.activeElement; this.el.setAttribute('show', '1'); this.el.setAttribute('aria-hidden', 'false'); this.el.tabIndex = -1; const items = this.focusables(); (items.find(el => el.hasAttribute('autofocus')) || items[0] || this.el).focus(); }
-    hide() { this.el.removeAttribute('show'); this.el.setAttribute('aria-hidden', 'true'); this.previous?.focus(); }
+    show() {
+        if (this.el.hasAttribute('show')) return;
+        if (document.querySelector('x-dialog[show]')) {
+            if (!waitingDialogs.includes(this)) { waitingDialogs.push(this); Events.fire('notify-user', '有新的请求待查看，请先完成或关闭当前窗口'); }
+            return;
+        }
+        const pending = waitingDialogs.indexOf(this); if (pending >= 0) waitingDialogs.splice(pending, 1);
+        this.previous = document.activeElement; this.el.setAttribute('show', '1'); this.el.setAttribute('aria-hidden', 'false'); this.el.tabIndex = -1;
+        const items = this.focusables(); (items.find(el => el.hasAttribute('autofocus')) || items[0] || this.el).focus();
+    }
+    hide() {
+        const pending = waitingDialogs.indexOf(this); if (pending >= 0) waitingDialogs.splice(pending, 1);
+        const wasVisible = this.el.hasAttribute('show'); this.el.removeAttribute('show'); this.el.setAttribute('aria-hidden', 'true');
+        if (wasVisible) this.previous?.focus();
+        // A synchronous transition (text -> QR -> text, or the next file)
+        // takes precedence; unrelated incoming dialogs never steal its focus.
+        queueMicrotask(() => { if (!document.querySelector('x-dialog[show]')) waitingDialogs.shift()?.show(); });
+    }
     dismiss() { this.hide(); }
+}
+class TextQRDialog extends Dialog {
+    constructor() {
+        super('textQrDialog'); this.generation = 0; this.returnTo = null;
+        $('openTextTools').onclick = () => this.open();
+        $('qrTextInput').oninput = () => this.changed();
+        $('generateTextQR').onclick = () => { void this.generate(); };
+        $('clearTextQR').onclick = () => { $('qrTextInput').value = ''; this.changed(); $('qrTextInput').focus(); };
+        window.addEventListener('pagehide', () => { this.returnTo = null; if (this.el.hasAttribute('show')) this.hide(); });
+    }
+    open(text = '', returnTo = null) {
+        this.returnTo = returnTo; $('qrTextInput').value = text; this.changed(); this.show();
+    }
+    hide() {
+        const returnTo = this.returnTo; this.returnTo = null;
+        $('qrTextInput').value = ''; this.changed(); super.hide();
+        if (returnTo) returnTo.show();
+    }
+    changed() {
+        this.generation++;
+        $('textQRPreview').hidden = true; $('textQR').hidden = true;
+        $('textQR').getContext('2d').clearRect(0, 0, $('textQR').width, $('textQR').height);
+        $('saveTextQR').hidden = true; $('saveTextQR').removeAttribute('href');
+        const text = $('qrTextInput').value;
+        // A UTF-8 byte always consumes at least one UTF-16 unit except a
+        // surrogate pair (four bytes). Avoid encoding an unbounded pasted draft.
+        const bytes = text.length > 800 ? null : new TextEncoder().encode(text).byteLength;
+        const malformed = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(text);
+        const invalid = malformed || bytes === null || bytes > 800;
+        $('qrTextStatus').textContent = malformed ? '文字包含不完整的字符，请重新粘贴；不会替换原文'
+            : invalid ? '文字太长：一个二维码最多 800 字节，请缩短文字；不会截断原文'
+            : bytes ? bytes + ' / 800 字节 · 文字越短越容易扫描' : '最多 800 字节，文字越短越容易扫描';
+        $('qrTextStatus').dataset.error = String(invalid);
+        $('generateTextQR').disabled = invalid || !text.length;
+    }
+    async generate() {
+        this.changed();
+        if ($('generateTextQR').disabled) return;
+        const text = $('qrTextInput').value, generation = this.generation;
+        const current = () => generation === this.generation && this.el.hasAttribute('show') && $('qrTextInput').value === text;
+        $('generateTextQR').disabled = true;
+        try {
+            const canvas = document.createElement('canvas');
+            // Byte mode preserves the exact UTF-8 text; no URL rewriting,
+            // trimming, QR service, clipboard read or storage is involved.
+            await window.ZeydropQR.toCanvas(canvas, [{ data: text, mode: 'byte' }], {
+                width: 512, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#10291f', light: '#ffffff' }
+            });
+            if (!current()) return;
+            const output = $('textQR'); output.width = canvas.width; output.height = canvas.height;
+            output.getContext('2d').drawImage(canvas, 0, 0);
+            $('saveTextQR').href = canvas.toDataURL('image/png');
+            output.hidden = false; $('textQRPreview').hidden = false; $('saveTextQR').hidden = false;
+            $('qrTextStatus').textContent = '二维码已生成，可扫码或保存图片；文字仅在本机处理';
+        } catch {
+            if (!current()) return;
+            $('qrTextStatus').textContent = '二维码未生成，请缩短文字或重新打开工具后重试';
+            $('qrTextStatus').dataset.error = 'true';
+        } finally { if (current()) $('generateTextQR').disabled = false; }
+    }
+}
+class ReceiveTextDialog extends Dialog {
+    constructor() { super('receiveTextDialog'); this.queue = []; this.active = null; this.sequence = 0; }
+    enqueue(text) {
+        if (this.queue.length + (this.active !== null ? 1 : 0) >= 20) {
+            Events.fire('notify-user', '待查看文字已达 20 条，最新一条未显示；请让对方稍后重发'); return;
+        }
+        this.queue.push(text); this.next();
+    }
+    next() {
+        if (this.active !== null || !this.queue.length) return;
+        this.sequence++; this.active = this.queue.shift(); $('text').textContent = this.active; this.show();
+    }
+    hide() { super.hide(); this.sequence++; this.active = null; $('text').textContent = ''; this.next(); }
 }
 class FileOfferDialog extends Dialog {
     constructor() {
@@ -446,17 +537,34 @@ class Zeydrop {
         if (id) { history.replaceState({}, '', location.pathname + '#room=' + id); join(id); }
     }
     text() {
-        const send = new Dialog('sendTextDialog'), receive = new Dialog('receiveTextDialog'); let recipient;
-        Events.on('text-recipient', event => { recipient = event.detail; send.show(); $('textInput').focus(); });
-        $('sendTextDialog').querySelector('form').onsubmit = event => { event.preventDefault(); Events.fire('send-text', { to: recipient, text: $('textInput').innerText }); send.hide(); };
-        Events.on('text-received', event => { $('text').textContent = event.detail.text; receive.show(); });
+        const send = new Dialog('sendTextDialog'), receive = new ReceiveTextDialog(), qr = new TextQRDialog(); let recipient;
+        const draftStatus = () => {
+            const count = $('textInput').value.length;
+            $('textSendStatus').textContent = count > 4096 ? '文字超过 4096 字符，请缩短后发送；草稿已保留' : count + ' / 4096 字符';
+            $('textSendStatus').dataset.error = String(count > 4096);
+        };
+        $('textInput').oninput = draftStatus;
+        Events.on('text-recipient', event => { recipient = event.detail; draftStatus(); send.show(); $('textInput').focus(); });
+        $('sendTextDialog').querySelector('form').onsubmit = event => {
+            event.preventDefault();
+            const peer = this.peers.peers.get(recipient);
+            if (!peer) { $('textSendStatus').textContent = '设备连接已结束，文字草稿已保留；请重新配对并核对安全码'; return; }
+            if (!peer.sendText($('textInput').value)) { $('textSendStatus').textContent = '文字未发送，草稿已保留。请检查长度、连接和安全码'; return; }
+            $('textInput').value = ''; send.hide(); Events.fire('notify-user', '文字已交给直连通道');
+        };
+        $('sendTextQR').onclick = () => { send.hide(); qr.open($('textInput').value, send); };
+        $('receiveTextQR').onclick = () => { Dialog.prototype.hide.call(receive); qr.open($('text').textContent, receive); };
+        Events.on('text-received', event => receive.enqueue(event.detail.text));
         $('copy').onclick = async () => {
+            const sequence = receive.sequence, text = receive.active;
+            const current = () => sequence === receive.sequence && receive.el.hasAttribute('show');
             try {
                 if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
-                await navigator.clipboard.writeText($('text').textContent);
-                receive.hide();
+                await navigator.clipboard.writeText(text);
+                if (current()) receive.hide();
                 Events.fire('notify-user', '文本已复制');
             } catch {
+                if (!current()) { Events.fire('notify-user', '复制未完成，请返回收到文字后重试'); return; }
                 const selection = window.getSelection(), range = document.createRange();
                 range.selectNodeContents($('text')); selection?.removeAllRanges(); selection?.addRange(range);
                 Events.fire('notify-user', '请复制选中的文本，或长按文本手动复制');

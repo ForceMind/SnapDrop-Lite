@@ -2,6 +2,10 @@
 
 记录：2026-11-07 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
+## 2026-11-08 UTC：文本与二维码改动（原生CI待执行）
+
+已有核码后DataChannel文字直传，新增主页无需配对的本机文本二维码、发送/收到文本转二维码、PNG保存、UTF-8容量反馈、编辑撤旧码及关闭清空。修复合法4096换行/控制字符因JSON转义超出接收限制的问题，非text控制仍维持8192边界；发送失败保留草稿。当前本地427/427通过（新增17项：文本协议8项、工具/模态9项），构建/check-build通过；本轮原生三引擎、独立解码、真实截图和正文通路检查尚待新CI，不沿用旧410项声明覆盖新UI。详见[文本与直传复核](TEST_REPORT_20261107_TEXT_QR.md)。全部正式功能/UI验收仍未完成，下方真实网络、移动Safari和独立主机门槛保留。
+
 ## 本轮生命周期及部署重试（CI68全套通过）
 
 当前本地410/410（0失败/跳过）、构建c75833843f0b324f/check-build/shell/diff与同一锁文件的两侧audit0通过。新部署校验器仅复用完整精确非当前release，保留inode/内容/模式/所有权，不改写或删除既有目录；已current保持previous和配置，残缺/不安全目录继续拒绝。[CI68](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42409023529)全套通过410项/0失败跳过，最终日志和32份JSON已读并归档。419文件候选独立重装410项/无Git重建/29dist复验通过，实际CI tar字节相同；[报告](TEST_REPORT_20261107_LIFECYCLE.md)，[Issue #9](https://github.com/ForceMind/SnapDrop-Lite/issues/9)跟踪这一精确范围；完整目录只读复用通过，残缺目录仍需人工检查。
