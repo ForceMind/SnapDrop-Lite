@@ -80,10 +80,13 @@ jobs:
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=webkit node tests/text-qr-layout-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
-        run: |
-          node tests/receive-download-browser.cjs
-          BROWSER_TYPE=firefox node tests/receive-download-browser.cjs
-          BROWSER_TYPE=webkit node tests/receive-download-browser.cjs
+        run: node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/receive-download-burst-browser.cjs
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         with:
