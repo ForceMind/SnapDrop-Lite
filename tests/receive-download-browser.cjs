@@ -9,7 +9,7 @@ const { startDev } = require('../scripts/dev.cjs');
 async function main() {
     const engine = process.env.BROWSER_TYPE || 'chromium', engines = { chromium, firefox, webkit };
     assert.ok(engines[engine]);
-    const report = { engine, passed: false, scope: 'controlled completed-file UI events; native downloads, not transport or OPFS evidence', checks: [] };
+    const report = { engine, passed: false, phase: 'startup', downloads: [], scope: 'controlled completed-file UI events; native downloads, not transport or OPFS evidence', checks: [] };
     const server = await startDev(0); let browser;
     try {
         browser = await engines[engine].launch({ headless: true });
@@ -33,21 +33,31 @@ async function main() {
                 sha256: 'a'.repeat(64), blob: new Blob([name]), locallyStored: local, release: () => window.__receiveReleases++ });
         }, { names, local });
         const save = async name => {
+            report.phase = 'save:' + name;
             await page.locator('#receiveDialog[show]').waitFor();
             const pending = page.waitForEvent('download'); await page.locator('#download').click(); const download = await pending;
             assert.equal(download.suggestedFilename(), name);
             const bytes = await fs.readFile(await download.path()); assert.equal(bytes.toString(), name);
             assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), crypto.createHash('sha256').update(name).digest('hex'));
+            report.downloads.push(name);
             await page.waitForFunction(name => document.getElementById('fileName').textContent !== name || !document.getElementById('receiveDialog').hasAttribute('show'), name);
         };
         await offer(['首个文件.txt', '第二个文件.txt']);
         assert.equal(await page.evaluate(() => window.__receiveURLs.size), 0);
         await save('首个文件.txt'); await save('第二个文件.txt');
         report.checks.push('queued native local downloads retain the intended filename and independently checked bytes');
+        report.phase = 'dismiss-without-save';
         await offer(['dismissed']); await page.locator('#receiveDialog[show]').press('Escape');
         assert.equal(await page.evaluate(() => window.__receiveURLs.size), 2);
-        for (let i = 2; i < 20; i++) { const name = 'capacity-' + i + '.txt'; await offer([name]); await save(name); }
+        // Pace the bulk fixture at at most five clicks/second. The first two
+        // queued downloads above remain unpaced; no download-policy switches
+        // or permission overrides are used for this resource-lifetime check.
+        for (let i = 2; i < 20; i++) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            const name = 'capacity-' + i + '.txt'; await offer([name]); await save(name);
+        }
         assert.equal(await page.evaluate(() => window.__receiveURLs.size), 20);
+        report.phase = 'capacity-rejection';
         await offer(['after-grace.txt']);
         let unexpected = 0; const count = () => unexpected++; page.on('download', count);
         await page.locator('#download').click();
@@ -65,9 +75,9 @@ async function main() {
         await save('ordinary-a.txt'); await save('ordinary-b.txt');
         assert.equal(await page.evaluate(() => window.__receiveReleases), 2);
         report.checks.push('ordinary queued files also preserve anchor filename/content and release both transient sinks');
-        assert.deepEqual(errors, []); report.passed = true;
+        assert.deepEqual(errors, []); report.phase = 'complete'; report.passed = true;
         await context.close();
-    } catch (error) { report.errorKind = error.name; throw error; }
+    } catch (error) { report.errorKind = error.name; report.errorStack = error.stack; throw error; }
     finally {
         await fs.mkdir('test-results', { recursive: true });
         await fs.writeFile('test-results/receive-download-' + engine + '.json', JSON.stringify(report, null, 2) + '\n');
