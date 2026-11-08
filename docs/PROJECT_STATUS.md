@@ -1,5 +1,9 @@
 # Zeydrop 当前工程状态
 
+## 2026-11-08 UTC：接收下载资源与连续保存
+
+修复暂存文件下载地址/监听器随保存次数累积，以及共用保存链接在默认动作前切队列的竞态。只在保存时创建暂存URL，接收入口最多20项/60秒宽限，页面退出统一释放；不删除原件。新增7项生产控制器回归，本地442/442、build266604dbfe70dbfa/check-build、两侧生产audit0通过。三引擎原生下载脚本已加入CI，精确提交结果见PR；本地浏览器启动失败未计通过。[报告](TEST_REPORT_20261108_RECEIVE_DOWNLOAD.md)。所有外部发布门槛保留。
+
 记录：2026-11-08 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
 ## 2026-11-07 太平洋时间：手机QR与文字窗口继续加固

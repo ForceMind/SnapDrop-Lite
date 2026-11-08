@@ -1,5 +1,7 @@
 # Zeydrop · 闪投
 
+本轮进一步修复接收下载地址累积和连续保存链接竞态，本地442/442项Node、构建及生产依赖audit通过；三引擎原生验证结果跟随PR精确提交。[下载生命周期报告](docs/TEST_REPORT_20261108_RECEIVE_DOWNLOAD.md)。
+
 **Direct by design.**
 
 [English](README.en.md)

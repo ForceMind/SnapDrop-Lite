@@ -1,5 +1,7 @@
 # Zeydrop · 闪投
 
+The receive dialog now bounds persistent download URLs (20 pending, 60-second startup grace) and advances queued files after the anchor default action. Local checks pass (442/442 Node, build and production audits); native results remain tied to the exact PR head. [Download lifecycle report](docs/TEST_REPORT_20261108_RECEIVE_DOWNLOAD.md).
+
 **Direct by design.**
 
 Zeydrop sends files directly between browsers over a reliable WebRTC DataChannel. HTTPS serves the application; WSS coordinates temporary pairing and exchanges SDP/ICE. There is no file upload endpoint, server file storage, TURN/DERP relay, or WebSocket file fallback. If a selected non-relay path cannot be verified, file transfer stays blocked.

@@ -211,6 +211,42 @@ class FileOfferDialog extends Dialog {
 class ReceiveDialog extends Dialog {
     constructor() {
         super('receiveDialog'); this.queue = [];
+        this.localDownloads = new Map(); this.downloadClose = null;
+        // Capture precedes Dialog's close listener. Let the browser start the
+        // original anchor download before advancing/replacing this shared link.
+        $('download').addEventListener('click', event => {
+            event.stopImmediatePropagation();
+            if (!this.active || this.downloadClose !== null) { event.preventDefault(); return; }
+            const file = this.active;
+            if (file.locallyStored) {
+                if (this.localDownloads.size >= 20) {
+                    event.preventDefault();
+                    Events.fire('notify-user', '下载链接较多，请等待最多 60 秒释放后重试；本机副本仍然保留');
+                    return;
+                }
+                try { this.url = URL.createObjectURL(file.blob); }
+                catch (_) {
+                    event.preventDefault();
+                    Events.fire('notify-user', '暂时无法准备下载，请重试；本机副本仍然保留'); return;
+                }
+                const url = this.url;
+                this.localDownloads.set(url, setTimeout(() => {
+                    this.localDownloads.delete(url); URL.revokeObjectURL(url);
+                }, 60000));
+                $('download').href = url;
+            }
+            this.downloadClose = setTimeout(() => {
+                this.downloadClose = null;
+                if (this.active === file) this.hide();
+            }, 0);
+        }, true);
+        window.addEventListener('pagehide', () => {
+            clearTimeout(this.downloadClose); this.downloadClose = null;
+            for (const [url, timer] of this.localDownloads) { clearTimeout(timer); URL.revokeObjectURL(url); }
+            this.localDownloads.clear();
+            // A BFCache return may retain the visible file, never a retired URL.
+            if (this.active?.locallyStored) { this.url = null; $('download').href = '#'; }
+        });
         Events.on('file-received', event => {
             if (event.detail.saved) return Events.fire('notify-user', 'SHA-256 校验通过，文件已保存：' + event.detail.name);
             this.queue.push(event.detail); this.next();
@@ -218,22 +254,19 @@ class ReceiveDialog extends Dialog {
     }
     next() {
         if (this.active || !this.queue.length) return;
-        this.active = this.queue.shift(); this.url = URL.createObjectURL(this.active.blob);
-        const link = $('download'); link.href = this.url; link.download = this.active.name;
+        this.active = this.queue.shift();
+        // Persistent sources allocate a URL only on an explicit save click.
+        this.url = this.active.locallyStored ? null : URL.createObjectURL(this.active.blob);
+        const link = $('download'); link.href = this.url || '#'; link.download = this.active.name;
         $('fileName').textContent = this.active.name; $('fileSize').textContent = fmt(this.active.size) + ' · SHA-256 ' + this.active.sha256
             + (this.active.locallyStored ? ' · 下载不会立即删除本机副本' : '');
         this.show();
     }
     hide() {
         super.hide();
-        if (this.url) {
-            const url = this.url;
-            if (this.active?.locallyStored) {
-                // A download has no reliable completion event. Revoking the Blob
-                // URL or deleting the OPFS source during the click can cancel it.
-                // Keep the URL until page exit; the user manages the local copy.
-                window.addEventListener('pagehide', () => URL.revokeObjectURL(url), { once: true });
-            } else setTimeout(() => URL.revokeObjectURL(url), 1000);
+        clearTimeout(this.downloadClose); this.downloadClose = null;
+        if (this.url && !this.active?.locallyStored) {
+            const url = this.url; setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
         if (this.active?.locallyStored) {
             Events.fire('notify-user', '下载使用的本机副本仍保留；可在“管理本机暂存文件”中删除，或等待过期清理。');

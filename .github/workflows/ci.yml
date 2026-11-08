@@ -79,6 +79,11 @@ jobs:
         run: BROWSER_TYPE=firefox node tests/text-qr-layout-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: BROWSER_TYPE=webkit node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: |
+          node tests/receive-download-browser.cjs
+          BROWSER_TYPE=firefox node tests/receive-download-browser.cjs
+          BROWSER_TYPE=webkit node tests/receive-download-browser.cjs
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         with:
@@ -88,6 +93,7 @@ jobs:
             test-results/pwa-upgrade-*.json
             test-results/ui-contrast-*
             test-results/qr-layout-*
+            test-results/receive-download-*.json
           retention-days: 7
       # Preserve native browser-default evidence before preparing the Linux
       # mDNS resolver used by WebKitGTK. Neither probe can authorize file data.
