@@ -34,7 +34,7 @@ jobs:
       # The Azure package mirror exhausted CI #44's install budget. Use the
       # official archive on this disposable hosted runner; APT keys/policy stay.
       - run: sudo --preserve-env=CI,GITHUB_ACTIONS,RUNNER_OS,RUNNER_ENVIRONMENT "$(command -v node)" scripts/configure-ci-apt.cjs
-      - run: sudo apt-get update && sudo apt-get install -y nginx
+      - run: sudo apt-get update && sudo apt-get install -y nginx libzbar0
       - run: bash scripts/check-nginx.sh
       - run: node tests/https-proxy.cjs
       # Source/build artifact is intentionally available before browser setup.
@@ -73,6 +73,12 @@ jobs:
         run: node tests/pwa-upgrade-browser.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: node tests/ui-contrast-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/text-qr-layout-browser.cjs
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         with:
@@ -81,6 +87,7 @@ jobs:
             test-results/pwa-workers-*.json
             test-results/pwa-upgrade-*.json
             test-results/ui-contrast-*
+            test-results/qr-layout-*
           retention-days: 7
       # Preserve native browser-default evidence before preparing the Linux
       # mDNS resolver used by WebKitGTK. Neither probe can authorize file data.
@@ -91,7 +98,7 @@ jobs:
       - id: mdns
         if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
         run: |
-          sudo apt-get install -y avahi-daemon libnss-mdns avahi-utils dbus libglib2.0-bin libzbar0
+          sudo apt-get install -y avahi-daemon libnss-mdns avahi-utils dbus libglib2.0-bin
           sudo systemctl start dbus avahi-daemon
           node scripts/check-ci-mdns.cjs
       - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}

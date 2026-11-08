@@ -6,6 +6,8 @@ Zeydrop sends files directly between browsers over a reliable WebRTC DataChannel
 
 ## Current status
 
+The latest follow-up improves narrow-screen QR controls, safely handles unavailable Canvas contexts, and restores the original text dialog after a cached-page return while retiring QR contents. Local **435/435 Node checks**, build and dependency audits pass. Native evidence is tied to the exact PR head; see [UI/recovery report](docs/TEST_REPORT_20261107_UI_RECOVERY.md) and [PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2). The CI70/71 results below are the preceding complete runtime baseline.
+
 This is **0.3.0-dev.1, an unreleased development candidate** on [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2). Runtime `033d88b` / build `b46de331c87a6628` passed [CI70](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42440165523): **427/427 Node checks**, both audits (0 vulnerabilities), native Chromium/Firefox/Linux WebKit text sharing, independently ZBar-decoded local QR pixels/PNG and real UI screenshots, Chromium 1 GiB / Firefox 100 MiB, all six strict bidirectional pairings, recovery, temporary HTTPS/WSS and PWA checks. Final logs and 35 raw JSON reports were read and archived. [Current report](docs/TEST_REPORT_20261107_TEXT_QR.md).
 
 The local text QR tool requires no pairing and never uploads its input. This update also fixes escaped-text limits, modal/clipboard races and mobile action layout. Subsequent documentation/evidence and screenshot-capture changes leave the application runtime unchanged; each source package has its own manifest/checksum.

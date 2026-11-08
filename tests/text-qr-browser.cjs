@@ -148,6 +148,37 @@ async function main() {
         for (const page of pages) await page.locator('.verify-peer').click();
         for (const page of pages) await page.waitForFunction(()=>[...zeydrop.peers.peers.values()][0]?._canSend());
         report.paths=await Promise.all(pages.map(page=>page.evaluate(nativePath))); assert.ok(report.paths.every(path=>path.selected&&path.direct&&path.protocol==='udp'));
+        report.phase = 'controlled-canvas-resource-fault';
+        for (const mode of ['null', 'throw']) {
+            await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL canvas resource probe');
+            await a.evaluate(mode => {
+                const canvas = document.getElementById('textQR');
+                window.__canvasOwnContext = Object.getOwnPropertyDescriptor(canvas, 'getContext');
+                Object.defineProperty(canvas, 'getContext', { configurable: true, value: () => {
+                    if (mode === 'throw') throw new DOMException('Synthetic canvas resource fault', 'InvalidStateError');
+                    return null;
+                } });
+            }, mode);
+            try {
+                await a.locator('#qrTextInput').fill('LOCAL_QR_PRIVATE_SENTINEL draft remains editable');
+                assert.equal(await a.locator('#generateTextQR').isDisabled(), true);
+                assert.match(await a.locator('#qrTextStatus').innerText(), /无法生成二维码/);
+                assert.equal(await a.locator('#textQR').isHidden(), true);
+                assert.equal(await a.locator('#saveTextQR').getAttribute('href'), null);
+                await a.locator('#clearTextQR').click(); assert.equal(await a.locator('#qrTextInput').inputValue(), '');
+                await a.locator('#closeTextQR').click(); await a.locator('#textQrDialog').waitFor({ state: 'hidden' });
+            } finally {
+                await a.evaluate(() => {
+                    const canvas = document.getElementById('textQR');
+                    if (window.__canvasOwnContext) Object.defineProperty(canvas, 'getContext', window.__canvasOwnContext);
+                    else delete canvas.getContext;
+                    delete window.__canvasOwnContext;
+                });
+            }
+            for (const page of pages) assert.equal(await page.evaluate(() => [...zeydrop.peers.peers.values()][0]._canSend()), true);
+        }
+        await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL recovers without reconnecting'); await a.locator('#closeTextQR').click();
+        report.cases.push('controlled per-canvas null/throw faults retire the old QR/download, allow editing/clear/close, preserve the native verified peer and recover real encoding without reconnecting');
         report.cases.push('real native selected non-relay UDP path and matching DTLS codes; each user confirmation clicked before sending');
         report.phase = 'native-text-and-qr-return';
         const text='PRIVATE_P2P_TEXT_SENTINEL\n中文与 emoji 👋\n<em data-untrusted>原样文字</em>\nhttps://example.test/a?x=1&y=2';

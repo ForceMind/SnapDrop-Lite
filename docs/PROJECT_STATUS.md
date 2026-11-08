@@ -2,6 +2,12 @@
 
 记录：2026-11-08 UTC。0.3.0-dev.1未发布开发候选；开发分支feat/direct-first-workspace-20261019，[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。
 
+## 2026-11-07 太平洋时间：手机QR与文字窗口继续加固
+
+本轮以实际远程b468885/CI71为基线；已恢复原始截图并提供独立PNG。手机QR三按钮采用紧凑单行布局，44px触控目标不变，明文说明移到预览之前。Canvas能力缺失/清理/绘图/导出失败均安全退役旧画布和下载链接，不再使工具无法关闭；同页缓存返回保留原收文及队列，但QR原文/图片立即清空，不自动发送、恢复身份或接受文件。
+
+新增8项生产控制器回归，本地435/435（0失败/跳过）及构建7cdefdd3de674966/check-build、两侧audit0通过。新增三引擎×五尺寸×深浅的真实几何/命中/独立PNG解码脚本，以及实际已核码连接期间的Canvas null/throw受控故障测试；精确提交的原生结果和原图以PR对应CI记录为准。BFCache证明仅为生产控制器受控事件，不冒称实际导航缓存资格。服务器、ICE及文件协议未改，所有真实网络/手机/Safari/主机门槛仍开放。详见[本轮报告](TEST_REPORT_20261107_UI_RECOVERY.md)。
+
 ## 2026-11-08 UTC：文字、二维码及真实UI复核（CI70全套通过）
 
 运行代码033d88beffc1c6b390f378dbb22fc86234b3ea90 / revisionb46de331c87a6628，[CI70](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42440165523)已完整成功，job128607487259最终日志与35份原始JSON已读并归档。427/427 Node（0失败/跳过）、两侧audit0、三引擎真实文字/本机QR/独立ZBar像素解码、21张真实深浅/手机宽度/配对截图、1GiB/100MiB、严格六组合/恢复/HTTPS/PWA全套通过。

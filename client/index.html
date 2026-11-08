@@ -225,11 +225,11 @@
                     <button id="clearTextQR" class="button" type="button">清空</button>
                     <button id="closeTextQR" class="button" type="button" close>关闭</button>
                 </div>
+                <p class="text-help text-qr-privacy" id="qrPrivacy">二维码内是原文，扫码者可读取。请只分享给信任的人；关闭工具会清空本次文字。</p>
                 <div class="text-qr-preview" id="textQRPreview" hidden>
                     <canvas id="textQR" width="512" height="512" role="img" aria-label="当前文字的二维码" hidden></canvas>
                     <a id="saveTextQR" class="button" download="zeydrop-text-qr.png" hidden>保存二维码 PNG</a>
                 </div>
-                <p class="text-help text-qr-privacy" id="qrPrivacy">二维码内是原文，扫码者可读取。请只分享给信任的人；关闭工具会清空本次文字。</p>
             </x-paper>
         </x-background>
     </x-dialog>

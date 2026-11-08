@@ -4,6 +4,7 @@ const fmt = bytes => bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + ' GiB
 const labels = { offered: '等待对方同意', sending: '正在发送', receiving: '正在接收', paused: '已暂停', verifying: '正在校验并保存', reconnecting: '等待原设备恢复（最多 2 分钟）', resuming: '正在核对续传进度', complete: 'SHA-256 校验通过', cancelled: '传输已停止' };
 let toastTimer;
 const waitingDialogs = [];
+const localQRUnavailable = '当前浏览器暂时无法生成二维码，请关闭工具后重试或更换浏览器；文字未上传';
 Events.on('notify-user', event => {
     $('toast').textContent = event.detail; $('toast').setAttribute('show', '1');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').removeAttribute('show'), 5000);
@@ -50,12 +51,24 @@ class Dialog {
 }
 class TextQRDialog extends Dialog {
     constructor() {
-        super('textQrDialog'); this.generation = 0; this.returnTo = null;
+        super('textQrDialog'); this.generation = 0; this.returnTo = null; this.pendingReturn = null;
         $('openTextTools').onclick = () => this.open();
         $('qrTextInput').oninput = () => this.changed();
         $('generateTextQR').onclick = () => { void this.generate(); };
         $('clearTextQR').onclick = () => { $('qrTextInput').value = ''; this.changed(); $('qrTextInput').focus(); };
-        window.addEventListener('pagehide', () => { this.returnTo = null; if (this.el.hasAttribute('show')) this.hide(); });
+        window.addEventListener('pagehide', event => {
+            if (!event?.persisted) this.pendingReturn = null;
+            if (!this.el.hasAttribute('show')) return;
+            // Only this existing page's text dialog may return after BFCache.
+            // QR contents still retire immediately; no identity, file approval
+            // or outgoing action is restored by this UI-only reference.
+            if (event?.persisted) this.pendingReturn = this.returnTo;
+            this.returnTo = null; this.hide();
+        });
+        window.addEventListener('pageshow', event => {
+            const returnTo = this.pendingReturn; this.pendingReturn = null;
+            if (event?.persisted) returnTo?.show();
+        });
     }
     open(text = '', returnTo = null) {
         this.returnTo = returnTo; $('qrTextInput').value = text; this.changed(); this.show();
@@ -65,22 +78,37 @@ class TextQRDialog extends Dialog {
         $('qrTextInput').value = ''; this.changed(); super.hide();
         if (returnTo) returnTo.show();
     }
+    resetCanvas() {
+        // Resetting the backing store can discard a previous image even when
+        // a context cannot be obtained or cleared. Hiding/removing the link
+        // happens first; resource failures must never strand a modal open.
+        try { $('textQR').width = 0; $('textQR').height = 0; } catch {}
+    }
+    clearPreview() {
+        $('textQRPreview').hidden = true; $('textQR').hidden = true;
+        $('saveTextQR').hidden = true; $('saveTextQR').removeAttribute('href');
+        this.canvasAvailable = false;
+        try {
+            const context = $('textQR').getContext('2d');
+            if (context) { context.clearRect(0, 0, $('textQR').width, $('textQR').height); this.canvasAvailable = true; }
+        } catch {}
+        if (!this.canvasAvailable) this.resetCanvas();
+    }
     changed() {
         this.generation++;
-        $('textQRPreview').hidden = true; $('textQR').hidden = true;
-        $('textQR').getContext('2d').clearRect(0, 0, $('textQR').width, $('textQR').height);
-        $('saveTextQR').hidden = true; $('saveTextQR').removeAttribute('href');
+        this.clearPreview();
         const text = $('qrTextInput').value;
         // A UTF-8 byte always consumes at least one UTF-16 unit except a
         // surrogate pair (four bytes). Avoid encoding an unbounded pasted draft.
         const bytes = text.length > 800 ? null : new TextEncoder().encode(text).byteLength;
         const malformed = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(text);
         const invalid = malformed || bytes === null || bytes > 800;
-        $('qrTextStatus').textContent = malformed ? '文字包含不完整的字符，请重新粘贴；不会替换原文'
+        $('qrTextStatus').textContent = !this.canvasAvailable ? localQRUnavailable
+            : malformed ? '文字包含不完整的字符，请重新粘贴；不会替换原文'
             : invalid ? '文字太长：一个二维码最多 800 字节，请缩短文字；不会截断原文'
             : bytes ? bytes + ' / 800 字节 · 文字越短越容易扫描' : '最多 800 字节，文字越短越容易扫描';
-        $('qrTextStatus').dataset.error = String(invalid);
-        $('generateTextQR').disabled = invalid || !text.length;
+        $('qrTextStatus').dataset.error = String(invalid || !this.canvasAvailable);
+        $('generateTextQR').disabled = invalid || !text.length || !this.canvasAvailable;
     }
     async generate() {
         this.changed();
@@ -96,16 +124,24 @@ class TextQRDialog extends Dialog {
                 width: 512, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#10291f', light: '#ffffff' }
             });
             if (!current()) return;
-            const output = $('textQR'); output.width = canvas.width; output.height = canvas.height;
-            output.getContext('2d').drawImage(canvas, 0, 0);
-            $('saveTextQR').href = canvas.toDataURL('image/png');
+            const output = $('textQR'); let image;
+            try {
+                output.width = canvas.width; output.height = canvas.height;
+                const context = output.getContext('2d');
+                if (!context) throw Error('Local QR canvas unavailable');
+                context.drawImage(canvas, 0, 0);
+                image = canvas.toDataURL('image/png');
+            } catch {
+                this.canvasAvailable = false; this.resetCanvas(); throw Error('Local QR canvas unavailable');
+            }
+            $('saveTextQR').href = image;
             output.hidden = false; $('textQRPreview').hidden = false; $('saveTextQR').hidden = false;
             $('qrTextStatus').textContent = '二维码已生成，可扫码或保存图片；文字仅在本机处理';
         } catch {
             if (!current()) return;
-            $('qrTextStatus').textContent = '二维码未生成，请缩短文字或重新打开工具后重试';
+            $('qrTextStatus').textContent = this.canvasAvailable ? '二维码未生成，请缩短文字或重新打开工具后重试' : localQRUnavailable;
             $('qrTextStatus').dataset.error = 'true';
-        } finally { if (current()) $('generateTextQR').disabled = false; }
+        } finally { if (current()) $('generateTextQR').disabled = !this.canvasAvailable; }
     }
 }
 class ReceiveTextDialog extends Dialog {

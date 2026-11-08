@@ -71,6 +71,9 @@ function fixture() {
     el('button', 'receiveTextClose', receiveRoot).setAttribute('close', '');
     const fileRoot = dialog('queuedFileDialog'); el('button', 'fileAccept', fileRoot).setAttribute('autofocus', '');
     el('button', 'fileClose', fileRoot).setAttribute('close', '');
+    const sendRoot = dialog('sendTextDialog'); el('textarea', 'textInput', sendRoot).setAttribute('autofocus', '');
+    el('button', 'sendTextSubmit', sendRoot).onclick = () => events.push({ type: 'send-attempt' });
+    el('button', 'sendTextClose', sendRoot).setAttribute('close', '');
     document = { activeElement: opener,
         getElementById(id) { assert.ok(elements.has(id), 'unknown DOM id: ' + id); return elements.get(id); },
         createElement(tag) { assert.equal(tag, 'canvas'); return el(tag); },
@@ -89,7 +92,7 @@ function fixture() {
         getComputedStyle: () => ({ visibility: 'visible' }), setTimeout: () => 1, clearTimeout() {} });
     vm.runInContext(controller + '\nthis.Controllers = { Dialog, TextQRDialog, ReceiveTextDialog };', context);
     const { Dialog, TextQRDialog, ReceiveTextDialog } = context.Controllers;
-    const qr = new TextQRDialog(), receive = new ReceiveTextDialog(), file = new Dialog('queuedFileDialog');
+    const qr = new TextQRDialog(), receive = new ReceiveTextDialog(), file = new Dialog('queuedFileDialog'), send = new Dialog('sendTextDialog');
     const $ = id => document.getElementById(id);
     const click = id => {
         const node = $(id); assert.ok(node.visible(), 'click target must be visible'); assert.equal(node.disabled, false);
@@ -97,7 +100,7 @@ function fixture() {
     };
     const change = value => { input.value = value; input.oninput(); };
     const complete = (index, marker) => { const job = qrCalls[index]; job.canvas.rendered = marker; job.resolve(); };
-    return { qr, receive, file, Dialog, $, click, change, complete, qrCalls, events, document, windowEvents,
+    return { qr, receive, file, send, Dialog, $, click, change, complete, qrCalls, events, document, windowEvents,
         visibleDialogs: () => dialogs.filter(node => node.hasAttribute('show')).map(node => node.id) };
 }
 
@@ -206,4 +209,128 @@ test('the receive-text queue keeps twenty messages in order and explicitly repor
         h.click('receiveTextClose'); await turn();
     }
     assert.equal(h.receive.active, null); assert.equal(h.receive.queue.length, 0); assert.deepEqual(h.visibleDialogs(), []);
+});
+
+test('a missing preview canvas context leaves the local tool usable and closable without publishing a QR', async () => {
+    const h = fixture(); h.$('textQR').getContext = () => null;
+    assert.doesNotThrow(() => h.qr.open('private draft'));
+    assert.deepEqual(h.visibleDialogs(), ['textQrDialog']);
+    assert.equal(h.$('qrTextInput').value, 'private draft');
+    assert.equal(h.$('generateTextQR').disabled, true);
+    assert.match(h.$('qrTextStatus').textContent, /当前浏览器.*无法生成二维码/);
+    assert.equal(h.$('textQRPreview').hidden, true); assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+    h.file.show(); h.change('new private draft'); await h.qr.generate(); assert.equal(h.qrCalls.length, 0);
+    h.click('clearTextQR'); assert.equal(h.$('qrTextInput').value, '');
+    assert.equal(h.$('generateTextQR').disabled, true);
+    assert.doesNotThrow(() => h.click('closeTextQR')); await turn();
+    assert.deepEqual(h.visibleDialogs(), ['queuedFileDialog']);
+    assert.equal(h.document.activeElement, h.$('fileAccept'));
+});
+
+test('throwing canvas capability or clearing errors do not strand the tool or disclose native details', async () => {
+    for (const mode of ['getContext', 'clearRect']) {
+        const h = fixture();
+        h.$('textQR').getContext = () => {
+            if (mode === 'getContext') throw Error('PRIVATE_CANVAS_CAPABILITY_DETAIL');
+            return { clearRect() { throw Error('PRIVATE_CANVAS_CLEAR_DETAIL'); } };
+        };
+        assert.doesNotThrow(() => h.qr.open('private draft'));
+        assert.equal(h.$('generateTextQR').disabled, true);
+        assert.ok(!h.$('qrTextStatus').textContent.includes('PRIVATE_'));
+        assert.doesNotThrow(() => h.change('edited draft'));
+        assert.doesNotThrow(() => h.click('clearTextQR'));
+        assert.doesNotThrow(() => h.click('closeTextQR')); await turn();
+        assert.deepEqual(h.visibleDialogs(), []);
+        assert.equal(h.$('qrTextInput').value, '');
+        assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+    }
+});
+
+test('a canvas lost after encoding starts publishes nothing and capability recovery requires a fresh generation', async () => {
+    const h = fixture(), preview = h.$('textQR'), originalContext = preview.getContext.bind(preview);
+    h.qr.open('original draft'); const job = h.qr.generate();
+    preview.getContext = () => null; h.complete(0, 'encoded-before-loss'); await job;
+    assert.equal(h.$('textQRPreview').hidden, true); assert.equal(h.$('textQR').hidden, true);
+    assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+    assert.equal(h.$('generateTextQR').disabled, true);
+    assert.match(h.$('qrTextStatus').textContent, /当前浏览器.*无法生成二维码/);
+    assert.equal(preview.width, 0); assert.equal(preview.height, 0);
+    h.click('closeTextQR'); preview.getContext = originalContext;
+    h.qr.open('fresh after recovery'); assert.equal(h.$('generateTextQR').disabled, false);
+    const next = h.qr.generate(); h.complete(1, 'fresh-image'); await next;
+    assert.equal(h.$('textQRPreview').hidden, false); assert.equal(preview.rendered, 'fresh-image');
+    assert.ok(h.$('saveTextQR').hasAttribute('href'));
+});
+
+test('failed preview drawing or PNG export retires every link and keeps the tool safely closable', async () => {
+    for (const mode of ['drawImage', 'toDataURL']) {
+        const h = fixture(), preview = h.$('textQR');
+        h.qr.open('private draft');
+        if (mode === 'drawImage') {
+            const context = preview.getContext.bind(preview);
+            preview.getContext = type => ({ ...context(type), drawImage() { throw Error('PRIVATE_CANVAS_DRAW_DETAIL'); } });
+        }
+        const pending = h.qr.generate();
+        if (mode === 'toDataURL') h.qrCalls[0].canvas.toDataURL = () => { throw Error('PRIVATE_CANVAS_EXPORT_DETAIL'); };
+        h.complete(0, 'private-image'); await pending;
+        assert.equal(h.$('textQRPreview').hidden, true); assert.equal(h.$('textQR').hidden, true);
+        assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+        assert.equal(h.$('generateTextQR').disabled, true);
+        assert.ok(!h.$('qrTextStatus').textContent.includes('PRIVATE_'));
+        assert.equal(preview.width, 0); assert.equal(preview.height, 0);
+        assert.doesNotThrow(() => h.click('closeTextQR')); await turn();
+        assert.deepEqual(h.visibleDialogs(), []);
+    }
+});
+
+test('cached-page restoration recovers the original received text and queue without restoring QR contents', async () => {
+    const h = fixture(); h.receive.enqueue('first received text'); h.receive.enqueue('second received text');
+    h.Dialog.prototype.hide.call(h.receive); h.qr.open(h.$('text').textContent, h.receive);
+    const pending = h.qr.generate(); h.windowEvents.get('pagehide')({ persisted: true }); await turn();
+    assert.deepEqual(h.visibleDialogs(), []); assert.equal(h.$('qrTextInput').value, '');
+    assert.equal(h.$('textQRPreview').hidden, true); assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+    h.windowEvents.get('pageshow')?.({ persisted: true }); await turn();
+    assert.deepEqual(h.visibleDialogs(), ['receiveTextDialog']); assert.equal(h.$('text').textContent, 'first received text');
+    h.complete(0, 'obsolete-before-pagehide'); await pending;
+    assert.equal(h.$('textQRPreview').hidden, true); assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+    h.receive.enqueue('third received text');
+    h.click('receiveTextClose'); await turn(); assert.equal(h.$('text').textContent, 'second received text');
+    h.click('receiveTextClose'); await turn(); assert.equal(h.$('text').textContent, 'third received text');
+    h.click('receiveTextClose'); await turn(); assert.deepEqual(h.visibleDialogs(), []);
+});
+
+test('a cached-page return to the send draft preserves text without invoking any send action', async () => {
+    const h = fixture(); h.$('textInput').value = 'original unsent draft'; h.send.show();
+    h.send.hide(); h.qr.open(h.$('textInput').value, h.send);
+    h.windowEvents.get('pagehide')({ persisted: true }); await turn();
+    h.windowEvents.get('pageshow')?.({ persisted: true }); await turn();
+    assert.deepEqual(h.visibleDialogs(), ['sendTextDialog']);
+    assert.equal(h.$('textInput').value, 'original unsent draft'); assert.equal(h.document.activeElement, h.$('textInput'));
+    assert.equal(h.$('qrTextInput').value, ''); assert.equal(h.$('textQRPreview').hidden, true);
+    assert.equal(h.events.filter(event => event.type === 'send-attempt' || event.type === 'send-text').length, 0);
+    h.click('sendTextClose'); await turn(); assert.deepEqual(h.visibleDialogs(), []);
+});
+
+test('home QR and noncached page exits never resurrect an unrelated or stale return dialog', async () => {
+    const h = fixture(); h.qr.open('home only'); h.windowEvents.get('pagehide')({ persisted: true }); await turn();
+    h.windowEvents.get('pageshow')?.({ persisted: true }); await turn(); assert.deepEqual(h.visibleDialogs(), []);
+    h.receive.enqueue('retained only in the departing page');
+    h.Dialog.prototype.hide.call(h.receive); h.qr.open(h.$('text').textContent, h.receive);
+    h.windowEvents.get('pagehide')({ persisted: true }); await turn();
+    h.windowEvents.get('pagehide')({ persisted: false });
+    h.windowEvents.get('pageshow')?.({ persisted: true }); await turn(); assert.deepEqual(h.visibleDialogs(), []);
+    assert.equal(h.$('qrTextInput').value, ''); assert.equal(h.$('saveTextQR').hasAttribute('href'), false);
+});
+
+test('repeated cached lifecycle events restore text once and respect an already visible file request', async () => {
+    const h = fixture(); h.receive.enqueue('original received text');
+    h.Dialog.prototype.hide.call(h.receive); h.qr.open(h.$('text').textContent, h.receive); h.file.show();
+    h.windowEvents.get('pagehide')({ persisted: true }); h.windowEvents.get('pagehide')({ persisted: true }); await turn();
+    assert.deepEqual(h.visibleDialogs(), ['queuedFileDialog']); const focus = h.document.activeElement;
+    h.windowEvents.get('pageshow')?.({ persisted: true }); h.windowEvents.get('pageshow')?.({ persisted: true }); await turn();
+    assert.deepEqual(h.visibleDialogs(), ['queuedFileDialog']); assert.equal(h.document.activeElement, focus);
+    h.click('fileClose'); await turn(); assert.deepEqual(h.visibleDialogs(), ['receiveTextDialog']);
+    assert.equal(h.$('text').textContent, 'original received text');
+    h.click('receiveTextClose'); await turn(); assert.deepEqual(h.visibleDialogs(), []);
+    h.windowEvents.get('pageshow')?.({ persisted: true }); await turn(); assert.deepEqual(h.visibleDialogs(), []);
 });
