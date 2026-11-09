@@ -1,19 +1,18 @@
 # Zeydrop · 闪投
 
-本轮进一步修复接收下载地址累积和连续保存链接竞态，本地442/442项Node、构建及生产依赖audit通过；三引擎原生验证结果跟随PR精确提交。[下载生命周期报告](docs/TEST_REPORT_20261108_RECEIVE_DOWNLOAD.md)。
-
 **Direct by design.**
 
 [English](README.en.md)
 
-无需账号的浏览器设备直连文件传输。服务器分发页面、创建短期邀请并交换 WebRTC SDP / ICE 信令。文件正文只通过设备间的 RTCDataChannel 发送；不提供 TURN、WebSocket 文件中转、上传接口或云存储。
+无需账号的浏览器设备直连文件与文字传输。服务器提供页面、临时邀请和 SDP/ICE 信令；用户正文通过 RTCDataChannel 发送。无上传接口、服务器文件存储、TURN/DERP 或 WebSocket 文件中转。不能建立已核验的非 relay 路径时明确失败。
 
-当前为 **0.3.0-dev.1 未发布开发候选**，位于[Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。上一完整云端基线为033d88b / revisionb46de331c87a6628的[CI70](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42440165523)及截图提交b468885的[CI71](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42441059398)：427项Node、三引擎文字/二维码、1GiB/100MiB及完整套件通过。本轮继续改善手机二维码首屏、Canvas故障与缓存页面返回，本地**435/435项Node**及构建通过；精确提交的云端结果和真实截图见PR。[本轮报告](docs/TEST_REPORT_20261107_UI_RECOVERY.md)，[前轮文字与直传证据](docs/TEST_REPORT_20261107_TEXT_QR.md)。
+当前为 **0.3.0-dev.1 未发布开发候选**，开发分支 `feat/direct-first-workspace-20261019` / [Draft PR #2](https://github.com/ForceMind/SnapDrop-Lite/pull/2)。**完整计划尚未验收完成。** [统一验收状态](docs/ACCEPTANCE_STATUS.md)列出已实现内容、真实证据和外部阻断；历史报告只证明各自对应的版本。
 
-新增无需配对的本机文字二维码和发送/收到文字转码，修复长转义文字误断链、手机操作行与弹窗/异步复制竞态。459文件运行候选已独立解压重装427项、无Git重建，29构建字节及实际CI tar一致。后续README/docs及截图捕获方式更新不改此运行代码；每个源码包必须核对自己的manifest和SHA。此前生命周期、暂存删除及部署重试修复继续由完整回归覆盖；升级仍须结束传输并关闭全部旧标签。
-真实Service Worker安装失败会保留旧版，新版等待所有旧客户端退出后才激活；A→B→A的三个阶段均核验缓存字节、三个Worker离线启动和本机检查点保留，历史文件没有自动绑定。整Chromium进程强杀及重新手动授权后的完整SHA也通过。它们是同机受控浏览器证据，不保证真实断电、磁盘故障、移动/已安装PWA或正式RC。实时/恢复前缀SHA仍在有界本机Worker完成，错误不静默回退。
+已验证应用基线 `98291dba5d5749fd4cd6d0b25c1403c75e7e6146` / revision `266604dbfe70dbfa`：[CI75](https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42515253012)全套通过，442/442 Node、0失败/跳过、两侧依赖audit0，三引擎文字/二维码/哈希/队列/下载、Chromium 1GiB、Firefox 100MiB、六组合文件互传、恢复、HTTPS/WSS和PWA。503文件候选独立重装/测试/无Git重建通过，29个构建文件及实际CI tar字节一致。此后仅文档整理不改变该应用基线；新源码包须核对自己的manifest/SHA及对应CI。
 
-此前Linux WebKit阻断已通过原生前后对照定位到系统mDNS环境：补齐并预检Avahi/NSS后保持默认浏览器策略与全部安全门槛，六组合通过；该准备仅用于临时CI。真实Safari仍见[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)，真实网络/主机见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)。同机、STUN关闭的CI不证明真实NAT成功率、移动/Safari硬件或正式部署。main/生产未改，仓库最后更名由用户手动完成，zeydrop.com未确认购买。
+现有功能包括邀请与安全码确认、接收授权、队列/背压/暂停/取消/重试、完整SHA-256、用户自愿的OPFS检查点与发送清单、双方重新授权后的恢复。文字通过已核码DataChannel发送（最多4096 UTF-16单位，成功提交通道不是已读回执）；本机文字二维码无需配对，最多800 UTF-8字节，可保存PNG，不上传、不自动保存原文。二维码明文可被持图者读取。
+
+响应式深浅UI和PWA已有实际Linux浏览器证据；模拟手机视口不等于真机。真实WAN/NAT/IPv6/运营商、macOS/iOS Safari/Android/Edge、系统picker/存储驱逐/后台冻结、独立主机TLS/systemd/升级回滚及长时容量仍未验收。见[Issue #4](https://github.com/ForceMind/SnapDrop-Lite/issues/4)、[Issue #5](https://github.com/ForceMind/SnapDrop-Lite/issues/5)和[发布门槛](docs/RELEASE_GATES.md)。保持Draft，不自动合并main或部署生产；最后更名由用户手动完成，zeydrop.com未确认拥有。
 
 ## 使用流程
 
