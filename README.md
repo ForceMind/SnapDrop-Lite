@@ -1,5 +1,7 @@
 # Zeydrop · 闪投
 
+[Codex 接手说明](docs/CODEX_HANDOFF.md) · [统一验收状态](docs/ACCEPTANCE_STATUS.md)
+
 **Direct by design.**
 
 [English](README.en.md)

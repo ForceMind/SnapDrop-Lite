@@ -1,5 +1,7 @@
 # Zeydrop · 闪投
 
+[Codex handoff](docs/CODEX_HANDOFF.md) · [Acceptance ledger](docs/ACCEPTANCE_STATUS.md)
+
 **Direct by design.**
 
 [简体中文](README.md)

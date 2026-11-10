@@ -11,3 +11,5 @@ Generated dist/ and test-results/ are ignored. Runtime dependencies bundle local
 Repository rename is explicitly deferred to the user as the final manual step (2026-10-19). Continue development in ForceMind/SnapDrop-Lite; do not request browser authentication for renaming.
 
 Public build inputs are explicitly listed in scripts/public-assets.mjs. Add a file there only when it is intended for public distribution; keep local notes/configuration outside public inputs. Preserve snapshot/symlink checks and the Nginx hidden-path integration regression. Git-free source candidates must continue to build.
+
+Codex takeover entry: read docs/CODEX_HANDOFF.md and docs/ACCEPTANCE_STATUS.md. CI76/c877127 is the last fully verified source baseline; later handoff commits change only documentation/evidence and need their own CI lookup. The prior Work session stops at the owner-requested handoff; follow the new owner instructions when resuming.
