@@ -80,6 +80,8 @@ async function main() {
             report.phase = shape.name + '-' + scheme;
             await page.setViewportSize({ width: shape.width, height: shape.height }); await page.emulateMedia({ colorScheme: scheme });
             await openMore(page); await page.locator('#openTextTools').click();
+            assert.equal(await page.evaluate(() => document.activeElement?.id), 'qrTextInput',
+                'closing the More menu does not steal the modal focus');
             await page.locator('#qrTextInput').fill(text); await page.locator('#generateTextQR').click();
             await page.locator('#textQR:visible').waitFor(); await settled(page);
             await page.locator('#textQrDialog x-paper').evaluate(paper => { paper.scrollTop = 0; }); await settled(page);
@@ -110,6 +112,8 @@ async function main() {
             }
             await page.keyboard.press('Escape'); assert.equal(await page.locator('#textQrDialog').isHidden(), true);
             assert.equal(await page.locator('#qrTextInput').inputValue(), '', 'closing still clears the local tool');
+            assert.equal(await page.evaluate(() => document.activeElement?.id), 'moreToggle',
+                'closing the tool returns focus to the visible More entry');
             report.cases.push({ name: report.phase, geometry: g, pngDecoded: true, downloadedPngDecoded: true, controlsReachable: true, keyboardClose: true });
         }
         assert.deepEqual(report.errors, []); report.passed = true; report.phase = 'complete';

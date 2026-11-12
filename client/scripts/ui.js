@@ -173,6 +173,7 @@ class FileOfferDialog extends Dialog {
         if (this.active || !this.queue.length) return;
         this.active = this.queue.shift(); $('offerFileName').textContent = this.active.name;
         $('offerSender').textContent = '来自「' + ($(this.active.sender)?.querySelector('.name')?.textContent || '已连接的设备') + '」';
+        $('recoveryReceiveOptions').hidden = true;
         $('recoveryReceiveOptions').open = false;
         $('recoveryReceiveOptions').querySelector('summary').textContent = '接收选项';
         $('offerFileSize').textContent = fmt(this.active.size) + (window.showSaveFilePicker ? ' · 默认保存到你选择的文件' : ' · 默认内存保存最多 64 MiB');
@@ -574,8 +575,9 @@ class Zeydrop {
         };
         const menu = $('moreActions'), toggle = $('moreToggle');
         menu.addEventListener('click', event => {
+            // Before the target opens its modal, give that modal a visible focus return point.
             if (event.target.closest('#sendTextAction, #openTextTools')) { menu.open = false; toggle.focus(); }
-        });
+        }, true);
         document.addEventListener('click', event => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
         menu.addEventListener('keydown', event => {
             if (event.key === 'Escape' && menu.open) { menu.open = false; toggle.focus(); }
