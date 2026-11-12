@@ -233,6 +233,11 @@ async function main() {
         await a.waitForFunction(() => document.querySelector('#signalStatus').dataset.state === 'connected' && [...zeydrop.peers.peers.values()][0]?._path?.direct, null, { timeout: 30000 });
         assert.equal(await a.evaluate(() => zeydrop.server._peerId), oldId); results.cases.push('WS disconnect/reconnect preserves server identity and rebuilds P2P');
         // Delay only the answerer's discovery, so real SDP/ICE reaches it first.
+        const previousInvite = await a.locator('#inviteUrl').inputValue();
+        for (const page of pages) {
+            await page.locator('#leaveRoomBtn').click();
+            await page.waitForFunction(() => zeydrop.server._desiredRoomId === null && zeydrop.peers.peers.size === 0);
+        }
         const ids = await Promise.all(pages.map(page => page.evaluate(() => zeydrop.server._peerId)));
         const answerer = ids.slice().sort()[0]; let delayedFrames = 0;
         for (const page of pages) await page.evaluate(() => { window.__earlySignalsObserved = 0; window.addEventListener('signal', event => { if (!zeydrop.peers.peers.has(event.detail.sender)) window.__earlySignalsObserved++; }); });
@@ -242,7 +247,7 @@ async function main() {
                 delayedFrames++; setTimeout(() => originalSend(peer, message), 250);
             } else originalSend(peer, message);
         };
-        const previousInvite = await a.locator('#inviteUrl').inputValue(); await a.locator('#createRoomBtn').click();
+        await a.locator('#createRoomBtn').click();
         await a.waitForFunction(previous => {const value=document.querySelector('#inviteUrl').value;return value.includes('#room=') && value!==previous;}, previousInvite);
         const delayedInvite = await a.locator('#inviteUrl').inputValue();
         await openJoin(b); await b.locator('#roomInput').fill(delayedInvite); await b.locator('#roomBtn').click();
