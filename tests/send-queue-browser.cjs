@@ -238,6 +238,8 @@ async function main() {
         assert.equal(await receiver.evaluate(() => window.__queueOffers), 0, 'successful reselect is not permission to send');
         await verifyPair();
         await sender.waitForFunction(() => !document.querySelector('#sendStoredQueue').disabled);
+        assert.equal(await sender.locator('#moreActions').evaluate(element => element.open), false,
+            'confirming the safety code closes the More menu');
         report.checks.push('correct originals selected in reverse order are rebound only after full hashes match; fresh matching safety codes still gate manual sending');
 
         await sender.evaluate(() => {
@@ -260,6 +262,7 @@ async function main() {
             };
         }, names[0]);
         report.phase = 'manual-queue-transfer';
+        await openQueue();
         await sender.locator('#sendStoredQueue').click();
         for (let index = 0; index < files.length; index++) {
             await receiver.locator('#fileOfferDialog[show]').waitFor();
@@ -323,6 +326,7 @@ async function main() {
         report.checks.push('synthetic localStorage quota failure is visible and never binds files or sends an offer');
 
         report.phase = 'corrupt-metadata';
+        await sender.locator('#moreToggle').press('Escape');
         await sender.locator('#leaveRoomBtn').click(); await receiver.locator('#leaveRoomBtn').click();
         await sender.evaluate(key => localStorage.setItem(key, '{invalid-queue'), KEY);
         await sender.reload(); await openQueue();
