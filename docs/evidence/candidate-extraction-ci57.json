@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "sourceBranchCommit": "172adc8ae2bfc9dd577f56fb92c103a4ad64e78b",
+  "workflowRun": 42357894421,
+  "manifestCommit": "8b30899ec1c781bf0ccceb8a0c7517df2679da55",
+  "revision": "10c5794070ac6a1b",
+  "archiveSha256": "766331d11154ab649cd4796003f4caf9a27b77026c2e7e4fd868959ba2bf0f52",
+  "outerZipSha256": "0288069426b82f9166e36098956db9677ab045b1724c21e7837cfe83ebf69dec",
+  "files": 246,
+  "allFileHashesModesSizesVerifiedBeforeAndAfter": true,
+  "reinstallBothLockfiles": true,
+  "tests": {
+    "passed": 285,
+    "failed": 0
+  },
+  "gitMetadataAbsent": true,
+  "buildReproduced": true,
+  "scope": "actual extracted CI57 source, no browser-local success or WAN/hardware/production claim"
+}

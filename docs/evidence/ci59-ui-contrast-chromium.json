@@ -1,0 +1,183 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "scope": "rendered light/dark recovery row, room status, placeholder and keyboard focus; not a complete accessibility audit",
+  "phase": "complete",
+  "errors": [],
+  "themes": {
+    "light": {
+      "text": [
+        {
+          "selector": ".recovery-record span",
+          "computedForeground": "rgb(25, 51, 46)",
+          "foreground": [
+            25,
+            51,
+            46
+          ],
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 13.510761242753448,
+          "minimum": 4.5
+        },
+        {
+          "selector": ".recovery-record button",
+          "computedForeground": "rgb(25, 51, 46)",
+          "foreground": [
+            25,
+            51,
+            46
+          ],
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 13.510761242753448,
+          "minimum": 4.5
+        },
+        {
+          "selector": "#roomStatus",
+          "computedForeground": "rgb(77, 102, 87)",
+          "foreground": [
+            77,
+            102,
+            87
+          ],
+          "background": [
+            242,
+            246,
+            241
+          ],
+          "ratio": 5.733299653319706,
+          "minimum": 4.5
+        },
+        {
+          "selector": "#roomInput::placeholder",
+          "computedForeground": "rgb(77, 102, 87)",
+          "foreground": [
+            77,
+            102,
+            87
+          ],
+          "background": [
+            255,
+            255,
+            255
+          ],
+          "ratio": 6.261687465608281,
+          "minimum": 4.5
+        }
+      ],
+      "focus": {
+        "selector": "#createRoomBtn:focus-visible",
+        "computedForeground": "rgb(51, 123, 90)",
+        "foreground": [
+          51,
+          123,
+          90
+        ],
+        "background": [
+          242,
+          246,
+          241
+        ],
+        "ratio": 4.665182046893398,
+        "minimum": 3,
+        "outlineWidth": 3,
+        "outlineOffset": 4
+      }
+    },
+    "dark": {
+      "text": [
+        {
+          "selector": ".recovery-record span",
+          "computedForeground": "rgb(235, 247, 235)",
+          "foreground": [
+            235,
+            247,
+            235
+          ],
+          "background": [
+            25,
+            41,
+            34
+          ],
+          "ratio": 13.77841173850141,
+          "minimum": 4.5
+        },
+        {
+          "selector": ".recovery-record button",
+          "computedForeground": "rgb(235, 247, 235)",
+          "foreground": [
+            235,
+            247,
+            235
+          ],
+          "background": [
+            25,
+            41,
+            34
+          ],
+          "ratio": 13.77841173850141,
+          "minimum": 4.5
+        },
+        {
+          "selector": "#roomStatus",
+          "computedForeground": "rgb(169, 195, 176)",
+          "foreground": [
+            169,
+            195,
+            176
+          ],
+          "background": [
+            33,
+            57,
+            43
+          ],
+          "ratio": 6.600163734221704,
+          "minimum": 4.5
+        },
+        {
+          "selector": "#roomInput::placeholder",
+          "computedForeground": "rgb(169, 195, 176)",
+          "foreground": [
+            169,
+            195,
+            176
+          ],
+          "background": [
+            20,
+            39,
+            29
+          ],
+          "ratio": 8.312787245839239,
+          "minimum": 4.5
+        }
+      ],
+      "focus": {
+        "selector": "#createRoomBtn:focus-visible",
+        "computedForeground": "rgb(109, 189, 146)",
+        "foreground": [
+          109,
+          189,
+          146
+        ],
+        "background": [
+          33,
+          57,
+          43
+        ],
+        "ratio": 5.54625968640421,
+        "minimum": 3,
+        "outlineWidth": 3,
+        "outlineOffset": 4
+      }
+    }
+  },
+  "passed": true,
+  "browserVersion": "156.0.8078.4"
+}

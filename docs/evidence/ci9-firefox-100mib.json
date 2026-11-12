@@ -1,0 +1,70 @@
+{
+  "engine": "firefox",
+  "cases": [
+    "real UDP DataChannel, selected host path, matching DTLS code",
+    "receiver reject sends zero file bytes",
+    "fallback save and independent downloaded SHA-256/content equality",
+    "storage quota failure reports cancellation without closing the direct channel",
+    "native streamed file 0 bytes with independent disk SHA-256",
+    "native streamed file 104857600 bytes with independent disk SHA-256",
+    "server WebSocket captured: no file name, hash or body; no binary frames",
+    "WS disconnect/reconnect preserves server identity and rebuilds P2P",
+    "real delayed discovery: earlier SDP/ICE buffered until authorized peer appears",
+    "local diagnostic download records selected path without identities, invitation, tokens or file metadata"
+  ],
+  "network": "two contexts on the same test host; STUN disabled",
+  "errors": [],
+  "profiles": "two ephemeral contexts",
+  "paths": [
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "family": "地址族未公开",
+      "rtt": 0
+    },
+    {
+      "direct": true,
+      "status": "selected",
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "family": "地址族未公开",
+      "rtt": 0
+    }
+  ],
+  "storageBefore": {
+    "quota": 10737418240,
+    "usage": 326361
+  },
+  "stream0": {
+    "ms": 168,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stream104857600": {
+    "ms": 7401,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "peakReceiveQueues": [
+    157,
+    163923
+  ],
+  "signaling": {
+    "messages": 4,
+    "bytes": 60,
+    "fileBodyObserved": false
+  },
+  "delayedEarlySignals": [
+    0,
+    3
+  ],
+  "passed": true,
+  "evidenceSource": {
+    "commit": "7c1285751b7c88c29af2f6edb4b5b5dce81b4546",
+    "runId": 39273386666,
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/39273386666",
+    "scope": "same-host browsers; predates separate paired-session deadline"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "sourceCommit": "a1dfef939cb2af1ab64fc987a84a9a18b996f685",
+  "revision": "6a2caec304bbd413",
+  "runId": 42349478384,
+  "runNumber": 52,
+  "jobId": 128334335063,
+  "conclusion": "success",
+  "nodeTests": {
+    "passed": 196,
+    "failed": 0
+  },
+  "sendQueueEngines": {
+    "chromium": {
+      "passed": true,
+      "errors": [],
+      "transferredBytes": 81976,
+      "fullChecklistExecuted": true
+    },
+    "firefox": {
+      "passed": true,
+      "errors": [],
+      "transferredBytes": 81976,
+      "fullChecklistExecuted": true
+    },
+    "webkit": {
+      "passed": true,
+      "errors": [],
+      "transferredBytes": 81976,
+      "fullChecklistExecuted": true
+    }
+  },
+  "browserPairs": [
+    {
+      "engines": [
+        "chromium",
+        "chromium"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "firefox"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "firefox"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "firefox",
+        "webkit"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    },
+    {
+      "engines": [
+        "webkit",
+        "webkit"
+      ],
+      "passed": true,
+      "fileTransferExecuted": true,
+      "directions": 2
+    }
+  ],
+  "artifacts": {
+    "source": 13564752556,
+    "queue": 13565142054,
+    "evidence": 13565171310
+  },
+  "candidateTarSha256": "972e76dbb6b389ed4abd47489d02ba80a14bb4d5c4c448f1d50db08e07ccf851",
+  "limitations": [
+    "same CI host, STUN disabled",
+    "picker selection substituted",
+    "not WAN/NAT or Safari/mobile hardware acceptance",
+    "no production deployment or main merge",
+    "not long soak or full process RSS/CPU"
+  ]
+}

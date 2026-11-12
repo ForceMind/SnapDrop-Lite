@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "passed": true,
+  "phase": "complete",
+  "checks": [
+    "the real native OPFS append is held before hash/ACK; the verified owned browser process group is SIGKILLed without park, close, or graceful page exit",
+    "after actual process exit, the same profile opens with fresh process/document/identity; committed metadata survives unchanged and the unhashed tail is not advertised as committed",
+    "new invitation, safety-code clicks, file reselection and explicit checkpoint consent truncate/revalidate the old prefix and send exactly the remaining tail; downloaded full SHA matches independent Node crypto"
+  ],
+  "errors": [],
+  "scope": "actual SIGKILL of verified test-owned Chromium group and observed core processes, same-origin persistent-profile OPFS recovery and real same-host RTCDataChannel; STUN disabled; not OS power loss, real disk failure, mobile/Safari or WAN evidence",
+  "network": {
+    "scope": "application page/context requests and actual signaling; not all browser-internal background traffic",
+    "uploadAttempts": 0,
+    "externalApplicationRequests": 0,
+    "signalingMessages": 18,
+    "signalingBytes": 3806,
+    "fileDataObserved": false
+  },
+  "browserVersion": "156.0.8078.4",
+  "initialPaths": [
+    {
+      "direct": true,
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host"
+    },
+    {
+      "direct": true,
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host"
+    }
+  ],
+  "beforeCrash": {
+    "nativeAppendAcknowledgedBytes": 1064960,
+    "committedOffset": 1048576,
+    "committedSha256": "a6635377b1b65d4f3738f6d076b8a4648eb1ba7cc5781c20c071a6e3c5508354",
+    "gracefulStorageRetireCalls": 0,
+    "completionEvents": 0,
+    "uncheckpointedBytes": 16384
+  },
+  "crash": {
+    "driver": "SIGKILL verified test-owned Chromium process group",
+    "positiveMainPidVerified": true,
+    "parentUidGroupSessionProfileAndStartVerified": true,
+    "ownedProcessHandle": true,
+    "coreProcessesObserved": 10,
+    "coreGroupMembershipVerified": true,
+    "observedMembersBeforeKill": 12,
+    "observedMainExitCode": null,
+    "observedMainExitSignal": "SIGKILL",
+    "browserDisconnected": true,
+    "oldLiveMembers": 0,
+    "oldZombieMembers": 0,
+    "gracefulCloseBeforeSignal": false,
+    "scope": "verified owned Chromium group and observed core processes; not OS shutdown or power loss"
+  },
+  "senderRemainedAlive": true,
+  "afterCrash": {
+    "samePersistentProfile": true,
+    "newOwnedProcessAndEndpoint": true,
+    "freshPeerIdentity": true,
+    "freshDocument": true,
+    "metadataByteIdentical": true,
+    "committedOffset": 1048576,
+    "committedSha256": "a6635377b1b65d4f3738f6d076b8a4648eb1ba7cc5781c20c071a6e3c5508354",
+    "physicalBytes": 1064960,
+    "uncheckpointedTailMayPersistOrVanish": true,
+    "noAutomaticRoom": true
+  },
+  "newPaths": [
+    {
+      "direct": true,
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx"
+    },
+    {
+      "direct": true,
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host"
+    }
+  ],
+  "resume": {
+    "calls": 1,
+    "offset": 1048576,
+    "snapshotBytes": 1048576,
+    "prefixSha256": "a6635377b1b65d4f3738f6d076b8a4648eb1ba7cc5781c20c071a6e3c5508354",
+    "independentlyReadSha256": "a6635377b1b65d4f3738f6d076b8a4648eb1ba7cc5781c20c071a6e3c5508354",
+    "sentTailBytes": 3145728,
+    "finalBytes": 4194304,
+    "finalSha256": "527d8c881d61fef9087b26a2ca5ba33cb2a7a6224b7099388ec075abe4ce3d6f"
+  },
+  "liveHashes": [
+    {
+      "handles": 3,
+      "workerHandles": 3,
+      "mainCalls": 0,
+      "active": 0
+    },
+    {
+      "handles": 2,
+      "workerHandles": 2,
+      "mainCalls": 0,
+      "active": 0
+    }
+  ],
+  "testProfileRemoved": true
+}

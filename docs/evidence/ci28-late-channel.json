@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "date_utc": "2026-11-05",
+  "project": "Zeydrop",
+  "code_commit": "202de19e4f6563d6a1aefc0a9c4c069dfe30e190",
+  "github_actions": {
+    "run": 28,
+    "id": 41990699426,
+    "conclusion": "success",
+    "url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/41990699426"
+  },
+  "verification": {
+    "node_tests": 60,
+    "node_passed": 60,
+    "node_failed": 0,
+    "chromium_1gib": "pass",
+    "firefox_100mib": "pass",
+    "webkit_ui_smoke": "pass",
+    "chromium_opfs_dual_tab_corruption": "pass",
+    "chromium_webrtc_cross_reload": "pass",
+    "source_protocol": "direct-only RTCDataChannel and signaling only on WSS"
+  },
+  "regression": "Drop queued stale frames if originating DataChannel closed/replaced or ICE selected-route epoch changed before asynchronous dequeue. Bounded queue accounting intact.",
+  "limits": "GitHub CI uses single host, STUN disabled; not physical devices, real public ISP NAT success, iOS Safari or production deployment.",
+  "release_status": "PR #2 Draft. Main unchanged. User retains manual repository rename."
+}

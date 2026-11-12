@@ -1,0 +1,178 @@
+name: Zeydrop verification
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: zeydrop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      - run: npm ci --ignore-scripts && npm --prefix server ci --ignore-scripts
+      - run: npm audit && npm --prefix server audit
+      - run: npm test
+      - run: node scripts/server-load.cjs --connections 64 --signals 20 --duration-ms 1000 --cycles 2 --out test-results/server-load.json
+      # Actual slow-reader sockets exercise the production output threshold.
+      # Default TCP buffers may absorb this bounded batch; a constrained test
+      # socket is then explicit in the evidence, never a mocked bufferedAmount.
+      - run: node tests/slow-reader.cjs --permanent --out test-results/slow-reader.json
+      - run: bash -n build.sh deploy.sh scripts/rollback.sh
+      - run: npm run build && node scripts/check-build.mjs
+      # The Azure package mirror exhausted CI #44's install budget. Use the
+      # official archive on this disposable hosted runner; APT keys/policy stay.
+      - run: sudo --preserve-env=CI,GITHUB_ACTIONS,RUNNER_OS,RUNNER_ENVIRONMENT "$(command -v node)" scripts/configure-ci-apt.cjs
+      - run: sudo apt-get update && sudo apt-get install -y nginx libzbar0
+      - run: bash scripts/check-nginx.sh
+      - run: node tests/https-proxy.cjs
+      # Source/build artifact is intentionally available before browser setup.
+      # Its manifest is not a browser, WAN, Safari or deployment certification.
+      - run: |
+          node scripts/package-candidate.mjs
+          cp test-results/candidate/zeydrop-candidate.tar.gz.sha256 /tmp/zeydrop-first.sha256
+          node scripts/package-candidate.mjs
+          cmp /tmp/zeydrop-first.sha256 test-results/candidate/zeydrop-candidate.tar.gz.sha256
+          cd test-results/candidate && sha256sum -c zeydrop-candidate.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: zeydrop-unreleased-source-candidate
+          path: test-results/candidate/
+          retention-days: 7
+      - uses: actions/cache/restore@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('package-lock.json') }}
+      - id: browsers
+        timeout-minutes: 10
+        if: ${{ !cancelled() }}
+        run: npx playwright install --with-deps chromium firefox webkit
+      - uses: actions/cache/save@v6
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' && steps.playwright-cache.outputs.cache-hit != 'true' }}
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-cache.outputs.cache-primary-key }}
+      # These local UI/storage checks need no mDNS or ICE. Publish their
+      # diagnostics early so a failure can be investigated during long files.
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/pwa-workers-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/pwa-upgrade-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/ui-contrast-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/text-qr-layout-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/receive-download-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/receive-download-burst-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        with:
+          name: zeydrop-local-ui-evidence
+          path: |
+            test-results/pwa-workers-*.json
+            test-results/pwa-upgrade-*.json
+            test-results/ui-contrast-*
+            test-results/qr-layout-*
+            test-results/receive-download-*.json
+          retention-days: 7
+      # Preserve native browser-default evidence before preparing the Linux
+      # mDNS resolver used by WebKitGTK. Neither probe can authorize file data.
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: |
+          node tests/webrtc-primitives.cjs
+          cp test-results/webrtc-primitives.json test-results/webrtc-primitives-browser-default.json
+      - id: mdns
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: |
+          sudo apt-get install -y avahi-daemon libnss-mdns avahi-utils dbus libglib2.0-bin
+          sudo systemctl start dbus avahi-daemon
+          node scripts/check-ci-mdns.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/text-qr-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/text-qr-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/text-qr-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        with:
+          name: zeydrop-text-qr-evidence
+          path: test-results/text-qr-*
+          retention-days: 7
+      - run: node tests/interoperability.cjs
+      - run: node tests/recovery-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/recovery-start-race-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/recovery-retirement-browser.cjs
+      - run: node tests/persistent-flow-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/file-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/file-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/file-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/stream-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/stream-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/stream-hash-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/stream-hash-recovery-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/browser-crash-recovery.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: node tests/send-queue-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox node tests/send-queue-browser.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit node tests/send-queue-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        with:
+          name: zeydrop-send-queue-evidence
+          path: test-results/send-queue-*
+          retention-days: 7
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: LARGE_FILE_TEST=1 npm run test:browser
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=firefox npm run test:browser
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: BROWSER_TYPE=webkit npm run test:smoke
+      # Experimental Linux WebKit DataChannel compatibility is a separate
+      # release gate. The earlier source/build candidate is available for
+      # isolated testing; any product failure still makes the overall CI red.
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: RTC_PROBE_ENVIRONMENT=linux-avahi-nss BROWSER_PAIRS=chromium-chromium,firefox-firefox,chromium-firefox,chromium-webkit,firefox-webkit,webkit-webkit node tests/webkit-transfer.cjs
+      - if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: RTC_PROBE_ENVIRONMENT=linux-avahi-nss node tests/webrtc-primitives.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zeydrop-test-evidence
+          path: test-results/
+          retention-days: 7

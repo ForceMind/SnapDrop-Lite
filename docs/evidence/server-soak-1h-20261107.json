@@ -1,0 +1,2678 @@
+{
+  "schema": 1,
+  "status": "passed",
+  "phase": "complete",
+  "startedAtUTC": "2026-11-07T08:12:05.172Z",
+  "scope": "isolated loopback signaling, synthetic SDP and real wall-clock heartbeat/resume; no ICE, DataChannel, file, WAN or production capacity claim",
+  "config": {
+    "durationSeconds": 3600,
+    "connections": 64
+  },
+  "timing": {
+    "realClock": true,
+    "clockAdvanced": false,
+    "manualSweep": false,
+    "resumeGraceMs": 120000,
+    "automaticSweepIntervalMs": 5000,
+    "hardDeadlineMs": 3810000,
+    "signalIntervalMs": 15000,
+    "reconnectIntervalMs": 60000,
+    "sampleIntervalMs": 60000
+  },
+  "runtime": {
+    "separateServerProcess": true,
+    "serverV8OldSpaceLimitMiB": 96,
+    "osMemoryLimitApplied": false,
+    "serverNode": "v24.22.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "counters": {
+    "signalMessagesSent": 15360,
+    "signalMessagesReceived": 15360,
+    "heartbeatResponses": 46008,
+    "resumedConnections": 472,
+    "reconnectCycles": 59,
+    "signalRelayLatency": {
+      "count": 15360,
+      "meanMs": 1.386,
+      "maxMs": 7.254,
+      "p50UpperBoundMs": 2,
+      "p95UpperBoundMs": 5
+    },
+    "connectHelloLatency": {
+      "count": 536,
+      "meanMs": 8.975,
+      "maxMs": 61.31,
+      "p50UpperBoundMs": 5,
+      "p95UpperBoundMs": 50
+    }
+  },
+  "samples": [
+    {
+      "phase": "baseline",
+      "atMs": 72,
+      "server": {
+        "connections": 0,
+        "sessions": 0,
+        "rooms": 0,
+        "webSocketClients": 0,
+        "rssBytes": 38154240,
+        "heapUsedBytes": 8533368,
+        "externalBytes": 4121491,
+        "processPeakRssBytes": 38666240,
+        "cpuUserMicros": 64026,
+        "cpuSystemMicros": 8193,
+        "elapsedMs": 64,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 0,
+        "maxObservedWindowBytes": 0,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": null,
+        "userMicros": null,
+        "systemMicros": null,
+        "percentOfOneCore": null
+      },
+      "counters": {
+        "signalMessagesSent": 0,
+        "signalMessagesReceived": 0,
+        "heartbeatResponses": 0,
+        "resumedConnections": 0
+      },
+      "signalRelayLatency": {
+        "count": 0,
+        "meanMs": null,
+        "maxMs": null,
+        "p50UpperBoundMs": null,
+        "p95UpperBoundMs": null
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 143,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 42217472,
+        "heapUsedBytes": 10089872,
+        "externalBytes": 4130443,
+        "processPeakRssBytes": 42217472,
+        "cpuUserMicros": 111716,
+        "cpuSystemMicros": 8449,
+        "elapsedMs": 134,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 2,
+        "maxObservedWindowBytes": 82,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 70,
+        "userMicros": 47690,
+        "systemMicros": 256,
+        "percentOfOneCore": 68.49
+      },
+      "counters": {
+        "signalMessagesSent": 0,
+        "signalMessagesReceived": 0,
+        "heartbeatResponses": 0,
+        "resumedConnections": 0
+      },
+      "signalRelayLatency": {
+        "count": 0,
+        "meanMs": null,
+        "maxMs": null,
+        "p50UpperBoundMs": null,
+        "p95UpperBoundMs": null
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 60195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 48762880,
+        "heapUsedBytes": 10361136,
+        "externalBytes": 4138005,
+        "processPeakRssBytes": 48762880,
+        "cpuUserMicros": 166366,
+        "cpuSystemMicros": 26188,
+        "elapsedMs": 60187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 845,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60053,
+        "userMicros": 54650,
+        "systemMicros": 17739,
+        "percentOfOneCore": 0.12
+      },
+      "counters": {
+        "signalMessagesSent": 320,
+        "signalMessagesReceived": 320,
+        "heartbeatResponses": 768,
+        "resumedConnections": 8
+      },
+      "signalRelayLatency": {
+        "count": 320,
+        "meanMs": 1.336,
+        "maxMs": 2.387,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 120195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 49766400,
+        "heapUsedBytes": 10592472,
+        "externalBytes": 4138107,
+        "processPeakRssBytes": 49766400,
+        "cpuUserMicros": 217884,
+        "cpuSystemMicros": 27043,
+        "elapsedMs": 120187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 910,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 51518,
+        "systemMicros": 855,
+        "percentOfOneCore": 0.09
+      },
+      "counters": {
+        "signalMessagesSent": 576,
+        "signalMessagesReceived": 576,
+        "heartbeatResponses": 1536,
+        "resumedConnections": 16
+      },
+      "signalRelayLatency": {
+        "count": 576,
+        "meanMs": 1.263,
+        "maxMs": 2.387,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 180191,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 49897472,
+        "heapUsedBytes": 10447464,
+        "externalBytes": 4135913,
+        "processPeakRssBytes": 49897472,
+        "cpuUserMicros": 243166,
+        "cpuSystemMicros": 35505,
+        "elapsedMs": 180183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 910,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59996,
+        "userMicros": 25282,
+        "systemMicros": 8462,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 832,
+        "signalMessagesReceived": 832,
+        "heartbeatResponses": 2296,
+        "resumedConnections": 24
+      },
+      "signalRelayLatency": {
+        "count": 832,
+        "meanMs": 1.216,
+        "maxMs": 2.387,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 2
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 240196,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 50421760,
+        "heapUsedBytes": 10402216,
+        "externalBytes": 4135436,
+        "processPeakRssBytes": 50421760,
+        "cpuUserMicros": 272480,
+        "cpuSystemMicros": 46501,
+        "elapsedMs": 240188,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 910,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60005,
+        "userMicros": 29314,
+        "systemMicros": 10996,
+        "percentOfOneCore": 0.07
+      },
+      "counters": {
+        "signalMessagesSent": 1088,
+        "signalMessagesReceived": 1088,
+        "heartbeatResponses": 3064,
+        "resumedConnections": 32
+      },
+      "signalRelayLatency": {
+        "count": 1088,
+        "meanMs": 1.165,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 2
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 300191,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 50421760,
+        "heapUsedBytes": 10638448,
+        "externalBytes": 4137873,
+        "processPeakRssBytes": 50421760,
+        "cpuUserMicros": 305874,
+        "cpuSystemMicros": 47990,
+        "elapsedMs": 300183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59995,
+        "userMicros": 33394,
+        "systemMicros": 1489,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 1344,
+        "signalMessagesReceived": 1344,
+        "heartbeatResponses": 3768,
+        "resumedConnections": 40
+      },
+      "signalRelayLatency": {
+        "count": 1344,
+        "meanMs": 1.282,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 360202,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 51339264,
+        "heapUsedBytes": 10651856,
+        "externalBytes": 4136409,
+        "processPeakRssBytes": 51339264,
+        "cpuUserMicros": 335564,
+        "cpuSystemMicros": 59204,
+        "elapsedMs": 360194,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60011,
+        "userMicros": 29690,
+        "systemMicros": 11214,
+        "percentOfOneCore": 0.07
+      },
+      "counters": {
+        "signalMessagesSent": 1600,
+        "signalMessagesReceived": 1600,
+        "heartbeatResponses": 4536,
+        "resumedConnections": 48
+      },
+      "signalRelayLatency": {
+        "count": 1600,
+        "meanMs": 1.228,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 420194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 51470336,
+        "heapUsedBytes": 10513904,
+        "externalBytes": 4135957,
+        "processPeakRssBytes": 51470336,
+        "cpuUserMicros": 359321,
+        "cpuSystemMicros": 71968,
+        "elapsedMs": 420186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59992,
+        "userMicros": 23757,
+        "systemMicros": 12764,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 1856,
+        "signalMessagesReceived": 1856,
+        "heartbeatResponses": 5304,
+        "resumedConnections": 56
+      },
+      "signalRelayLatency": {
+        "count": 1856,
+        "meanMs": 1.249,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 480193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 51863552,
+        "heapUsedBytes": 11015720,
+        "externalBytes": 4205918,
+        "processPeakRssBytes": 51863552,
+        "cpuUserMicros": 381198,
+        "cpuSystemMicros": 82367,
+        "elapsedMs": 480185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 21877,
+        "systemMicros": 10399,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 2112,
+        "signalMessagesReceived": 2112,
+        "heartbeatResponses": 6072,
+        "resumedConnections": 64
+      },
+      "signalRelayLatency": {
+        "count": 2112,
+        "meanMs": 1.257,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 540192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 51994624,
+        "heapUsedBytes": 10817168,
+        "externalBytes": 4202913,
+        "processPeakRssBytes": 51994624,
+        "cpuUserMicros": 395200,
+        "cpuSystemMicros": 99453,
+        "elapsedMs": 540184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 14002,
+        "systemMicros": 17086,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 2368,
+        "signalMessagesReceived": 2368,
+        "heartbeatResponses": 6840,
+        "resumedConnections": 72
+      },
+      "signalRelayLatency": {
+        "count": 2368,
+        "meanMs": 1.236,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 600191,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52056064,
+        "heapUsedBytes": 10516464,
+        "externalBytes": 4200492,
+        "processPeakRssBytes": 52387840,
+        "cpuUserMicros": 437911,
+        "cpuSystemMicros": 100379,
+        "elapsedMs": 600183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 42711,
+        "systemMicros": 926,
+        "percentOfOneCore": 0.07
+      },
+      "counters": {
+        "signalMessagesSent": 2624,
+        "signalMessagesReceived": 2624,
+        "heartbeatResponses": 7608,
+        "resumedConnections": 80
+      },
+      "signalRelayLatency": {
+        "count": 2624,
+        "meanMs": 1.195,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 660194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52318208,
+        "heapUsedBytes": 10873736,
+        "externalBytes": 4202665,
+        "processPeakRssBytes": 52387840,
+        "cpuUserMicros": 484207,
+        "cpuSystemMicros": 105160,
+        "elapsedMs": 660185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60002,
+        "userMicros": 46296,
+        "systemMicros": 4781,
+        "percentOfOneCore": 0.09
+      },
+      "counters": {
+        "signalMessagesSent": 2880,
+        "signalMessagesReceived": 2880,
+        "heartbeatResponses": 8376,
+        "resumedConnections": 88
+      },
+      "signalRelayLatency": {
+        "count": 2880,
+        "meanMs": 1.247,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 720195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52318208,
+        "heapUsedBytes": 11118792,
+        "externalBytes": 4205150,
+        "processPeakRssBytes": 52387840,
+        "cpuUserMicros": 513401,
+        "cpuSystemMicros": 109429,
+        "elapsedMs": 720187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60002,
+        "userMicros": 29194,
+        "systemMicros": 4269,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 3136,
+        "signalMessagesReceived": 3136,
+        "heartbeatResponses": 9144,
+        "resumedConnections": 96
+      },
+      "signalRelayLatency": {
+        "count": 3136,
+        "meanMs": 1.243,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 780191,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52318208,
+        "heapUsedBytes": 11347400,
+        "externalBytes": 4206638,
+        "processPeakRssBytes": 52387840,
+        "cpuUserMicros": 519685,
+        "cpuSystemMicros": 129519,
+        "elapsedMs": 780183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59996,
+        "userMicros": 6284,
+        "systemMicros": 20090,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 3392,
+        "signalMessagesReceived": 3392,
+        "heartbeatResponses": 9912,
+        "resumedConnections": 104
+      },
+      "signalRelayLatency": {
+        "count": 3392,
+        "meanMs": 1.252,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 840195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52449280,
+        "heapUsedBytes": 10745240,
+        "externalBytes": 4201068,
+        "processPeakRssBytes": 52449280,
+        "cpuUserMicros": 533734,
+        "cpuSystemMicros": 137445,
+        "elapsedMs": 840187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60004,
+        "userMicros": 14049,
+        "systemMicros": 7926,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 3648,
+        "signalMessagesReceived": 3648,
+        "heartbeatResponses": 10680,
+        "resumedConnections": 112
+      },
+      "signalRelayLatency": {
+        "count": 3648,
+        "meanMs": 1.248,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 900194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52711424,
+        "heapUsedBytes": 11030712,
+        "externalBytes": 4268777,
+        "processPeakRssBytes": 52711424,
+        "cpuUserMicros": 561378,
+        "cpuSystemMicros": 139165,
+        "elapsedMs": 900186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 27644,
+        "systemMicros": 1720,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 3904,
+        "signalMessagesReceived": 3904,
+        "heartbeatResponses": 11448,
+        "resumedConnections": 120
+      },
+      "signalRelayLatency": {
+        "count": 3904,
+        "meanMs": 1.254,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 960199,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52711424,
+        "heapUsedBytes": 11028664,
+        "externalBytes": 4268921,
+        "processPeakRssBytes": 52711424,
+        "cpuUserMicros": 575814,
+        "cpuSystemMicros": 151387,
+        "elapsedMs": 960191,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60005,
+        "userMicros": 14436,
+        "systemMicros": 12222,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 4160,
+        "signalMessagesReceived": 4160,
+        "heartbeatResponses": 12216,
+        "resumedConnections": 128
+      },
+      "signalRelayLatency": {
+        "count": 4160,
+        "meanMs": 1.283,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1020192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52842496,
+        "heapUsedBytes": 11091720,
+        "externalBytes": 4269036,
+        "processPeakRssBytes": 52842496,
+        "cpuUserMicros": 599833,
+        "cpuSystemMicros": 151589,
+        "elapsedMs": 1020184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59993,
+        "userMicros": 24019,
+        "systemMicros": 202,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 4416,
+        "signalMessagesReceived": 4416,
+        "heartbeatResponses": 12984,
+        "resumedConnections": 136
+      },
+      "signalRelayLatency": {
+        "count": 4416,
+        "meanMs": 1.285,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1080194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52842496,
+        "heapUsedBytes": 11112768,
+        "externalBytes": 4269209,
+        "processPeakRssBytes": 52842496,
+        "cpuUserMicros": 618856,
+        "cpuSystemMicros": 157261,
+        "elapsedMs": 1080186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60002,
+        "userMicros": 19023,
+        "systemMicros": 5672,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 4672,
+        "signalMessagesReceived": 4672,
+        "heartbeatResponses": 13752,
+        "resumedConnections": 144
+      },
+      "signalRelayLatency": {
+        "count": 4672,
+        "meanMs": 1.301,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1140194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52842496,
+        "heapUsedBytes": 11149800,
+        "externalBytes": 4269353,
+        "processPeakRssBytes": 52842496,
+        "cpuUserMicros": 641434,
+        "cpuSystemMicros": 164699,
+        "elapsedMs": 1140186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 22578,
+        "systemMicros": 7438,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 4928,
+        "signalMessagesReceived": 4928,
+        "heartbeatResponses": 14520,
+        "resumedConnections": 152
+      },
+      "signalRelayLatency": {
+        "count": 4928,
+        "meanMs": 1.296,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1200189,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52842496,
+        "heapUsedBytes": 11180256,
+        "externalBytes": 4269497,
+        "processPeakRssBytes": 52842496,
+        "cpuUserMicros": 664282,
+        "cpuSystemMicros": 165082,
+        "elapsedMs": 1200181,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59995,
+        "userMicros": 22848,
+        "systemMicros": 383,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 5184,
+        "signalMessagesReceived": 5184,
+        "heartbeatResponses": 15288,
+        "resumedConnections": 160
+      },
+      "signalRelayLatency": {
+        "count": 5184,
+        "meanMs": 1.297,
+        "maxMs": 4.365,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1260195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52973568,
+        "heapUsedBytes": 11019016,
+        "externalBytes": 4267717,
+        "processPeakRssBytes": 52973568,
+        "cpuUserMicros": 681101,
+        "cpuSystemMicros": 176538,
+        "elapsedMs": 1260187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60006,
+        "userMicros": 16819,
+        "systemMicros": 11456,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 5440,
+        "signalMessagesReceived": 5440,
+        "heartbeatResponses": 16056,
+        "resumedConnections": 168
+      },
+      "signalRelayLatency": {
+        "count": 5440,
+        "meanMs": 1.35,
+        "maxMs": 6.514,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1320197,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52973568,
+        "heapUsedBytes": 11026528,
+        "externalBytes": 4267756,
+        "processPeakRssBytes": 52973568,
+        "cpuUserMicros": 702855,
+        "cpuSystemMicros": 180511,
+        "elapsedMs": 1320188,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 21754,
+        "systemMicros": 3973,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 5696,
+        "signalMessagesReceived": 5696,
+        "heartbeatResponses": 16824,
+        "resumedConnections": 176
+      },
+      "signalRelayLatency": {
+        "count": 5696,
+        "meanMs": 1.326,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1380192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 52973568,
+        "heapUsedBytes": 11057016,
+        "externalBytes": 4333436,
+        "processPeakRssBytes": 52973568,
+        "cpuUserMicros": 707904,
+        "cpuSystemMicros": 202890,
+        "elapsedMs": 1380183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59995,
+        "userMicros": 5049,
+        "systemMicros": 22379,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 5952,
+        "signalMessagesReceived": 5952,
+        "heartbeatResponses": 17592,
+        "resumedConnections": 184
+      },
+      "signalRelayLatency": {
+        "count": 5952,
+        "meanMs": 1.345,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1440195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53059584,
+        "heapUsedBytes": 11124896,
+        "externalBytes": 4333580,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 745871,
+        "cpuSystemMicros": 205597,
+        "elapsedMs": 1440186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60003,
+        "userMicros": 37967,
+        "systemMicros": 2707,
+        "percentOfOneCore": 0.07
+      },
+      "counters": {
+        "signalMessagesSent": 6208,
+        "signalMessagesReceived": 6208,
+        "heartbeatResponses": 18360,
+        "resumedConnections": 192
+      },
+      "signalRelayLatency": {
+        "count": 6208,
+        "meanMs": 1.351,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1500195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11157800,
+        "externalBytes": 4333724,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 759837,
+        "cpuSystemMicros": 215623,
+        "elapsedMs": 1500187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 13966,
+        "systemMicros": 10026,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 6464,
+        "signalMessagesReceived": 6464,
+        "heartbeatResponses": 19128,
+        "resumedConnections": 200
+      },
+      "signalRelayLatency": {
+        "count": 6464,
+        "meanMs": 1.331,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1560194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11212208,
+        "externalBytes": 4333868,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 777695,
+        "cpuSystemMicros": 222068,
+        "elapsedMs": 1560186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 17858,
+        "systemMicros": 6445,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 6720,
+        "signalMessagesReceived": 6720,
+        "heartbeatResponses": 19896,
+        "resumedConnections": 208
+      },
+      "signalRelayLatency": {
+        "count": 6720,
+        "meanMs": 1.32,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1620201,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11253248,
+        "externalBytes": 4334012,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 782643,
+        "cpuSystemMicros": 243811,
+        "elapsedMs": 1620193,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60007,
+        "userMicros": 4948,
+        "systemMicros": 21743,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 6976,
+        "signalMessagesReceived": 6976,
+        "heartbeatResponses": 20664,
+        "resumedConnections": 216
+      },
+      "signalRelayLatency": {
+        "count": 6976,
+        "meanMs": 1.308,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1680192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11310256,
+        "externalBytes": 4334156,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 802026,
+        "cpuSystemMicros": 249888,
+        "elapsedMs": 1680184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59991,
+        "userMicros": 19383,
+        "systemMicros": 6077,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 7232,
+        "signalMessagesReceived": 7232,
+        "heartbeatResponses": 21432,
+        "resumedConnections": 224
+      },
+      "signalRelayLatency": {
+        "count": 7232,
+        "meanMs": 1.306,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1740192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11342704,
+        "externalBytes": 4334300,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 812377,
+        "cpuSystemMicros": 268926,
+        "elapsedMs": 1740184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 10351,
+        "systemMicros": 19038,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 7488,
+        "signalMessagesReceived": 7488,
+        "heartbeatResponses": 22200,
+        "resumedConnections": 232
+      },
+      "signalRelayLatency": {
+        "count": 7488,
+        "meanMs": 1.294,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1800191,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11360456,
+        "externalBytes": 4399980,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 825889,
+        "cpuSystemMicros": 281582,
+        "elapsedMs": 1800183,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 13512,
+        "systemMicros": 12656,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 7744,
+        "signalMessagesReceived": 7744,
+        "heartbeatResponses": 22968,
+        "resumedConnections": 240
+      },
+      "signalRelayLatency": {
+        "count": 7744,
+        "meanMs": 1.317,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1860192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53190656,
+        "heapUsedBytes": 11415120,
+        "externalBytes": 4400124,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 840876,
+        "cpuSystemMicros": 292259,
+        "elapsedMs": 1860184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 14987,
+        "systemMicros": 10677,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 8000,
+        "signalMessagesReceived": 8000,
+        "heartbeatResponses": 23736,
+        "resumedConnections": 248
+      },
+      "signalRelayLatency": {
+        "count": 8000,
+        "meanMs": 1.302,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1920203,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53452800,
+        "heapUsedBytes": 11428280,
+        "externalBytes": 4400268,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 856766,
+        "cpuSystemMicros": 303051,
+        "elapsedMs": 1920195,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60011,
+        "userMicros": 15890,
+        "systemMicros": 10792,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 8256,
+        "signalMessagesReceived": 8256,
+        "heartbeatResponses": 24504,
+        "resumedConnections": 256
+      },
+      "signalRelayLatency": {
+        "count": 8256,
+        "meanMs": 1.307,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 1980196,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53583872,
+        "heapUsedBytes": 11512712,
+        "externalBytes": 4400413,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 866889,
+        "cpuSystemMicros": 319625,
+        "elapsedMs": 1980188,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59993,
+        "userMicros": 10123,
+        "systemMicros": 16574,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 8512,
+        "signalMessagesReceived": 8512,
+        "heartbeatResponses": 25272,
+        "resumedConnections": 264
+      },
+      "signalRelayLatency": {
+        "count": 8512,
+        "meanMs": 1.32,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2040194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53583872,
+        "heapUsedBytes": 11552048,
+        "externalBytes": 4400557,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 891851,
+        "cpuSystemMicros": 321143,
+        "elapsedMs": 2040186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59998,
+        "userMicros": 24962,
+        "systemMicros": 1518,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 8768,
+        "signalMessagesReceived": 8768,
+        "heartbeatResponses": 26040,
+        "resumedConnections": 272
+      },
+      "signalRelayLatency": {
+        "count": 8768,
+        "meanMs": 1.328,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2100189,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53583872,
+        "heapUsedBytes": 11551880,
+        "externalBytes": 4400701,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 915371,
+        "cpuSystemMicros": 323573,
+        "elapsedMs": 2100181,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59995,
+        "userMicros": 23520,
+        "systemMicros": 2430,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 9024,
+        "signalMessagesReceived": 9024,
+        "heartbeatResponses": 26808,
+        "resumedConnections": 280
+      },
+      "signalRelayLatency": {
+        "count": 9024,
+        "meanMs": 1.329,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2160192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53583872,
+        "heapUsedBytes": 11581872,
+        "externalBytes": 4400845,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 926916,
+        "cpuSystemMicros": 335601,
+        "elapsedMs": 2160184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60003,
+        "userMicros": 11545,
+        "systemMicros": 12028,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 9280,
+        "signalMessagesReceived": 9280,
+        "heartbeatResponses": 27576,
+        "resumedConnections": 288
+      },
+      "signalRelayLatency": {
+        "count": 9280,
+        "meanMs": 1.337,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2220198,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53583872,
+        "heapUsedBytes": 11620704,
+        "externalBytes": 4400989,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 947024,
+        "cpuSystemMicros": 339226,
+        "elapsedMs": 2220189,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60005,
+        "userMicros": 20108,
+        "systemMicros": 3625,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 9536,
+        "signalMessagesReceived": 9536,
+        "heartbeatResponses": 28344,
+        "resumedConnections": 296
+      },
+      "signalRelayLatency": {
+        "count": 9536,
+        "meanMs": 1.359,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2280193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12454592,
+        "externalBytes": 4473729,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 974163,
+        "cpuSystemMicros": 346940,
+        "elapsedMs": 2280185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59996,
+        "userMicros": 27139,
+        "systemMicros": 7714,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 9792,
+        "signalMessagesReceived": 9792,
+        "heartbeatResponses": 29112,
+        "resumedConnections": 304
+      },
+      "signalRelayLatency": {
+        "count": 9792,
+        "meanMs": 1.36,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2340194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12229368,
+        "externalBytes": 4472578,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 994716,
+        "cpuSystemMicros": 349036,
+        "elapsedMs": 2340186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 20553,
+        "systemMicros": 2096,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 10048,
+        "signalMessagesReceived": 10048,
+        "heartbeatResponses": 29880,
+        "resumedConnections": 312
+      },
+      "signalRelayLatency": {
+        "count": 10048,
+        "meanMs": 1.345,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2400192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12093400,
+        "externalBytes": 4471195,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 999090,
+        "cpuSystemMicros": 367991,
+        "elapsedMs": 2400184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59998,
+        "userMicros": 4374,
+        "systemMicros": 18955,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 10304,
+        "signalMessagesReceived": 10304,
+        "heartbeatResponses": 30648,
+        "resumedConnections": 320
+      },
+      "signalRelayLatency": {
+        "count": 10304,
+        "meanMs": 1.351,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2460194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12016968,
+        "externalBytes": 4469195,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1016316,
+        "cpuSystemMicros": 375006,
+        "elapsedMs": 2460186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60002,
+        "userMicros": 17226,
+        "systemMicros": 7015,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 10560,
+        "signalMessagesReceived": 10560,
+        "heartbeatResponses": 31416,
+        "resumedConnections": 328
+      },
+      "signalRelayLatency": {
+        "count": 10560,
+        "meanMs": 1.35,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2520194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12576320,
+        "externalBytes": 4474369,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1034535,
+        "cpuSystemMicros": 383612,
+        "elapsedMs": 2520186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 18219,
+        "systemMicros": 8606,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 10816,
+        "signalMessagesReceived": 10816,
+        "heartbeatResponses": 32184,
+        "resumedConnections": 336
+      },
+      "signalRelayLatency": {
+        "count": 10816,
+        "meanMs": 1.353,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2580194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12356488,
+        "externalBytes": 4473169,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1039112,
+        "cpuSystemMicros": 402353,
+        "elapsedMs": 2580186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 4577,
+        "systemMicros": 18741,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 11072,
+        "signalMessagesReceived": 11072,
+        "heartbeatResponses": 32952,
+        "resumedConnections": 344
+      },
+      "signalRelayLatency": {
+        "count": 11072,
+        "meanMs": 1.344,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2640192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12243304,
+        "externalBytes": 4471771,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1058573,
+        "cpuSystemMicros": 407356,
+        "elapsedMs": 2640184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59998,
+        "userMicros": 19461,
+        "systemMicros": 5003,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 11328,
+        "signalMessagesReceived": 11328,
+        "heartbeatResponses": 33720,
+        "resumedConnections": 352
+      },
+      "signalRelayLatency": {
+        "count": 11328,
+        "meanMs": 1.342,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2700192,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 11922264,
+        "externalBytes": 4533277,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1077416,
+        "cpuSystemMicros": 410080,
+        "elapsedMs": 2700184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 18843,
+        "systemMicros": 2724,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 11584,
+        "signalMessagesReceived": 11584,
+        "heartbeatResponses": 34488,
+        "resumedConnections": 360
+      },
+      "signalRelayLatency": {
+        "count": 11584,
+        "meanMs": 1.353,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2760193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12546496,
+        "externalBytes": 4539137,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1094373,
+        "cpuSystemMicros": 415518,
+        "elapsedMs": 2760185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 16957,
+        "systemMicros": 5438,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 11840,
+        "signalMessagesReceived": 11840,
+        "heartbeatResponses": 35256,
+        "resumedConnections": 368
+      },
+      "signalRelayLatency": {
+        "count": 11840,
+        "meanMs": 1.352,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2820195,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53501952,
+        "heapUsedBytes": 12331360,
+        "externalBytes": 4537739,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1101734,
+        "cpuSystemMicros": 434084,
+        "elapsedMs": 2820187,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60002,
+        "userMicros": 7361,
+        "systemMicros": 18566,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 12096,
+        "signalMessagesReceived": 12096,
+        "heartbeatResponses": 36024,
+        "resumedConnections": 376
+      },
+      "signalRelayLatency": {
+        "count": 12096,
+        "meanMs": 1.352,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2880193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12158000,
+        "externalBytes": 4535331,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1121412,
+        "cpuSystemMicros": 441432,
+        "elapsedMs": 2880184,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59997,
+        "userMicros": 19678,
+        "systemMicros": 7348,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 12352,
+        "signalMessagesReceived": 12352,
+        "heartbeatResponses": 36792,
+        "resumedConnections": 384
+      },
+      "signalRelayLatency": {
+        "count": 12352,
+        "meanMs": 1.35,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 2940193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12629200,
+        "externalBytes": 4539569,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1145647,
+        "cpuSystemMicros": 442996,
+        "elapsedMs": 2940185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 24235,
+        "systemMicros": 1564,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 12608,
+        "signalMessagesReceived": 12608,
+        "heartbeatResponses": 37560,
+        "resumedConnections": 392
+      },
+      "signalRelayLatency": {
+        "count": 12608,
+        "meanMs": 1.361,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3000196,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12485688,
+        "externalBytes": 4538369,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1158988,
+        "cpuSystemMicros": 454624,
+        "elapsedMs": 3000188,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60003,
+        "userMicros": 13341,
+        "systemMicros": 11628,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 12864,
+        "signalMessagesReceived": 12864,
+        "heartbeatResponses": 38328,
+        "resumedConnections": 400
+      },
+      "signalRelayLatency": {
+        "count": 12864,
+        "meanMs": 1.365,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3060193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12124016,
+        "externalBytes": 4534141,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1180788,
+        "cpuSystemMicros": 458764,
+        "elapsedMs": 3060185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59997,
+        "userMicros": 21800,
+        "systemMicros": 4140,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 13120,
+        "signalMessagesReceived": 13120,
+        "heartbeatResponses": 39096,
+        "resumedConnections": 408
+      },
+      "signalRelayLatency": {
+        "count": 13120,
+        "meanMs": 1.363,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3120194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12723432,
+        "externalBytes": 4540001,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1195322,
+        "cpuSystemMicros": 467179,
+        "elapsedMs": 3120186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 14534,
+        "systemMicros": 8415,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 13376,
+        "signalMessagesReceived": 13376,
+        "heartbeatResponses": 39864,
+        "resumedConnections": 416
+      },
+      "signalRelayLatency": {
+        "count": 13376,
+        "meanMs": 1.363,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3180194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12509576,
+        "externalBytes": 4604169,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1209576,
+        "cpuSystemMicros": 477310,
+        "elapsedMs": 3180186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 14254,
+        "systemMicros": 10131,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 13632,
+        "signalMessagesReceived": 13632,
+        "heartbeatResponses": 40632,
+        "resumedConnections": 424
+      },
+      "signalRelayLatency": {
+        "count": 13632,
+        "meanMs": 1.369,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3240193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12960128,
+        "externalBytes": 4607169,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1223689,
+        "cpuSystemMicros": 485206,
+        "elapsedMs": 3240185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 14113,
+        "systemMicros": 7896,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 13888,
+        "signalMessagesReceived": 13888,
+        "heartbeatResponses": 41400,
+        "resumedConnections": 432
+      },
+      "signalRelayLatency": {
+        "count": 13888,
+        "meanMs": 1.378,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3300193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 53633024,
+        "heapUsedBytes": 12844872,
+        "externalBytes": 4605969,
+        "processPeakRssBytes": 55595008,
+        "cpuUserMicros": 1241577,
+        "cpuSystemMicros": 494164,
+        "elapsedMs": 3300185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 17888,
+        "systemMicros": 8958,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 14144,
+        "signalMessagesReceived": 14144,
+        "heartbeatResponses": 42168,
+        "resumedConnections": 440
+      },
+      "signalRelayLatency": {
+        "count": 14144,
+        "meanMs": 1.374,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3360194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 57692160,
+        "heapUsedBytes": 12838544,
+        "externalBytes": 4604571,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1272085,
+        "cpuSystemMicros": 502013,
+        "elapsedMs": 3360186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60001,
+        "userMicros": 30508,
+        "systemMicros": 7849,
+        "percentOfOneCore": 0.06
+      },
+      "counters": {
+        "signalMessagesSent": 14400,
+        "signalMessagesReceived": 14400,
+        "heartbeatResponses": 42936,
+        "resumedConnections": 448
+      },
+      "signalRelayLatency": {
+        "count": 14400,
+        "meanMs": 1.372,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3420194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 56672256,
+        "heapUsedBytes": 12535464,
+        "externalBytes": 4600541,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1289468,
+        "cpuSystemMicros": 510468,
+        "elapsedMs": 3420186,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 17383,
+        "systemMicros": 8455,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 14656,
+        "signalMessagesReceived": 14656,
+        "heartbeatResponses": 43704,
+        "resumedConnections": 456
+      },
+      "signalRelayLatency": {
+        "count": 14656,
+        "meanMs": 1.378,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3480194,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 56672256,
+        "heapUsedBytes": 13137104,
+        "externalBytes": 4606401,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1313472,
+        "cpuSystemMicros": 515563,
+        "elapsedMs": 3480185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59999,
+        "userMicros": 24004,
+        "systemMicros": 5095,
+        "percentOfOneCore": 0.05
+      },
+      "counters": {
+        "signalMessagesSent": 14912,
+        "signalMessagesReceived": 14912,
+        "heartbeatResponses": 44472,
+        "resumedConnections": 464
+      },
+      "signalRelayLatency": {
+        "count": 14912,
+        "meanMs": 1.383,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active",
+      "atMs": 3540193,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 56672256,
+        "heapUsedBytes": 12919240,
+        "externalBytes": 4605003,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1324389,
+        "cpuSystemMicros": 527626,
+        "elapsedMs": 3540185,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60000,
+        "userMicros": 10917,
+        "systemMicros": 12063,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 15168,
+        "signalMessagesReceived": 15168,
+        "heartbeatResponses": 45240,
+        "resumedConnections": 472
+      },
+      "signalRelayLatency": {
+        "count": 15168,
+        "meanMs": 1.382,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "active-complete",
+      "atMs": 3600149,
+      "server": {
+        "connections": 64,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 64,
+        "rssBytes": 56672256,
+        "heapUsedBytes": 12923840,
+        "externalBytes": 4594877,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1339875,
+        "cpuSystemMicros": 534049,
+        "elapsedMs": 3600141,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 59956,
+        "userMicros": 15486,
+        "systemMicros": 6423,
+        "percentOfOneCore": 0.04
+      },
+      "counters": {
+        "signalMessagesSent": 15360,
+        "signalMessagesReceived": 15360,
+        "heartbeatResponses": 46008,
+        "resumedConnections": 472
+      },
+      "signalRelayLatency": {
+        "count": 15360,
+        "meanMs": 1.386,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "after-close",
+      "atMs": 3600173,
+      "server": {
+        "connections": 0,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 0,
+        "rssBytes": 56848384,
+        "heapUsedBytes": 12738208,
+        "externalBytes": 4657563,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1353860,
+        "cpuSystemMicros": 534211,
+        "elapsedMs": 3600165,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 24,
+        "userMicros": 13985,
+        "systemMicros": 162,
+        "percentOfOneCore": 58.95
+      },
+      "counters": {
+        "signalMessagesSent": 15360,
+        "signalMessagesReceived": 15360,
+        "heartbeatResponses": 46008,
+        "resumedConnections": 472
+      },
+      "signalRelayLatency": {
+        "count": 15360,
+        "meanMs": 1.386,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "waiting-real-resume-grace",
+      "atMs": 3660221,
+      "server": {
+        "connections": 0,
+        "sessions": 64,
+        "rooms": 32,
+        "webSocketClients": 0,
+        "rssBytes": 56848384,
+        "heapUsedBytes": 12896296,
+        "externalBytes": 4657593,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1353861,
+        "cpuSystemMicros": 536701,
+        "elapsedMs": 3660213,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 60048,
+        "userMicros": 1,
+        "systemMicros": 2490,
+        "percentOfOneCore": 0
+      },
+      "counters": {
+        "signalMessagesSent": 15360,
+        "signalMessagesReceived": 15360,
+        "heartbeatResponses": 46008,
+        "resumedConnections": 472
+      },
+      "signalRelayLatency": {
+        "count": 15360,
+        "meanMs": 1.386,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    },
+    {
+      "phase": "real-grace-complete",
+      "atMs": 3722074,
+      "server": {
+        "connections": 0,
+        "sessions": 0,
+        "rooms": 0,
+        "webSocketClients": 0,
+        "rssBytes": 56848384,
+        "heapUsedBytes": 13466248,
+        "externalBytes": 4660353,
+        "processPeakRssBytes": 58458112,
+        "cpuUserMicros": 1368373,
+        "cpuSystemMicros": 543150,
+        "elapsedMs": 3722066,
+        "maxSocketBufferedBytesAtSample": 0,
+        "maxObservedWindowMessages": 18,
+        "maxObservedWindowBytes": 1012,
+        "budgetExceeded": false
+      },
+      "serverCpuSincePreviousSample": {
+        "elapsedMs": 61853,
+        "userMicros": 14512,
+        "systemMicros": 6449,
+        "percentOfOneCore": 0.03
+      },
+      "counters": {
+        "signalMessagesSent": 15360,
+        "signalMessagesReceived": 15360,
+        "heartbeatResponses": 46008,
+        "resumedConnections": 472
+      },
+      "signalRelayLatency": {
+        "count": 15360,
+        "meanMs": 1.386,
+        "maxMs": 7.254,
+        "p50UpperBoundMs": 2,
+        "p95UpperBoundMs": 5
+      }
+    }
+  ],
+  "cleanup": {
+    "verified": true,
+    "mode": "real-wall-clock-grace-and-automatic-sweep",
+    "afterClose": {
+      "connections": 0,
+      "sessions": 64,
+      "rooms": 32,
+      "webSocketClients": 0
+    },
+    "waitedMs": 121902,
+    "afterGrace": {
+      "connections": 0,
+      "sessions": 0,
+      "rooms": 0,
+      "webSocketClients": 0
+    }
+  },
+  "source": {
+    "algorithm": "sha256",
+    "server": "b3aa2d2f4a3f6a547f3e6bb7661f010bcbf326702461c425657fddadd850e52f",
+    "tool": "b19fd3b4e5793a415c5f680af56c307e0967675a08c944ec6b151725aa10633b"
+  },
+  "wallTimeMs": 3722082,
+  "activeStartedAtUTC": "2026-11-07T08:12:05.315Z",
+  "activeElapsedMs": 3600003
+}

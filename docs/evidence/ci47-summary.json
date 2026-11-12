@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "sourceCommit": "848d16c1bd1e419ab30c543f8afa0eb0c0c2ff1e",
+  "testedMergeCommit": "5a097e78938c0fee694812cd8ff0f97b8b7c5659",
+  "revision": "dd492385685e4a1f",
+  "run": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/42216448334",
+  "conclusion": "success",
+  "nodeTests": 139,
+  "browserPairs": [
+    {
+      "engines": [
+        "chromium",
+        "chromium"
+      ],
+      "versions": [
+        "156.0.8078.4",
+        "156.0.8078.4"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "chromium-to-chromium",
+          "bytes": 1048787,
+          "sha256": "892abd9b4c9123052af79f66ff63c86e1320d2b1e11e0323cae96e27dfe09ea6"
+        },
+        {
+          "from": "chromium-to-chromium",
+          "bytes": 1048787,
+          "sha256": "88d7cdedb65925d349edd831bb97d36f00c6f5ee507f3fe46f82ca11e2c26fcf"
+        }
+      ]
+    },
+    {
+      "engines": [
+        "firefox",
+        "firefox"
+      ],
+      "versions": [
+        "157.0",
+        "157.0"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "firefox-to-firefox",
+          "bytes": 1048783,
+          "sha256": "2bf5b4f00306d41cee7aa41ee9ee1bb2cdc2f377d0e7039abc2defe42bf37e9d"
+        },
+        {
+          "from": "firefox-to-firefox",
+          "bytes": 1048783,
+          "sha256": "ac39c2519daa9643f4d7a365fc5f5392556741ad43c93ab4ede5dcea6ed4cc64"
+        }
+      ]
+    },
+    {
+      "engines": [
+        "chromium",
+        "firefox"
+      ],
+      "versions": [
+        "156.0.8078.4",
+        "157.0"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "chromium-to-firefox",
+          "bytes": 1048785,
+          "sha256": "00bbb9f6cec03b77118530ff46348cce53cd68587810d23a125671aee567acfd"
+        },
+        {
+          "from": "firefox-to-chromium",
+          "bytes": 1048785,
+          "sha256": "596a4a3bafd1f9a30f2cf6784626d75f5e3878c1fc5330dcc63b9093882406b1"
+        }
+      ]
+    },
+    {
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "versions": [
+        "156.0.8078.4",
+        "27.2"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "chromium-to-webkit",
+          "bytes": 1048783,
+          "sha256": "7e69f682fd8db3dc5a340acc71fa52b9825d4c058c301b61c7c615231b3d4aeb"
+        },
+        {
+          "from": "webkit-to-chromium",
+          "bytes": 1048783,
+          "sha256": "132ffe6daa760c36b07aac470f3d8e1f949016433d7e86b208ab321ea4d5b87b"
+        }
+      ]
+    },
+    {
+      "engines": [
+        "firefox",
+        "webkit"
+      ],
+      "versions": [
+        "157.0",
+        "27.2"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "firefox-to-webkit",
+          "bytes": 1048781,
+          "sha256": "b6cffd759d8148fdcf079048c81ce766fdbd97aa6e90d9cdcdc431d558830346"
+        },
+        {
+          "from": "webkit-to-firefox",
+          "bytes": 1048781,
+          "sha256": "953c26b4c5be29060b6813a650e86a16881d4ec82ca3ede59e63b179d64a9993"
+        }
+      ]
+    },
+    {
+      "engines": [
+        "webkit",
+        "webkit"
+      ],
+      "versions": [
+        "27.2",
+        "27.2"
+      ],
+      "passed": true,
+      "bidirectionalFiles": [
+        {
+          "from": "webkit-to-webkit",
+          "bytes": 1048779,
+          "sha256": "21ccb831b40236639e90b2725a224529c0da56c10c314c40844a0cccdbe9acc9"
+        },
+        {
+          "from": "webkit-to-webkit",
+          "bytes": 1048779,
+          "sha256": "d89c48a31d67146639a8050e54bfe283a254d657bbba8fb5f2eef6a3db825b3b"
+        }
+      ]
+    }
+  ],
+  "chromium1GiB": {
+    "ms": 81538,
+    "sha256": "49bc20df15e412a64472421e13fe86ff1c5165e18b2afccf160d4dc19fe68a14"
+  },
+  "chromium100MiB": {
+    "ms": 8628,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "firefox100MiB": {
+    "ms": 7079,
+    "sha256": "20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e"
+  },
+  "peakReceiveQueuesBytes": {
+    "chromium": [
+      156,
+      262225
+    ],
+    "firefox": [
+      156,
+      163922
+    ]
+  },
+  "observedWS": {
+    "chromium": {
+      "messages": 40,
+      "bytes": 1431,
+      "fileBodyObserved": false
+    },
+    "firefox": {
+      "messages": 8,
+      "bytes": 1297,
+      "fileBodyObserved": false
+    }
+  },
+  "HTTPSPublicationBoundary": {
+    "passed": true,
+    "scope": "ephemeral self-signed TLS proxy",
+    "checks": [
+      "real Nginx HTTPS static and security headers",
+      "HTTP redirect",
+      "private dotfiles rejected even when present",
+      "well-known challenge path remains available",
+      "upload rejection",
+      "Origin ACL on WebSocket upgrade",
+      "two-client WSS pairing",
+      "no file proxy"
+    ]
+  },
+  "candidate": {
+    "artifactId": 13500684979,
+    "archiveSHA256": "71ee5a318084206013aac2865653eb2a4c21adf998c3565427ad2ffece0d82e2",
+    "filesVerified": 167,
+    "localAndCIArchiveByteIdentical": true,
+    "expiresAt": "2026-11-13T12:22:35Z"
+  },
+  "evidenceArtifact": {
+    "id": 13502167504,
+    "zipSHA256": "98a2ffe5140d5f8e20411c89c771161ccf96d6004cdfe5775bb9e799c3fdbab8"
+  },
+  "limitations": [
+    "same CI host, STUN disabled; no WAN/NAT success-rate inference",
+    "file-picker selection supplied by fixture; no physical storage permission proof",
+    "candidate address family not disclosed; no IPv4/IPv6 test claim",
+    "queue counter is not total browser RSS; test elapsed time is not public throughput",
+    "EOC-mode C-W control emitted no empty markers; no EOC causality claim",
+    "no real Safari/mobile/ISP/systemd/production deployment acceptance"
+  ]
+}

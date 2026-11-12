@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "phase": "complete",
+  "passed": true,
+  "cases": [
+    {
+      "case": "stale-orphan-retirement",
+      "prefixBytes": 16384,
+      "exactMetadataAndBodyPreserved": true,
+      "controlledInitialClockAdvance": true,
+      "restoredClockBeforeFreshPublication": true,
+      "restore": {
+        "offset": 16384,
+        "bytes": 16384,
+        "sha256": "60df7b24431bdead79a525237fe2e395b7d3948178600fbbaa16bf562c5212a0"
+      }
+    },
+    {
+      "case": "manual-part-unlink-gap",
+      "competingEraseRejected": "NoModificationAllowedError",
+      "originalMetadataPreservedDuringGap": true,
+      "freshStartRejectedDuringGap": true,
+      "replacementAfterRetirementRestored": {
+        "offset": 16384,
+        "bytes": 16384,
+        "sha256": "1e515854a45b809593ebe741e07aee6b6885b021b441637d270001013e18f6eb"
+      },
+      "nativeLockReacquiredWithoutReload": {
+        "controlBytes": 0,
+        "partBytes": 16384
+      }
+    },
+    {
+      "case": "manual-json-unlink-gap",
+      "competingEraseRejected": "NoModificationAllowedError",
+      "originalMetadataPreservedDuringGap": true,
+      "freshStartRejectedDuringGap": true,
+      "replacementAfterRetirementRestored": {
+        "offset": 16384,
+        "bytes": 16384,
+        "sha256": "1e515854a45b809593ebe741e07aee6b6885b021b441637d270001013e18f6eb"
+      },
+      "nativeLockReacquiredWithoutReload": {
+        "controlBytes": 0,
+        "partBytes": 16384
+      }
+    }
+  ],
+  "errors": [],
+  "scope": "actual built Worker, two same-origin documents and native OPFS files/locks; test-only method timing gates and initial stale-list clock advance, not real 24h aging, disk faults, WAN or Safari evidence",
+  "network": {
+    "uploadAttempts": 0,
+    "externalAttempts": 0
+  },
+  "browserVersion": "156.0.8078.4",
+  "revisions": [
+    "b46de331c87a6628",
+    "b46de331c87a6628"
+  ]
+}

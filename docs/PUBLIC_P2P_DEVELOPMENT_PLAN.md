@@ -1,5 +1,7 @@
 # 闪投：公网 P2P 直连（Direct-only）开发计划
 
+> 历史审计快照：以下“尚未实施”、关闭STUN、旧dist/协议等描述对应2026-10-19的main基线，并非当前开发分支。当前实现、已验证范围和发布阻断项请以 [PROJECT_STATUS](PROJECT_STATUS.md)、[ARCHITECTURE](ARCHITECTURE.md)、[TEST_MATRIX](TEST_MATRIX.md) 为准。不要根据本历史表重复重建已实现功能；产品Direct-only边界继续有效。
+
 > 状态：开发方案（尚未实施功能改造）  
 > 审计日期：2026-10-19  
 > 仓库：`ForceMind/SnapDrop-Lite`  

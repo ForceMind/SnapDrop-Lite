@@ -1,0 +1,38 @@
+{
+  "recordedOn": "2026-11-09",
+  "timeZone": "America/Los_Angeles",
+  "sourceCommit": "c87712753ac4f25e71dd20af75e8798c72a3eb05",
+  "runtimeRevision": "266604dbfe70dbfa",
+  "ci": {
+    "runId": 42668552946,
+    "jobId": 129338645082,
+    "conclusion": "success",
+    "nodeTests": 442,
+    "failures": 0,
+    "skipped": 0,
+    "finalLogsRead": true,
+    "topLevelJsonReportsRead": 42,
+    "scope": "same-host Linux browser suite; not real WAN/Safari/mobile/independent deployment"
+  },
+  "candidate": {
+    "artifactId": 13697378347,
+    "zipBytes": 1138288,
+    "zipSha256": "201dfaaf8d1175b8ccd0edc37d88c78d8bc5c2fd6fe944f88357fa417937a555",
+    "tarSha256": "7b4edb687381530725f28adb4fa348003ff5ff7ee69cb933cb53afe4b8d6c5ba",
+    "regularFiles": 504,
+    "memberHashesSizesModesVerified": true,
+    "ciMerge": "8282e66ad7f5a838fbb14597c0a810cb0d5a4f7d",
+    "mergeTreeMatchesSource": true,
+    "independentExtractedReinstallForCI76Claimed": false
+  },
+  "evidence": {
+    "artifactId": 13697708987,
+    "zipBytes": 10264251,
+    "zipSha256": "283f60ef4565ad90d36be8bb9acc215c9ba3fb524bba643e7e2800d6baa60c5a"
+  },
+  "externalIssuesStillOpen": [
+    4,
+    5
+  ],
+  "handoffOnlyChanges": "Documentation and this evidence summary; later handoff commit CI must be checked separately."
+}

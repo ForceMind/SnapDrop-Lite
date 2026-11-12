@@ -1,0 +1,7 @@
+{
+  "vulnerableCommit": "90962c1ba95781a667d916c46a142e729d5181ee",
+  "request": "malformed absolute request-target http://[ with normal WS headers",
+  "observed": "uncaught ERR_INVALID_URL, isolated child exited 1",
+  "fixedRegression": "four raw TCP request-targets return HTTP 401; subsequent normal hello succeeds",
+  "externalTraffic": false
+}

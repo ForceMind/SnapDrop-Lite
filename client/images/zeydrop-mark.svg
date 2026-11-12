@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Zeydrop">
+<rect width="192" height="192" rx="48" fill="#163F31"/>
+<rect x="22" y="65" width="55" height="62" rx="18" fill="#B9EDA9"/>
+<rect x="115" y="65" width="55" height="62" rx="18" fill="#B9EDA9"/>
+<path d="M62 86h68m0 0-13-13m13 13-13 13M130 106H62m0 0 13-13m-13 13 13 13" fill="none" stroke="#153E2E" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+<circle cx="96" cy="96" r="8" fill="#163F31"/>
+</svg>

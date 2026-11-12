@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "scope": "independent extraction and installation of local clean-HEAD runtime source archive; not a GitHub CI artifact, browser, WAN, device or deployment proof",
+  "sourceCommit": "e2a2088358e609435f188029be2c48da2d7155a9",
+  "revision": "8283668696e877e0",
+  "version": "0.3.0-dev.1",
+  "archive": {
+    "sha256": "dcc30529c67fc0c6e6915a2e7fb65987bd9f31c383f094188b5f5b0c732dbb5b",
+    "bytes": 687433,
+    "regularFiles": 288,
+    "sourceFiles": 259,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 3451324,
+    "largestFileBytes": 287354,
+    "exactManifestMembers": true,
+    "duplicateMembers": false,
+    "linksOrSpecialFiles": false,
+    "modeSizeShaMatch": true,
+    "sourceBytesAndModesMatchGitCommit": true,
+    "normalizedOwnerMtime": true,
+    "exactCleanCommitSourceWhitelist": true,
+    "exactClientDerivedBuildWhitelist": true
+  },
+  "extractedRoot": "/workspace/scratch/322a85615223/verify-stream-hash-runtime/zeydrop-candidate",
+  "gitMetadataAbsent": true,
+  "recordedAt": "2026-11-07T11:20:29.691218+00:00",
+  "checks": {
+    "rootNpmCiIgnoreScripts": {
+      "exitCode": 0
+    },
+    "serverNpmCiIgnoreScripts": {
+      "exitCode": 0
+    },
+    "nodeTests": {
+      "passed": 324,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "gitFreeBuild": {
+      "revision": "8283668696e877e0",
+      "exitCode": 0
+    },
+    "repeatBuildAndLocalReferences": {
+      "exitCode": 0
+    },
+    "shellSyntax": {
+      "exitCode": 0
+    },
+    "allRebuiltDistFilesByteMatchArchive": {
+      "count": 29,
+      "passed": true
+    },
+    "allSourceAndBuildBytesModesStillMatchManifest": {
+      "count": 288,
+      "passed": true
+    }
+  },
+  "passed": true,
+  "nodeVersion": "v24.22.1",
+  "completedAt": "2026-11-07T11:21:20.808103+00:00",
+  "distDigestMapSha256": "af74ad72edc93ff4cf396aa6b33d035405689dd58604dabd97aebee6155afe67"
+}

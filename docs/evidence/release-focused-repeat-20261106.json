@@ -1,0 +1,28 @@
+{
+  "scope": "local repeated non-root temporary release fixtures; does not prove real systemd/TLS/host deployment",
+  "baseCommit": "906a15c6112512749cb85ca1b3491f0f7f34ef04",
+  "trackedSourceModified": true,
+  "filesSha256": {
+    "deploy.sh": "0316c82450e820b680df582ed33cbb4275bacbd98d7f3163e787c7e9ef3440d0",
+    "scripts/rollback.sh": "a8353f7808c169713a9b61de65aa258145935b365b576ed2fb9168fada1e80ef",
+    "tests/deployment.test.cjs": "b3610d2d22fb70b420b170197714d214c7349ff15ff7f4267900f1b51efb92d1",
+    "tests/package-candidate.test.cjs": "e971380e146c7cb7127da347c206c5e8872c8792ab5733763e66b77cf71bced3"
+  },
+  "focused": {
+    "runs": 10,
+    "testsPerRun": 13,
+    "allPassed": true
+  },
+  "fixtureCorrection": "mock openssl now consumes stdin until EOF before writing; production pipefail and expected busy exit 75 were preserved",
+  "fullAttempt": {
+    "tests": 129,
+    "passed": 127,
+    "failed": 2,
+    "blockingTests": [
+      "old-peer write failure cannot revive on replacement before new verification",
+      "old-peer write failure cannot revive on replacement after early verification"
+    ],
+    "note": "separate recovery regression was being implemented concurrently; no overall-green claim; parent will rerun integrated source"
+  },
+  "productionActions": false
+}

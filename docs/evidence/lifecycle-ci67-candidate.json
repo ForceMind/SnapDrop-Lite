@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T19:51:52.029968+00:00",
+  "scope": "actual CI67 source artifact compared to independent twice-packaged, reinstalled, 400-tested and Git-free rebuilt local clean-HEAD archive; no native browser/WAN/device/deployment certification",
+  "workflow": {
+    "runId": 42407825773,
+    "runNumber": 67,
+    "artifactId": 13588740051,
+    "headCommit": "c4c7d6e2f46d8e63f5a996f52332470390386781",
+    "manifestMergeCommit": "5dd584cd7fda1c0102cf97296a27e0b7e5fc1d33",
+    "gitObjectParents": [
+      "2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+      "c4c7d6e2f46d8e63f5a996f52332470390386781"
+    ],
+    "gitObjectMessage": "Merge c4c7d6e2f46d8e63f5a996f52332470390386781 into 2b4f75ccee93558aef755c0429fbe1dd35c3ef6c",
+    "gitObjectParentsMessageAndTreeVerified": true,
+    "mergeTreeEqualsHeadTree": true
+  },
+  "outerZip": {
+    "path": "/workspace/scratch/322a85615223/zeydrop-ci67-source.zip",
+    "bytes": 933556,
+    "sha256": "fd1bba938075a0b3309094b5ff354de06327a4da39e58a227a7d4a09bdeddb43",
+    "exactThreeRegularMembers": true,
+    "crcPassed": true,
+    "encryptedMembers": false
+  },
+  "archive": {
+    "bytes": 915287,
+    "sha256": "6cdb32fbffe05065058c6f05ae54aa052af90b48869987195eb6b10ad97faa82",
+    "regularFiles": 381,
+    "sourceFiles": 352,
+    "builtFiles": 29,
+    "directories": 17,
+    "payloadBytes": 5634926,
+    "allMemberModesSizesShaMatchManifest": true,
+    "exactGitWhitelistsSourceBytesModesForHeadAndMerge": true,
+    "exactClientDerivedBuildWhitelist": true,
+    "noDuplicateLinkSpecialOrUnsafePathMembers": true,
+    "normalizedOwnerMtime": true,
+    "byteIdenticalToIndependentlyVerifiedLocalArchive": true,
+    "allExtractedRebuiltSourceAndDistBytesModesMatchActualCiArchive": true
+  },
+  "manifestDifferences": {
+    "commit": {
+      "local": "c4c7d6e2f46d8e63f5a996f52332470390386781",
+      "ci": "5dd584cd7fda1c0102cf97296a27e0b7e5fc1d33"
+    }
+  },
+  "revision": "cc281863f488aa68",
+  "sourceVerificationUsesOnlyExplicitGitObjectsAndImmutableArtifacts": true,
+  "independentVerification": {
+    "report": "/workspace/scratch/322a85615223/lifecycle-runtime-extraction.json",
+    "reportSha256": "9a96a3f4e116802d9b74a046a6e695c408852efd7ddffc42dcd0ba0aa4ce27a4",
+    "root": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e/zeydrop-candidate",
+    "savedPackage": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/verified-local-package",
+    "nodeVersion": "v24.22.1",
+    "checks": {
+      "sourceBuild": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/source-build.log",
+        "logSha256": "4cc074bf293f7194c2f8ed9614aade87e4ff3130e496e01295b7c3c3cce1d308"
+      },
+      "package1": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/package-1.log",
+        "logSha256": "4a0f368b7c071f088c6c781ff82e70a7ca1d06e9fe548ff6000ed8ebed6015dd"
+      },
+      "package2": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/package-2.log",
+        "logSha256": "4a0f368b7c071f088c6c781ff82e70a7ca1d06e9fe548ff6000ed8ebed6015dd"
+      },
+      "rootNpmCiIgnoreScripts": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/npm-root.log",
+        "logSha256": "3d64711429f9c4faf7172a3ed124ed793860c8229603622d14376fb7d65f4f08"
+      },
+      "serverNpmCiIgnoreScripts": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/npm-server.log",
+        "logSha256": "b95461f9c0a6c2dc0dbec05649ef5bdb29114e651f04b3a22010a75b40552518"
+      },
+      "nodeTestCommand": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/node-tests.log",
+        "logSha256": "5c3193fe8188d2695912eca889a3eae9ff172e9d3752fc249df84506a9f473f2"
+      },
+      "nodeTests": {
+        "passed": 400,
+        "failed": 0,
+        "skipped": 0,
+        "exitCode": 0
+      },
+      "gitFreeBuild": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/git-free-build.log",
+        "logSha256": "4cc074bf293f7194c2f8ed9614aade87e4ff3130e496e01295b7c3c3cce1d308"
+      },
+      "repeatBuildAndLocalReferences": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/repeat-build.log",
+        "logSha256": "1ce50cd69a43581acd5bfb18a32021c7357ad80e9dd865383e28105b9f8bbafb"
+      },
+      "shellSyntax": {
+        "exitCode": 0,
+        "log": "/workspace/scratch/322a85615223/verify-lifecycle-runtime-c4c7d6e-logs/shell-syntax.log",
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "allRebuiltDistFilesByteMatchArchive": {
+        "count": 29,
+        "passed": true
+      },
+      "allSourceAndBuildBytesModesStillMatchManifest": {
+        "count": 381,
+        "passed": true
+      }
+    }
+  },
+  "repeatedNpmTests": false,
+  "passed": true,
+  "limitation": "Content verification only. Overall CI/browser result is recorded separately; no evidence of real WAN/NAT, mobile/Safari hardware, actual physical storage faults or production deployment."
+}

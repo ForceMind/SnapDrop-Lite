@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T11:33:10.512530+00:00",
+  "baseCommit": "e2a2088358e609435f188029be2c48da2d7155a9",
+  "revision": "25c4bc95c5f8c577",
+  "nodeTests": {
+    "passed": 339,
+    "failed": 0,
+    "skipped": 0
+  },
+  "checks": [
+    "npm test",
+    "npm run build",
+    "node scripts/check-build.mjs",
+    "node --check tests/stream-hash-recovery-browser.cjs",
+    "bash -n build.sh deploy.sh scripts/rollback.sh",
+    "git diff --check"
+  ],
+  "browser": {
+    "passed": false,
+    "failureCode": "runtime-operation-denied",
+    "nativeOpfsFaultTest": "written and syntax checked; actual browser execution requires new CI"
+  },
+  "scope": "local checks of cleanup followup; not a native-browser result"
+}

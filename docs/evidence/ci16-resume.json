@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-24",
+  "repository": "ForceMind/SnapDrop-Lite",
+  "pull_request": 2,
+  "commit": "51685d9403952ef17796d2f06a607b69eb8c37af",
+  "ci_url": "https://github.com/ForceMind/SnapDrop-Lite/actions/runs/40090569875",
+  "ci_number": 16,
+  "conclusion": "success",
+  "node_tests": {
+    "passed": 47,
+    "total": 47
+  },
+  "scope": "Two isolated browser contexts on the same CI host, STUN disabled. Actual RTCDataChannel and native OPFS sink. Picker is replaced by a test fixture. No Internet NAT, mobile Safari, or production claims.",
+  "resume_file_bytes": 8388608,
+  "persisted_before_forced_ws_disconnect_bytes": 131072,
+  "sha256": "6b59425c5bf6585e132f7e6b520623ea2ac76484f1a4bde550313c5a05c08140",
+  "chromium": {
+    "large_file_bytes": 1073741824,
+    "resume_datachannel_bytes": 8486912,
+    "passed": true
+  },
+  "firefox": {
+    "large_file_bytes": 104857600,
+    "resume_datachannel_bytes": 8437760,
+    "passed": true
+  },
+  "webkit": {
+    "ui_smoke": true,
+    "actual_file_resume_tested": false
+  },
+  "unverified": [
+    "public WAN/IPv6/strict NAT real hardware",
+    "real Safari iOS picker and disk",
+    "reload or browser shutdown persistent resume",
+    "production deployment and rollback"
+  ]
+}

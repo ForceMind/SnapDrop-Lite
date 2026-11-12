@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "engine": "chromium",
+  "scope": "real built SHA Worker fault after native OPFS append, direct two-context transfer and explicitly authorized recovery; same host/STUN disabled, not WAN/Safari/mobile evidence",
+  "phase": "complete",
+  "checks": [
+    "native SHA Worker crashes after a real uncheckpointed 16 KiB append; original 1 MiB metadata stays byte-for-byte unchanged, no erase/false complete/new ACK occurs",
+    "the same live recovery Worker releases the native file lock, restore truncates the tail and verifies the old prefix before reload; a separate active OPFS record survives and finishes correctly",
+    "fresh page/invitation, new safety-code clicks, file reselection and explicit local-checkpoint consent restore only after approval; the 3 MiB tail completes with independently verified 4 MiB downloaded SHA"
+  ],
+  "errors": [],
+  "nativeWorkers": [
+    {
+      "script": "recovery-worker.js",
+      "endpoint": 0,
+      "phase": "startup",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "recovery-worker.js",
+      "endpoint": 1,
+      "phase": "startup",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "endpoint": 0,
+      "phase": "fault-after-native-append",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "endpoint": 1,
+      "phase": "fault-after-native-append",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "recovery-worker.js",
+      "endpoint": 1,
+      "phase": "fresh-page-and-invitation",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "endpoint": 1,
+      "phase": "authorized-prefix-resume",
+      "version": "50be36dcf5f9d638"
+    },
+    {
+      "script": "stream-hash-worker.js",
+      "endpoint": 0,
+      "phase": "authorized-prefix-resume",
+      "version": "50be36dcf5f9d638"
+    }
+  ],
+  "passed": true,
+  "browserVersion": "156.0.8078.4",
+  "network": {
+    "uploadAttempts": 0,
+    "externalAttempts": 0,
+    "signalingMessages": 19,
+    "signalingBytes": 3827,
+    "fileDataObserved": false
+  },
+  "independentSeed": {
+    "nativeRecoveryWorker": true,
+    "committed": 2048
+  },
+  "initialPaths": [
+    {
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "direct": true
+    },
+    {
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "prflx",
+      "direct": true
+    }
+  ],
+  "fault": {
+    "nativeErrors": 1,
+    "releases": 1,
+    "releasedOffset": 1048576,
+    "erased": 0,
+    "physicalWritten": 1064960,
+    "physicalSize": 1064960,
+    "metadataUnchanged": true,
+    "offset": 1048576,
+    "prefixSha256": "1c30eb7db2ee8fecc384b161e6c117160ae7aa7b7a56900e9df6dccda61b20f3",
+    "baselineOffset": 1048576,
+    "baselineSha256": "1c30eb7db2ee8fecc384b161e6c117160ae7aa7b7a56900e9df6dccda61b20f3",
+    "phase": "partial",
+    "completionEvents": 0,
+    "controls": [
+      {
+        "type": "accept",
+        "offset": null
+      },
+      {
+        "type": "ack",
+        "offset": 262144
+      },
+      {
+        "type": "ack",
+        "offset": 524288
+      },
+      {
+        "type": "ack",
+        "offset": 786432
+      },
+      {
+        "type": "ack",
+        "offset": 1048576
+      },
+      {
+        "type": "cancel",
+        "offset": null
+      }
+    ],
+    "injectedWorkerRequests": 1
+  },
+  "lock": {
+    "reacquiredBeforeReload": true,
+    "offset": 1048576,
+    "snapshotBytes": 1048576,
+    "sha256": "1c30eb7db2ee8fecc384b161e6c117160ae7aa7b7a56900e9df6dccda61b20f3",
+    "nativeRecoveryWorker": true
+  },
+  "independent": {
+    "bytes": 4096,
+    "sha256": "17aba703974853f064a4323d675c2973db929e4e8fb932fabc072c19e198d1d0",
+    "locallyStored": true,
+    "nativeRecoveryWorker": true
+  },
+  "freshPaths": [
+    {
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "direct": true
+    },
+    {
+      "protocol": "udp",
+      "localType": "host",
+      "remoteType": "host",
+      "direct": true
+    }
+  ],
+  "resume": {
+    "calls": 1,
+    "offset": 1048576,
+    "snapshotBytes": 1048576,
+    "prefixSha256": "1c30eb7db2ee8fecc384b161e6c117160ae7aa7b7a56900e9df6dccda61b20f3",
+    "independentSha256": "1c30eb7db2ee8fecc384b161e6c117160ae7aa7b7a56900e9df6dccda61b20f3",
+    "fileBytes": 4194304,
+    "finalSha256": "da3feddbbe6ad43f9a22c98dc6c035515efd66c69fd40a1bc5d69c2704e7c47f",
+    "dataChannelBytes": 3145728
+  },
+  "liveHashes": [
+    {
+      "created": 3,
+      "native": 3,
+      "mainCalls": 0,
+      "active": 0
+    },
+    {
+      "created": 2,
+      "native": 2,
+      "mainCalls": 0,
+      "active": 0
+    }
+  ]
+}

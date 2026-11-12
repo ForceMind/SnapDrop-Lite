@@ -1,0 +1,367 @@
+'use strict';
+// All file bytes remain in origin-private browser storage. The app server only
+// exchanges WebRTC signaling; no recovery data is sent over WebSocket.
+const DIR = 'zeydrop-recovery-v1';
+const TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_ITEMS = 20;
+const CHUNK = 16 * 1024;
+const COMMIT_STEP = 1024 * 1024;
+const active = new Map();
+let directory;
+const validId = id => typeof id === 'string' && /^[a-f0-9-]{32,36}$/.test(id);
+const validHash = hash => typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash);
+const partName = id => id + '.part';
+const metaName = id => id + '.json';
+async function folder() {
+    if (!directory) {
+        const root = await navigator.storage.getDirectory();
+        directory = await root.getDirectoryHandle(DIR, { create: true });
+    }
+    return directory;
+}
+async function existing(name) {
+    try { return await (await folder()).getFileHandle(name); }
+    catch (e) { if (e?.name === 'NotFoundError') return null; throw e; }
+}
+async function readMeta(id) {
+    if (!validId(id)) throw Error('无效本机断点标识');
+    const handle = await existing(metaName(id));
+    if (!handle) return null;
+    const file = await handle.getFile();
+    if (file.size > 4096) throw Error('本机断点元数据损坏');
+    const data = JSON.parse(await file.text());
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+        || data.id !== id || data.version !== 1 || !Number.isSafeInteger(data.size) || data.size < 0
+        || !Number.isSafeInteger(data.offset) || data.offset < 0 || data.offset > data.size
+        || typeof data.name !== 'string' || data.name.length < 1 || data.name.length > 255
+        || typeof data.mime !== 'string' || data.mime.length > 128
+        || !validHash(data.prefixSha256) || !Number.isSafeInteger(data.createdAt)
+        || !['partial', 'complete'].includes(data.phase)
+        || (data.phase === 'complete' && (data.offset !== data.size
+            || !validHash(data.completeSha256) || data.completeSha256 !== data.prefixSha256)))
+        throw Error('本机断点元数据损坏');
+    return data;
+}
+async function writeMeta(meta) {
+    const file = await (await folder()).getFileHandle(metaName(meta.id), { create: true });
+    const writer = await file.createWritable({ mode: 'exclusive' });
+    try { await writer.write(JSON.stringify(meta)); await writer.close(); }
+    catch (e) { try { await writer.abort(); } catch {} throw e; }
+}
+// Data handles protect active writers, but cannot stay open while their file
+// is unlinked. Keep one stable, zero-byte native lock across short directory
+// mutations so another Worker cannot replace a record inside that unlink gap.
+// Never unlink this lock file or hold it for an entire transfer lifetime.
+async function mutate(operation) {
+    const file = await (await folder()).getFileHandle('mutation-lock', { create: true });
+    const lock = await file.createSyncAccessHandle();
+    let succeeded = false;
+    try {
+        const result = await operation();
+        succeeded = true;
+        return result;
+    } finally {
+        try { lock.close(); }
+        catch (error) { if (succeeded) throw error; }
+    }
+}
+async function removeRecord(id) {
+    const item = active.get(id);
+    if (item) { active.delete(id); item.access.close(); }
+    const dir = await folder();
+    for (const name of [partName(id), metaName(id)]) {
+        try { await dir.removeEntry(name); }
+        catch (e) { if (e?.name !== 'NotFoundError') throw e; }
+    }
+    return true;
+}
+async function erase(id) {
+    if (!validId(id)) throw Error('无效本机断点标识');
+    return mutate(() => removeRecord(id));
+}
+async function retire(id) {
+    return mutate(async () => {
+        if (active.has(id)) return false;
+        const now = Date.now();
+        const stale = file => Number.isFinite(file?.lastModified) && now - file.lastModified >= TTL_MS;
+        // Listing snapshots are only hints. Recheck under both locks: an
+        // existing writer could otherwise commit and close after our stale
+        // snapshot but before unlink. The directory guard remains held after
+        // this short data lock closes, excluding replacement through unlink.
+        const header = await existing(metaName(id)), part = await existing(partName(id));
+        const access = part && await part.createSyncAccessHandle();
+        let eligible;
+        try {
+            eligible = await (async () => {
+                const partFile = part && await part.getFile();
+                if (header) {
+                    let meta;
+                    try { meta = await readMeta(id); }
+                    catch {
+                        if (!stale(await header.getFile()) || (part && !stale(partFile))) return false;
+                    }
+                    if (meta && !(now - meta.createdAt >= TTL_MS || meta.createdAt > now + 60000 || !part)) return false;
+                    if (part && !stale(partFile)) return false;
+                } else if (!part || !stale(partFile)) return false;
+                return true;
+            })();
+        } catch (error) {
+            try { access?.close(); } catch {}
+            throw error;
+        }
+        access?.close(); // A native close failure must prevent unlink.
+        if (!eligible) return false;
+        return removeRecord(id);
+    });
+}
+// Cleanup is lazy while the site is open (and at the next visit), not a
+// background task that can run when every Zeydrop tab is closed. Never delete
+// an active or recently changed partial from a different tab.
+async function listing() {
+    const dir = await folder(), result = [], metadataIds = new Set(), orphanParts = [];
+    const now = Date.now();
+    const stale = file => Number.isFinite(file?.lastModified) && now - file.lastModified >= TTL_MS;
+    for await (const [name] of dir.entries()) {
+        if (/^[a-f0-9-]{32,36}\.part$/.test(name)) {
+            orphanParts.push(name.slice(0, -5)); continue;
+        }
+        if (!/^[a-f0-9-]{32,36}\.json$/.test(name)) continue;
+        const id = name.slice(0, -5);
+        metadataIds.add(id);
+        let meta;
+        try { meta = await readMeta(id); }
+        catch {
+            // Corrupted metadata stays visible for manual deletion. If both
+            // files are older than the TTL, it is safe to attempt garbage collection.
+            const header = await existing(metaName(id));
+            const part = await existing(partName(id));
+            if (!header) continue;
+            const headerFile = await header.getFile();
+            let partFile = null;
+            try { partFile = part && await part.getFile(); } catch {}
+            if (!active.has(id) && stale(headerFile) && (!part || (partFile && stale(partFile)))) {
+                try { if (await retire(id)) continue; } catch {} // A different tab may have a lock.
+            }
+            result.push({
+                version: 1, id, name: '损坏的本机断点元数据（可删除）',
+                size: 0, offset: 0, phase: 'invalid', createdAt: headerFile.lastModified
+            });
+            continue;
+        }
+        if (!meta) continue;
+        const part = await existing(partName(id));
+        const expired = now - meta.createdAt >= TTL_MS;
+        if (expired || meta.createdAt > now + 60000 || !part) {
+            // Deletion may be blocked by another tab. Never erase a file
+            // with a recent write time even if the header timestamp is old.
+            let recentPart = false;
+            try { recentPart = !!part && !stale(await part.getFile()); } catch { recentPart = true; }
+            if (!active.has(id) && !recentPart) {
+                try { if (await retire(id)) continue; } catch {}
+            }
+            // A locked/recent file cannot be silently deleted, but must remain
+            // visible for explicit cleanup. Never offer it as a resumable partial.
+            result.push({ ...meta, phase: expired ? 'expired' : 'invalid' });
+            continue;
+        }
+        result.push(meta);
+    }
+    for (const id of orphanParts) {
+        if (metadataIds.has(id) || active.has(id)) continue;
+        try {
+            const part = await existing(partName(id));
+            if (part && stale(await part.getFile())) await retire(id);
+        } catch {} // Do not remove an in-use file in another tab.
+    }
+    // Do not slice here: records beyond the soft capacity must stay visible
+    // so users can delete corrupted/overflow records instead of losing access.
+    return result.sort((a, b) => b.createdAt - a.createdAt);
+}
+async function start(meta) {
+    if (!meta || !validId(meta.id) || !Number.isSafeInteger(meta.size) || meta.size < 0
+        || typeof meta.name !== 'string' || meta.name.length < 1 || meta.name.length > 255
+        || typeof meta.mime !== 'string' || meta.mime.length > 128) throw Error('无效的本机文件信息');
+    if (active.has(meta.id) || await existing(metaName(meta.id))) throw Error('本机已有同名断点');
+    if ((await listing()).length >= MAX_ITEMS) throw Error('本机最多保留 20 个断点，请清理后重试');
+    const dir = await folder();
+    const file = await dir.getFileHandle(partName(meta.id), { create: true });
+    let adopted;
+    try {
+        return await mutate(async () => {
+            const access = await file.createSyncAccessHandle();
+            // Another tab may have published this ID while the file/lock was awaited.
+            // Refuse under the exclusive data lock before truncating anything: an
+            // existing (even corrupt) header belongs to the record that won that race.
+            try {
+                if (await existing(metaName(meta.id))) throw Error('本机已有同名断点');
+            } catch (error) {
+                access.close(); // A native close failure must reject, not claim release.
+                throw error;
+            }
+            const item = { file, access, offset: 0, committed: 0, meta: {
+                version: 1, id: meta.id, name: meta.name, size: meta.size, mime: meta.mime,
+                offset: 0, prefixSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                createdAt: Date.now(), phase: 'partial'
+            } };
+            try {
+                access.truncate(0);
+                await writeMeta(item.meta);
+                active.set(meta.id, item);
+                adopted = item;
+            } catch (error) {
+                // After closing the data lock, another tab can initialize this ID.
+                // A later erase(id) could delete that newly committed file. Keep this
+                // empty/invalid initialization stub for explicit or expired cleanup;
+                // no file body has been accepted yet. Preserve the publication error
+                // even if native close also fails; physical release is not guaranteed.
+                try { access.close(); } catch {}
+                throw error;
+            }
+            return { id: meta.id, offset: 0 };
+        });
+    } catch (error) {
+        // A mutation-lock close failure after setup must not leave an adopted
+        // writer behind when the caller was told that opening failed.
+        if (adopted && active.get(meta.id) === adopted) {
+            active.delete(meta.id);
+            try { adopted.access.close(); } catch {}
+        }
+        throw error;
+    }
+}
+async function resume(id, expected) {
+    if (active.has(id)) throw Error('本机断点正在其他传输中使用');
+    const matches = meta => meta && meta.phase === 'partial' && meta.offset
+        && Date.now() - meta.createdAt < TTL_MS && meta.createdAt <= Date.now() + 60000
+        && expected && expected.name === meta.name && expected.size === meta.size && expected.mime === meta.mime;
+    if (!matches(await readMeta(id))) throw Error('找不到匹配的本机未完成文件');
+    const file = await existing(partName(id));
+    if (!file) throw Error('本机断点数据已丢失');
+    let adopted;
+    try {
+        return await mutate(async () => {
+            let access;
+            try { access = await file.createSyncAccessHandle(); }
+            catch (error) {
+                if (['NoModificationAllowedError', 'InvalidStateError'].includes(error?.name))
+                    throw Error('本机断点正在另一标签页使用，请先关闭另一页面再重试');
+                throw error;
+            }
+            try {
+                // Another tab may publish a newer checkpoint or finish while we await
+                // this lock. Never truncate using metadata read before acquiring it.
+                const meta = await readMeta(id);
+                if (!matches(meta)) throw Error('找不到匹配的本机未完成文件');
+                if (access.getSize() < meta.offset) throw Error('本机文件长度不足，断点不可用');
+                access.truncate(meta.offset);
+                access.flush();
+                const snapshot = await file.getFile();
+                if (snapshot.size < meta.offset) throw Error('本机断点不可用');
+                adopted = { file, access, offset: meta.offset, committed: meta.offset, meta };
+                active.set(id, adopted);
+                return { meta, snapshot };
+            } catch (e) { access.close(); throw e; }
+        });
+    } catch (error) {
+        if (adopted && active.get(id) === adopted) {
+            active.delete(id);
+            try { adopted.access.close(); } catch {}
+        }
+        throw error;
+    }
+}
+async function append(id, bytes) {
+    const item = active.get(id);
+    if (!item || !(bytes instanceof ArrayBuffer) || bytes.byteLength < 1 || bytes.byteLength > CHUNK
+        || item.offset + bytes.byteLength > item.meta.size) throw Error('无效的本机分块');
+    const wrote = item.access.write(new Uint8Array(bytes), { at: item.offset });
+    if (wrote !== bytes.byteLength) throw Error('本机数据未完整写入');
+    item.offset += wrote;
+    return item.offset;
+}
+async function checkpoint(id, sha256, force) {
+    const item = active.get(id);
+    if (!item || !validHash(sha256)) throw Error('无效的本机检查点');
+    if (!force && item.offset - item.committed < COMMIT_STEP) return item.committed;
+    item.access.flush(); // Data must be on disk before publishing its offset.
+    const updated = { ...item.meta, offset: item.offset, prefixSha256: sha256 };
+    await writeMeta(updated);
+    item.meta = updated; item.committed = item.offset;
+    return item.committed;
+}
+async function park(id, sha256) {
+    const item = active.get(id);
+    if (!item) return false;
+    let committed = false;
+    try {
+        await checkpoint(id, sha256, true);
+        committed = true;
+    } finally {
+        // A failed metadata write must not leave the old checkpoint locked.
+        // Keep its original error if native close also fails; a close failure
+        // after a successful commit still rejects rather than claiming release.
+        try { item.access.close(); }
+        catch (error) { if (committed) throw error; }
+        finally { if (active.get(id) === item) active.delete(id); }
+    }
+    return true;
+}
+async function releaseCommitted(id) {
+    if (!validId(id)) throw Error('无效的本机断点标识');
+    const item = active.get(id);
+    if (!item) return null;
+    // The append may have reached disk before its hash failed. Preserve the
+    // last committed metadata; resume will truncate any uncommitted tail.
+    // A native close failure rejects, even though logical ownership is removed.
+    try { item.access.close(); }
+    finally { if (active.get(id) === item) active.delete(id); }
+    return item.committed;
+}
+async function completed(id) {
+    const meta = await readMeta(id);
+    if (!meta || meta.phase !== 'complete' || !validHash(meta.completeSha256))
+        throw Error('本机没有已验证完成的文件');
+    const file = await existing(partName(id));
+    if (!file) throw Error('本机文件不存在');
+    const blob = await file.getFile();
+    if (blob.size !== meta.size) throw Error('本机文件大小已变化');
+    return { meta, blob };
+}
+async function probe() {
+    const dir = await folder(), name = 'capability-probe-' + crypto.randomUUID();
+    const handle = await dir.getFileHandle(name, { create: true });
+    try {
+        if (typeof handle.createSyncAccessHandle !== 'function') return false;
+        const access = await handle.createSyncAccessHandle();
+        access.close();
+        return true;
+    } finally { await dir.removeEntry(name).catch(() => {}); }
+}
+async function finish(id, sha256) {
+    const item = active.get(id);
+    if (!item || item.offset !== item.meta.size || !validHash(sha256)) throw Error('本机文件尚未完成校验');
+    await checkpoint(id, sha256, true);
+    const complete = { ...item.meta, phase: 'complete', completeSha256: sha256 };
+    // Keep the data lock through publication; a delete/resume from another
+    // tab must not remove or truncate the data between these two commits.
+    await writeMeta(complete);
+    item.access.close(); active.delete(id);
+    return { meta: complete, file: await item.file.getFile() };
+}
+async function list() { return listing(); }
+const tasks = { probe, start, resume, append, checkpoint, park, releaseCommitted, finish, completed, erase, list };
+let taskChain = Promise.resolve();
+self.onmessage = event => {
+    const { request, type, args = [] } = event.data || {};
+    if (!Number.isSafeInteger(request) || !Object.hasOwn(tasks, type) || !Array.isArray(args)) return;
+    // Async message listeners run concurrently unless explicitly sequenced.
+    // In particular erase must wait for an already-started metadata commit.
+    taskChain = taskChain.then(async () => {
+        try { self.postMessage({ request, ok: true, value: await tasks[type](...args) }); }
+        catch (e) {
+            const errorName = ['QuotaExceededError', 'NotAllowedError', 'NoModificationAllowedError']
+                .includes(e?.name) ? e.name : 'Error';
+            self.postMessage({ request, ok: false, errorName, error: String(e?.message || e).slice(0, 200) });
+        }
+    });
+};

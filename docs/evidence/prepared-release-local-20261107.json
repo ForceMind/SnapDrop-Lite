@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-11-07T20:00:28.334817+00:00",
+  "baseline": "c4c7d6e2f46d8e63f5a996f52332470390386781",
+  "revision": "c75833843f0b324f",
+  "node": {
+    "tests": 410,
+    "passed": 410,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "8c416754b9c8b74192c8b2571da10df65234c95df56a9a4403b7262695e9b57a"
+  },
+  "focused": {
+    "new": 10,
+    "totalRelated": 24,
+    "passed": 24
+  },
+  "negativeControl": {
+    "source": "c4c7d6e",
+    "fullShellRetryCases": 2,
+    "passed": 0,
+    "failed": 2
+  },
+  "build": {
+    "passed": true,
+    "checkBuild": true,
+    "shellSyntax": true,
+    "diffCheck": true
+  },
+  "audit": {
+    "rootAndServerReportedVulnerabilities": 0,
+    "lockfilesChanged": false,
+    "sameTurnAudits": "lifecycle-local-20261107.json"
+  },
+  "behavior": "Reuse only exact complete non-current prepared runtime, read-only validation of tree/bytes/modes/effective-owner/links/stability; no existing release writes or deletion; partial/different/unsafe is refused unchanged. Read atime can change.",
+  "nativeBrowser": {
+    "newRevisionPassed": false,
+    "localAttempt": "system Chromium startup EPERM; updated fixture builds succeeded; native current-revision CI pending"
+  },
+  "scope": "Isolated real shell/filesystem with external services simulated; no independent systemd/TLS/production-host certification."
+}
