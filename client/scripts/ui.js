@@ -24,10 +24,10 @@ class Dialog {
         });
     }
     focusables() {
-        return [...this.el.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex], [contenteditable]:not([contenteditable="false"])')]
+        return [...this.el.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary:first-child, [tabindex], [contenteditable]:not([contenteditable="false"])')]
             .filter(el => !el.matches(':disabled') && !el.closest('[hidden], [inert]') && el.getClientRects().length
                 && !['hidden','collapse'].includes(getComputedStyle(el).visibility)
-                && (el.tabIndex >= 0 || (el.isContentEditable && !el.hasAttribute('tabindex'))));
+                && (el.tabIndex >= 0 || (el.matches('summary:first-child') && !el.hasAttribute('tabindex')) || (el.isContentEditable && !el.hasAttribute('tabindex'))));
     }
     show() {
         if (this.el.hasAttribute('show')) return;
@@ -172,6 +172,9 @@ class FileOfferDialog extends Dialog {
     next() {
         if (this.active || !this.queue.length) return;
         this.active = this.queue.shift(); $('offerFileName').textContent = this.active.name;
+        $('offerSender').textContent = '来自「' + ($(this.active.sender)?.querySelector('.name')?.textContent || '已连接的设备') + '」';
+        $('recoveryReceiveOptions').open = false;
+        $('recoveryReceiveOptions').querySelector('summary').textContent = '接收选项';
         $('offerFileSize').textContent = fmt(this.active.size) + (window.showSaveFilePicker ? ' · 默认保存到你选择的文件' : ' · 默认内存保存最多 64 MiB');
         $('durableLocalReceive').checked = false;
         $('useLocalCheckpoint').checked = false;
@@ -190,6 +193,7 @@ class FileOfferDialog extends Dialog {
                 if (!match) return;
                 this.candidate = match;
                 $('localResumeOption').hidden = false;
+                $('recoveryReceiveOptions').querySelector('summary').textContent = '接收选项 · 有可续传的断点';
                 $('localResumeOption').lastChild.textContent = ' 本机已有 ' + fmt(match.offset)
                     + ' 断点：重新配对后校验并从这里续传';
             }).catch(() => {});
@@ -287,37 +291,58 @@ class PeersUI {
         Events.on('connection-state', event => this.state(event.detail));
         Events.on('send-queue-state', event => this.queue(event.detail));
     }
-    count() { $('peerCount').textContent = document.querySelectorAll('x-peer').length + ' 台设备'; }
+    count() {
+        const peers = [...document.querySelectorAll('x-peer')];
+        $('transferWorkspace').toggleAttribute('data-has-peer', peers.length > 0);
+        const peer = peers.length === 1 && peers[0].dataset.ready === 'true' ? peers[0] : null;
+        const pathDetail = peers.length === 1 ? peers[0].dataset.pathDetail || '' : '';
+        $('connectionDetails').hidden = !pathDetail;
+        if (!pathDetail) $('connectionDetails').open = false;
+        $('peerPathDetail').textContent = pathDetail;
+        const send = $('sendTextAction');
+        send.disabled = !peer;
+        send.onclick = peer ? () => Events.fire('text-recipient', peer.id) : null;
+        if (!$('leaveRoomBtn').hidden) $('leaveRoomBtn').textContent = peers.length ? '结束连接' : '取消连接';
+    }
     add(peer) {
         if ($(peer.id)) return;
         const el = document.createElement('x-peer'); el.id = peer.id;
-        el.innerHTML = '<div class="peer-device"><svg class="icon"><use href="#desktop-mac"/></svg><strong class="name"></strong></div><div class="status" role="status">正在建立直连…</div><div class="connection-help"></div><div class="peer-verification"><small>在两台设备核对相同的安全码</small><strong class="security-code">等待协商</strong><button type="button" class="verify-peer" disabled>安全码一致，允许传输</button></div><label class="select-files button" tabindex="0">选择文件<input type="file" multiple disabled></label><div class="peer-actions"><button type="button" class="send-text">发送文字</button><button type="button" class="retry-peer">重试连接</button></div><details class="peer-diagnostics"><summary>连接详情</summary><div class="path-detail"></div></details>';
+        el.innerHTML = '<div class="peer-device"><svg class="icon" aria-hidden="true"><use href="#desktop-mac"/></svg><strong class="name"></strong></div><div class="status" role="status">正在连接…</div><div class="connection-help"></div><div class="peer-verification" hidden><small>确认两台设备显示相同的安全码</small><strong class="security-code"></strong><button type="button" class="verify-peer" disabled>一致，继续</button></div><button type="button" class="select-files primary-action" hidden disabled>选择文件</button><input type="file" multiple hidden disabled><small class="drop-hint" hidden>也可以把文件拖到这里</small><button type="button" class="retry-peer" hidden>重试连接</button>';
         const queue = document.createElement('div'); queue.className = 'send-queue'; queue.hidden = true;
         queue.innerHTML = '<p class="queue-summary" role="status"></p><div class="peer-actions"><button type="button" class="continue-queue">继续后续文件</button><button type="button" class="clear-queue">清空待发队列</button></div>';
         el.append(queue);
         for (const action of ['continue', 'clear']) queue.querySelector('.' + action + '-queue').onclick = () => Events.fire('transfer-control', { peerId: peer.id, action: action + '-queue' });
         el.querySelector('.name').textContent = peer.name.deviceName;
         const input = el.querySelector('input');
-        input.addEventListener('change', () => { Events.fire('files-selected', { to: peer.id, files: input.files }); input.value = ''; });
-        el.querySelector('.select-files').addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); input.click(); } });
+        input.addEventListener('change', () => { if (!input.disabled) Events.fire('files-selected', { to: peer.id, files: input.files }); input.value = ''; });
+        el.querySelector('.select-files').onclick = () => { if (!input.disabled) input.click(); };
         el.querySelector('.verify-peer').onclick = () => Events.fire('verify-peer', peer.id);
         el.querySelector('.retry-peer').onclick = () => Events.fire('retry-peer', peer.id);
-        el.querySelector('.send-text').onclick = () => Events.fire('text-recipient', peer.id);
         el.addEventListener('dragover', event => event.preventDefault());
-        el.addEventListener('drop', event => { event.preventDefault(); Events.fire('files-selected', { to: peer.id, files: event.dataTransfer.files }); });
+        el.addEventListener('drop', event => { event.preventDefault(); if (!input.disabled) Events.fire('files-selected', { to: peer.id, files: event.dataTransfer.files }); });
         document.querySelector('x-peers').append(el);
     }
     state(info) {
         const el = $(info.peerId); if (!el) return;
-        el.querySelector('.status').textContent = info.state === 'closed' ? '连接已关闭' : info.state === 'failed' ? '无法直连' : info.state === 'disconnected' ? '连接断开，正在恢复' : info.path?.direct ? '设备直连已建立' : '正在建立并核验直连…';
-        el.querySelector('.connection-help').textContent = info.reason || (info.path?.direct ? (!info.ready ? '直连已建立，正在等待另一台设备就绪' : info.verified ? '安全码已核对，可以选择文件' : '请先在两台设备核对下方安全码') : '请让另一台设备保持页面打开');
-        el.querySelector('.path-detail').textContent = info.path?.direct ? `${info.path.protocol.toUpperCase()} · ${info.path.family} · ${info.path.localType} ↔ ${info.path.remoteType}${info.path.rtt !== null ? ' · ' + info.path.rtt + ' ms' : ''}` : `候选：host ${info.candidates?.host || 0} / srflx ${info.candidates?.srflx || 0}${info.stunError ? ' · 部分 STUN 探测失败' : ''}`;
-        el.querySelector('.security-code').textContent = info.code || '等待协商';
-        const verify = el.querySelector('.verify-peer'); verify.disabled = !info.code || !info.path?.direct || !info.ready || info.verified;
-        verify.textContent = info.verified ? '安全码已核对' : '安全码一致，允许传输';
-        el.querySelector('input').disabled = !info.verified || !info.path?.direct || !info.ready;
-        el.querySelector('.send-text').disabled = !info.verified || !info.path?.direct || !info.ready;
-        el.dataset.state = info.state;
+        const connected = info.state === 'connected';
+        const ready = connected && !!info.path?.direct && !!info.ready && !!info.verified;
+        const verify = connected && !!info.path?.direct && !!info.ready && !!info.code && !info.verified;
+        el.querySelector('.status').textContent = ready ? '已直连' : verify ? '核对安全码'
+            : { closed: '连接已结束', failed: '无法直连', disconnected: '连接断开，正在恢复' }[info.state] || '正在连接…';
+        el.querySelector('.connection-help').textContent = ready || verify ? ''
+            : info.reason || (info.path?.direct ? '等待对方就绪' : '请让另一台设备保持页面打开');
+        const moveFocus = ready && document.activeElement === el.querySelector('.verify-peer');
+        el.querySelector('.security-code').textContent = verify ? info.code : '';
+        el.querySelector('.peer-verification').hidden = !verify;
+        el.querySelector('.verify-peer').disabled = !verify;
+        const picker = el.querySelector('.select-files');
+        picker.hidden = picker.disabled = el.querySelector('input').disabled = !ready;
+        el.querySelector('.drop-hint').hidden = !ready;
+        el.querySelector('.retry-peer').hidden = !['failed', 'disconnected'].includes(info.state);
+        el.dataset.pathDetail = info.path?.direct ? `${info.path.protocol?.toUpperCase() || '直连'} · ${info.path.family} · ${info.path.localType} ↔ ${info.path.remoteType}${info.path.rtt != null ? ' · ' + info.path.rtt + ' ms' : ''}`
+            : `候选：host ${info.candidates?.host || 0} / srflx ${info.candidates?.srflx || 0}${info.stunError ? ' · 部分 STUN 探测失败' : ''}`;
+        el.dataset.state = info.state; el.dataset.ready = String(ready); this.count();
+        if (moveFocus) picker.focus();
     }
     queue(info) {
         const el = $(info.peerId); if (!el) return;
@@ -547,6 +572,14 @@ class Zeydrop {
             document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
             Events.fire('notify-user', '诊断已在本机导出，可自行查看后分享给开发者');
         };
+        const menu = $('moreActions'), toggle = $('moreToggle');
+        menu.addEventListener('click', event => {
+            if (event.target.closest('#sendTextAction, #openTextTools')) { menu.open = false; toggle.focus(); }
+        });
+        document.addEventListener('click', event => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
+        menu.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && menu.open) { menu.open = false; toggle.focus(); }
+        });
         new PeersUI(); this.server = new ServerConnection(); this.peers = new PeersManager(this.server);
         new FileOfferDialog(); new ReceiveDialog(); new TransfersUI(); this.rooms(); this.text();
         this.sendQueue = new SendQueueUI(this.peers);
@@ -557,13 +590,26 @@ class Zeydrop {
     }
     rooms() {
         let currentRoom = null, expires = null, paired = false;
-        const status = (message, state = '') => { $('roomStatus').textContent = message; $('roomStatus').dataset.state = state; };
-        const clearInvite = () => { currentRoom = null; expires = null; paired = false; $('inviteCreated').hidden = true; $('inviteUrl').value = ''; $('inviteQR').getContext('2d').clearRect(0, 0, 200, 200); $('roomInput').value = ''; $('roomBtn').hidden = true; history.replaceState({}, '', location.pathname); };
+        const status = (message, state = '') => { $('roomStatus').textContent = message; $('roomStatus').hidden = !message; $('roomStatus').dataset.state = state; };
+        const showJoin = open => { $('joinRow').hidden = !open; $('toggleJoin').setAttribute('aria-expanded', String(open)); };
+        const connecting = active => {
+            $('connectActions').hidden = active;
+            $('leaveRoomBtn').hidden = !active;
+            if (active) $('leaveRoomBtn').textContent = '取消连接';
+        };
+        const clearInvite = () => {
+            currentRoom = null; expires = null; paired = false;
+            $('inviteCreated').hidden = true; $('inviteUrl').value = '';
+            const qr = $('inviteQR'); qr.width = qr.width;
+            $('roomInput').value = ''; $('roomBtn').disabled = true; showJoin(false); connecting(false);
+            history.replaceState({}, '', location.pathname);
+        };
         const showInvite = async id => {
             const url = new URL(location.pathname, location.origin); url.hash = 'room=' + id;
             $('inviteUrl').value = url.href; $('inviteCreated').hidden = false;
-            $('inviteTitle').textContent = paired ? '双方设备已配对' : '邀请已生成';
-            $('inviteUrl').parentElement.hidden = paired; $('inviteQR').hidden = paired;
+            $('inviteTitle').textContent = paired ? '双方设备已配对' : '连接设备';
+            $('inviteUrl').hidden = true; $('inviteUrl').parentElement.hidden = paired;
+            $('inviteHelp').hidden = paired; $('inviteQR').hidden = paired;
             if (paired) return;
             try { await window.ZeydropQR.toCanvas($('inviteQR'), url.href, { width: 160, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#163f31', light: '#ffffff' } }); } catch { $('inviteQR').hidden = true; }
         };
@@ -581,21 +627,29 @@ class Zeydrop {
         const join = (raw, create = false) => {
             const id = normalize(raw);
             if (!/^[a-f0-9]{32}$/.test(id)) return status('邀请码无效，请使用本站生成的完整邀请链接', 'error');
-            currentRoom = id; expires = null; paired = false; $('inviteCreated').hidden = true;
+            currentRoom = id; expires = null; paired = false; $('inviteCreated').hidden = true; connecting(true);
             this.server.joinRoom(id, create); status(create ? '正在创建邀请…' : '正在加入邀请…', 'waiting');
         };
-        $('createRoomBtn').onclick = () => { if (!crypto.getRandomValues) return; join(hex(crypto.getRandomValues(new Uint8Array(16))), true); };
-        $('roomInput').oninput = () => { $('roomBtn').hidden = !$('roomInput').value.trim(); };
-        $('roomBtn').onclick = () => join($('roomInput').value);
-        $('roomInput').onkeydown = event => { if (event.key === 'Enter') join($('roomInput').value); };
+        $('createRoomBtn').onclick = () => { if (currentRoom || !crypto.getRandomValues) return; join(hex(crypto.getRandomValues(new Uint8Array(16))), true); };
+        $('toggleJoin').onclick = () => { const open = $('joinRow').hidden; showJoin(open); if (open) $('roomInput').focus(); };
+        $('roomInput').oninput = () => { $('roomBtn').disabled = !$('roomInput').value.trim(); };
+        $('joinRow').onsubmit = event => { event.preventDefault(); if (!currentRoom) join($('roomInput').value); };
         $('copyInviteBtn').onclick = async () => {
-            try { await navigator.clipboard.writeText($('inviteUrl').value); Events.fire('notify-user', '邀请链接已复制'); }
-            catch { $('inviteUrl').focus(); $('inviteUrl').select(); Events.fire('notify-user', '请复制选中的邀请链接'); }
+            const id = currentRoom, url = $('inviteUrl').value;
+            if (!id || paired || !url) return;
+            try {
+                await navigator.clipboard.writeText(url);
+                if (currentRoom === id && !paired) Events.fire('notify-user', '邀请链接已复制');
+            } catch {
+                if (currentRoom !== id || paired) return;
+                const input = $('inviteUrl'); input.hidden = false; input.focus(); input.select();
+                Events.fire('notify-user', '请复制选中的邀请链接');
+            }
         };
-        $('leaveRoomBtn').onclick = () => { this.server.leaveRoom(); clearInvite(); status('会话已结束，可创建新的邀请。已启用的本机暂存可在本机暂存管理中查看'); };
-        Events.on('room-joined', event => { if (event.detail.roomId !== currentRoom) return; expires = event.detail.expiresAt; paired = event.detail.paired === true; showInvite(currentRoom); status(paired ? '配对已锁定，请核对安全码；此邀请不再接受其他设备' : '房间已就绪，等待另一台设备加入并核对安全码', 'connected'); history.replaceState({}, '', location.pathname + '#room=' + currentRoom); });
+        $('leaveRoomBtn').onclick = () => { this.server.leaveRoom(); clearInvite(); status('已结束连接'); $('createRoomBtn').focus(); };
+        Events.on('room-joined', event => { if (event.detail.roomId !== currentRoom) return; expires = event.detail.expiresAt; paired = event.detail.paired === true; showInvite(currentRoom); status(paired ? '等待对方连接' : '等待对方加入', 'waiting'); history.replaceState({}, '', location.pathname + '#room=' + currentRoom); });
         Events.on('room-expired', () => { clearInvite(); status('邀请或会话已过期，连接已结束。请创建新邀请；已启用的本机暂存可在本机暂存管理中查看', 'error'); });
-        Events.on('room-error', event => { if (['expired', 'missing', 'invalid', 'exists'].includes(event.detail.code)) clearInvite(); status(event.detail.message, 'error'); });
+        Events.on('room-error', event => { if (currentRoom) { this.server.leaveRoom(); clearInvite(); } status(event.detail.message, 'error'); });
         Events.on('signal-state', event => {
             const state = event.detail.state; $('signalStatus').dataset.state = state;
             $('signalStatus').querySelector('.signal-label').textContent = { connected: '信令服务在线', connecting: '正在连接信令', offline: '信令连接断开' }[state];

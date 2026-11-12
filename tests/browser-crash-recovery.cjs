@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openRecovery } = require('./workspace-ui-helpers.cjs');
 // Native Linux Chromium process-group crash on a test-owned persistent profile.
 // No graceful page/Worker parking before SIGKILL. Not power-loss/WAN evidence.
 const assert = require('node:assert/strict');
@@ -58,7 +59,7 @@ async function main() {
     const pair = async () => {
         await sender.locator('#createRoomBtn').click();
         await sender.waitForFunction(() => document.querySelector('#inviteUrl').value.includes('#room='));
-        await receiver.locator('#roomInput').fill(await sender.locator('#inviteUrl').inputValue());
+        await openJoin(receiver); await receiver.locator('#roomInput').fill(await sender.locator('#inviteUrl').inputValue());
         await receiver.locator('#roomBtn').click();
         for (const page of [sender, receiver]) await page.waitForFunction(() => {
             const p = [...zeydrop.peers.peers.values()][0]; return p?._path?.direct && p._remoteHello && p._code && !p._verified;
@@ -134,7 +135,7 @@ async function main() {
             const id = [...zeydrop.peers.peers.values()][0]._incoming.meta.id; window.__processCrash.target = id; return id;
         });
         assert.equal(await sender.evaluate(() => window.__binaryBytes), 0);
-        await receiver.locator('#durableLocalReceive').check(); await receiver.locator('#acceptFileOffer').click();
+        await openRecovery(receiver); await receiver.locator('#durableLocalReceive').check(); await receiver.locator('#acceptFileOffer').click();
         await receiver.waitForFunction(() => window.__processCrash.held && window.__processCrash.committedRaw, null, { timeout: 60000 });
         const before = await receiver.evaluate(() => ({ ...window.__processCrash, completions: window.__crashCompletions }));
         originalRaw = before.committedRaw; const original = JSON.parse(originalRaw);
@@ -192,7 +193,7 @@ async function main() {
         await sender.evaluate(() => { window.__binaryBytes = 0; });
         await sender.locator('x-peer input[type=file]').setInputFiles(file);
         await receiver.locator('#fileOfferDialog[show]').waitFor();
-        await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
+        await openRecovery(receiver); await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
         assert.equal(await receiver.locator('#useLocalCheckpoint').isChecked(), false);
         const stateBefore = await receiver.evaluate(() => {
             const state = [...zeydrop.peers.peers.values()][0]._incoming;

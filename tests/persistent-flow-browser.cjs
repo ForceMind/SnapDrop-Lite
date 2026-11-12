@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openRecovery } = require('./workspace-ui-helpers.cjs');
 // True two-context WebRTC + browser OPFS flow across a receiver page reload.
 // This remains a same-host test with STUN disabled, NOT public NAT evidence.
 const assert = require('node:assert/strict');
@@ -37,7 +38,7 @@ async function main() {
             // Changing only the hash on an already-open page does not reload
             // the application. Join explicitly through the real UI instead.
             if (receiver.url() === 'about:blank') await receiver.goto(server.origin);
-            await receiver.locator('#roomInput').fill(url);
+            await openJoin(receiver); await receiver.locator('#roomInput').fill(url);
             await receiver.locator('#roomBtn').click();
             await Promise.all(pages.map(waitPeer));
             const codes = await Promise.all(pages.map(p => p.locator('.security-code').innerText()));
@@ -66,7 +67,7 @@ async function main() {
         await sender.locator('x-peer input[type=file]').setInputFiles(file);
         await receiver.locator('#fileOfferDialog[show]').waitFor();
         await receiver.locator('#recoveryReceiveOptions').waitFor({ state: 'visible', timeout: 15000 });
-        await receiver.locator('#durableLocalReceive').check();
+        await openRecovery(receiver); await receiver.locator('#durableLocalReceive').check();
         await receiver.locator('#acceptFileOffer').click();
         await receiver.waitForFunction(() => window.__persistCut >= 1024 * 1024, null, { timeout: 40000 });
         // Destructively reload both transport/receiver state and the OPFS writer.
@@ -99,7 +100,7 @@ async function main() {
         });
         await sender.locator('x-peer input[type=file]').setInputFiles(file);
         await receiver.locator('#fileOfferDialog[show]').waitFor();
-        await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
+        await openRecovery(receiver); await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
         await receiver.locator('#useLocalCheckpoint').check();
         await receiver.locator('#acceptFileOffer').click();
         await sender.waitForFunction(name => window.__testTransfers[name]?.phase === 'complete', name, { timeout: 120000 });

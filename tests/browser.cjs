@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openMore } = require('./workspace-ui-helpers.cjs');
 // Real two-browser-context DataChannel tests. No external NAT claims are made.
 const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path'), crypto = require('node:crypto'), os = require('node:os');
 const { chromium, firefox, webkit } = require('playwright'); const { startDev } = require('../scripts/dev.cjs');
@@ -51,6 +52,10 @@ async function main() {
             await a.addStyleTag({ content: css + '\nbody { font-family: \"Noto Sans SC\",sans-serif !important; }' });
             await a.evaluate(() => document.fonts.ready);
         }
+        assert.equal(await a.locator('#createRoomBtn').isVisible(), true);
+        assert.equal(await a.locator('#joinRow').isHidden(), true);
+        assert.equal(await a.locator('#openTextTools').isHidden(), true);
+        assert.equal(server.signaling.rooms.size, 0, 'opening the page does not create an invitation');
         await a.screenshot({ path: 'test-results/desktop-light.png', fullPage: true });
         await a.emulateMedia({ colorScheme: 'dark' }); await a.screenshot({ path: 'test-results/desktop-dark.png', fullPage: true }); await a.emulateMedia({ colorScheme: 'light' });
         await a.setViewportSize({ width: 390, height: 844 }); await a.screenshot({ path: 'test-results/mobile.png', fullPage: true });
@@ -61,7 +66,14 @@ async function main() {
         await b.goto(invite); await instrumentHash(b);
         for (const page of pages) await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._path?.direct, null, { timeout: 30000 });
         const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText())); assert.equal(codes[0], codes[1]); console.log('PASS direct connection and DTLS code');
-        for (const page of pages) { assert.equal(await page.locator('x-peer input').isDisabled(), true); await page.locator('.verify-peer').click(); }
+        for (const page of pages) {
+            assert.equal(await page.locator('x-peer input').isDisabled(), true);
+            assert.equal(await page.locator('.select-files').isHidden(), true);
+            await page.locator('.verify-peer').click();
+            await page.locator('.select-files').waitFor({ state: 'visible' });
+            assert.equal(await page.locator('#pairingArea').isHidden(), true);
+            assert.equal(await page.locator('.peer-verification').isHidden(), true);
+        }
         const paths = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._path)));
         assert.ok(paths.every(info => info.direct && info.protocol === 'udp' && info.localType !== 'relay' && info.remoteType !== 'relay'));
         results.paths = paths; results.cases.push('real UDP DataChannel, selected host path, matching DTLS code');
@@ -72,8 +84,14 @@ async function main() {
         results.cases.push('sealed pair continues actual file transfers after the invitation deadline');
         const traffic = []; for (const peer of server.signaling.connections.values()) peer.socket.on('message', (bytes, binary) => traffic.push({ binary, text: bytes.toString(), bytes: bytes.length }));
         const file = { name: '闪投 & <视频> PRIVATE_FILE_SENTINEL.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_FILE_BODY_SENTINEL\n'.repeat(12000)) };
-        await a.locator('x-peer input[type=file]').setInputFiles([file, { name: 'queued-after-rejection.txt', mimeType: 'text/plain', buffer: Buffer.from('later') }]);
+        const chooser = a.waitForEvent('filechooser');
+        await a.locator('.select-files').click();
+        await (await chooser).setFiles([file, { name: 'queued-after-rejection.txt', mimeType: 'text/plain', buffer: Buffer.from('later') }]);
         await b.locator('#fileOfferDialog[show]').waitFor();
+        assert.equal(await b.locator('#offerFileName').textContent(), file.name);
+        assert.equal(await b.locator('#durableLocalReceive').isHidden(), true);
+        assert.equal(await a.locator('#transferSection').evaluate(el => el.parentElement.id), 'transferWorkspace');
+        results.cases.push('compact workspace starts without an invitation; native file chooser appears only after verification, and receiving options stay collapsed');
         const rejectedId = await a.evaluate(() => [...zeydrop.peers.peers.values()][0]._outgoing.meta.id);
         assert.equal(await b.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
         await b.locator('#rejectFileOffer').click(); await a.waitForFunction(() => ![...zeydrop.peers.peers.values()][0]._outgoing);
@@ -227,13 +245,13 @@ async function main() {
         const previousInvite = await a.locator('#inviteUrl').inputValue(); await a.locator('#createRoomBtn').click();
         await a.waitForFunction(previous => {const value=document.querySelector('#inviteUrl').value;return value.includes('#room=') && value!==previous;}, previousInvite);
         const delayedInvite = await a.locator('#inviteUrl').inputValue();
-        await b.locator('#roomInput').fill(delayedInvite); await b.locator('#roomBtn').click();
+        await openJoin(b); await b.locator('#roomInput').fill(delayedInvite); await b.locator('#roomBtn').click();
         for (const page of pages) await page.waitForFunction(() => [...zeydrop.peers.peers.values()][0]?._path?.direct, null, {timeout:30000});
         server.signaling.send = originalSend; assert.ok(delayedFrames>0);
         results.delayedEarlySignals = await Promise.all(pages.map(page => page.evaluate(() => window.__earlySignalsObserved)));
         assert.ok(results.delayedEarlySignals.some(count => count>0), 'Test must actually deliver SDP/ICE before discovery');
         results.cases.push('real delayed discovery: earlier SDP/ICE buffered until authorized peer appears');
-        const diagnosticDownload = a.waitForEvent('download'); await a.locator('#exportDiagnostics').click();
+        const diagnosticDownload = a.waitForEvent('download'); await openMore(a); await a.locator('#exportDiagnostics').click();
         const report = JSON.parse(await fs.readFile(await (await diagnosticDownload).path(), 'utf8'));
         assert.equal(report.schema, 1); assert.match(report.revision, /^[a-f0-9]{16}$/);
         assert.ok(report.events.some(event => event.kind === 'connection' && event.path.direct && event.path.status === 'selected'));

@@ -1,4 +1,5 @@
 'use strict';
+const { openMore } = require('./workspace-ui-helpers.cjs');
 // Real built modal geometry and local QR pixels. Viewport emulation does not
 // certify a phone, camera, browser keyboard or hardware accessibility behavior.
 const assert = require('node:assert/strict');
@@ -78,7 +79,7 @@ async function main() {
         for (const shape of shapes) for (const scheme of ['light', 'dark']) {
             report.phase = shape.name + '-' + scheme;
             await page.setViewportSize({ width: shape.width, height: shape.height }); await page.emulateMedia({ colorScheme: scheme });
-            await page.locator('#openTextTools').click();
+            await openMore(page); await page.locator('#openTextTools').click();
             await page.locator('#qrTextInput').fill(text); await page.locator('#generateTextQR').click();
             await page.locator('#textQR:visible').waitFor(); await settled(page);
             await page.locator('#textQrDialog x-paper').evaluate(paper => { paper.scrollTop = 0; }); await settled(page);

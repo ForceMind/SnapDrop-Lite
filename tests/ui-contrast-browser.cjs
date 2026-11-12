@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openMore } = require('./workspace-ui-helpers.cjs');
 // Actual rendered UI and native recovery storage. Synthetic local metadata;
 // no peer, invitation, file body, or user file is needed for this audit.
 const assert=require('node:assert/strict'),fs=require('node:fs/promises');
@@ -52,11 +53,12 @@ async function main(){
             const sink=await window.ZeydropRecovery.open({id,name:'界面测试暂存',size:1,mime:'application/octet-stream'});
             await sink.park('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
         });
-        await page.locator('#localStorageSection').waitFor({state:'visible'});await page.locator('#localStorageManage').click();
+        await openJoin(page); await openMore(page);
+        await page.locator('#localStorageSection').waitFor({state:'visible'});await openMore(page); await page.locator('#localStorageManage').click();
         await page.locator('.recovery-record').waitFor({state:'visible'});assert.equal(await page.locator('.recovery-record button').isEnabled(),true);
         for(const theme of ['light','dark']){
             report.phase=theme;await page.emulateMedia({colorScheme:theme});
-            await page.locator('#roomInput').focus();await page.keyboard.press('Shift+Tab');
+            await page.locator('#roomInput').focus();await page.keyboard.press('Shift+Tab');await page.keyboard.press('Shift+Tab');
             assert.equal(await page.evaluate(()=>document.activeElement?.id),'createRoomBtn');
             report.themes[theme]=await page.evaluate(measure);
             for(const item of [...report.themes[theme].text,report.themes[theme].focus])assert.ok(item.ratio>=item.minimum,theme+' contrast below threshold: '+item.selector);

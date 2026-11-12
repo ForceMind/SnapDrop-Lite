@@ -52,74 +52,15 @@
                     </svg>
                 </span>
                 <span class="brand-identity">
-                    <strong>Zeydrop</strong><small>DIRECT BY DESIGN</small>
+                    <strong>闪投</strong>
                 </span>
             </a>
-            <div class="topbar-right">
-                <span id="signalStatus" class="signal-indicator" role="status"><span class="signal-led"></span><span class="signal-label">正在连接信令服务</span></span>
-                <a href="#about" class="icon-button toolbar-icon" title="关于与使用帮助" aria-label="关于与使用帮助"><svg class="icon"><use xlink:href="#info-outline" /></svg></a>
-                <a href="#" id="install" class="icon-button toolbar-icon" title="安装到桌面" hidden><svg class="icon"><use xlink:href="#homescreen" /></svg></a>
-            </div>
-        </header>
-
-        <main class="workspace" id="main">
-            <section class="intro-pane" aria-labelledby="heroTitle">
-                <div class="eyebrow"><span class="eyebrow-dot"></span> PRIVATE BY CONNECTION <span class="eyebrow-line"></span> 01 / 02</div>
-                <h1 id="heroTitle">分享不必<br>绕远路<span class="heading-period">.</span></h1>
-                <p class="hero-subtitle">设备直接连接，文件直接抵达。无论在同一房间，还是相隔千里，都优先尝试点对点传输。</p>
-                <div class="hero-art" aria-hidden="true">
-                    <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
-                    <div class="hero-node node-a"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8m-4-3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-                    <div class="hero-link"><span></span><i></i><span></span></div>
-                    <div class="hero-node node-b"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="17.5" r=".9" fill="currentColor"/></svg></div>
-                    <div class="orbit-tag tag-top">P2P / WEBRTC</div><div class="orbit-tag tag-bottom">NO FILE RELAY</div>
-                </div>
-                <div class="trust-strip">
-                    <div><span class="mini-icon">↗</span><strong>端到端直传</strong><small>文件正文不经过服务器</small></div>
-                    <div><span class="mini-icon">◎</span><strong>无需安装</strong><small>打开网页即可使用</small></div>
-                </div>
-            </section>
-
-            <section class="workspace-card" aria-label="文件传输工作台">
-                <div class="card-heading">
-                    <div><div class="section-eyebrow">TRANSFER WORKSPACE</div><h2>开始连接</h2></div>
-                    <span class="workspace-count">WEB / PWA</span>
-                </div>
-
-                <div class="invite-panel">
-                    <div class="invite-panel-title"><span class="step-token">01</span><div><h3>跨网络配对</h3><p>生成邀请链接，发送给另一台设备</p></div></div>
-                    <button id="createRoomBtn" class="primary-action" type="button"><span>创建邀请链接</span><span aria-hidden="true">↗</span></button>
-                    <div class="invite-divider"><span>或者加入其他设备</span></div>
-                    <div class="join-row">
-                        <input type="text" id="roomInput" placeholder="粘贴邀请链接或输入配对码" maxlength="512" aria-label="邀请链接或配对码" autocomplete="off" spellcheck="false">
-                        <button id="roomBtn" class="join-action" type="button" hidden>加入</button>
-                    </div>
-                    <div class="invite-created" id="inviteCreated" hidden>
-                        <div><strong id="inviteTitle">邀请已生成</strong><p id="inviteExpiry">15 分钟有效 · 最多两台设备</p></div><canvas id="inviteQR" width="160" height="160" aria-label="邀请二维码"></canvas>
-                        <div class="invite-url"><input id="inviteUrl" aria-label="邀请链接" type="text" readonly><button id="copyInviteBtn" type="button">复制</button></div>
-                    <button id="leaveRoomBtn" type="button" class="leave-room">离开房间</button></div>
-                    <p id="roomStatus" class="room-status" role="status" aria-live="polite">房间尚未建立 · 仅连接双方直接传输文件</p>
-                </div>
-
-                <div class="text-tools-entry">
-                    <span class="text-tools-symbol" aria-hidden="true">▦</span>
-                    <div><strong>文字，也能轻松分享</strong><small>文本转二维码 · 无需配对 · 本机生成</small></div>
-                    <button id="openTextTools" type="button">打开工具 <span aria-hidden="true">↗</span></button>
-                </div>
-
-                <div class="devices-section">
-                    <div class="devices-heading"><div><span class="step-token step-token-secondary">02</span><strong>选择要发送的设备</strong></div><span class="devices-count" id="peerCount">0 台设备</span></div>
-                    <div class="devices-stage">
-                        <x-peers class="center" aria-label="已发现设备"></x-peers>
-                        <x-no-peers>
-                            <span class="empty-glyph" aria-hidden="true">⌁</span>
-                            <h2>还没有发现其他设备</h2>
-                            <p>在另一台设备打开网页并加入同一邀请，即可在这里选择设备发送文件。</p>
-                        </x-no-peers>
-                    </div>
-                    <x-instructions desktop="先核对安全码，再选择文件发送" mobile="核对安全码后选择文件"></x-instructions>
-                    <div class="diagnostics-action"><button id="exportDiagnostics" type="button">导出连接诊断</button><small>仅在本机下载连接状态，不含 IP、邀请或文件信息</small></div>
-                    <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>仅存在当前浏览器，24 小时后过期，本站打开时清理；可随时删除</small><div id="localStorageRecords" hidden></div></div>
+            <details id="moreActions" class="more-actions">
+                <summary id="moreToggle">更多</summary>
+                <div class="more-panel">
+                    <button id="sendTextAction" type="button" disabled>发送文字</button>
+                    <button id="openTextTools" type="button">文字转二维码</button>
+                    <div class="diagnostics-action" id="localStorageSection" hidden><button id="localStorageManage" type="button">管理本机暂存文件</button><small>只存在此浏览器，24 小时后过期；可随时删除</small><div id="localStorageRecords" hidden></div></div>
                     <details id="sendQueueSection" class="send-queue-storage" hidden>
                         <summary>跨刷新保留待发清单</summary>
                         <p>只在此浏览器保存文件名、大小和完整校验值，不保存原文件，也不发送到服务器。清单 24 小时后过期；刷新后须重新配对、核对安全码并重选全部原件。</p>
@@ -128,34 +69,67 @@
                         <div class="queue-storage-actions"><button id="saveSendQueue" type="button" disabled>选择文件并保存清单</button><button id="reselectSendQueue" type="button" disabled>重新选择全部原文件</button><button id="sendStoredQueue" type="button" disabled>发送已核验清单</button><button id="clearSendQueue" type="button" disabled>删除本机清单</button><button id="cancelQueueHash" type="button" hidden>停止校验</button></div>
                         <p id="sendQueueStatus" role="status" aria-live="polite">当前没有待发清单</p><ul id="sendQueueList"></ul>
                     </details>
+                    <details id="connectionDetails" class="peer-diagnostics" hidden><summary>连接详情</summary><div class="path-detail" id="peerPathDetail"></div></details>
+                    <button id="exportDiagnostics" type="button">导出连接诊断</button>
+                    <span id="signalStatus" class="signal-indicator" role="status"><span class="signal-led"></span><span class="signal-label">正在连接信令服务</span></span>
+                    <a href="#about">帮助与关于</a>
+                    <a href="#" id="install" hidden>安装闪投</a>
                 </div>
+            </details>
+        </header>
+
+        <main class="workspace simple-workspace" id="main">
+            <section class="workspace-card simple-card" id="transferWorkspace" aria-label="传文件">
+                <div class="invite-panel" id="pairingArea">
+                    <div id="connectActions" class="connect-actions">
+                        <h1>传文件</h1>
+                        <p>先连接要接收文件的设备。</p>
+                        <button id="createRoomBtn" class="primary-action" type="button">连接设备</button>
+                        <button id="toggleJoin" class="quiet-action" type="button" aria-expanded="false" aria-controls="joinRow">已有邀请？加入</button>
+                        <form class="join-row" id="joinRow" hidden>
+                            <input type="text" id="roomInput" placeholder="粘贴邀请链接或配对码" maxlength="512" aria-label="邀请链接或配对码" autocomplete="off" spellcheck="false">
+                            <button id="roomBtn" class="join-action" type="submit" disabled>加入</button>
+                        </form>
+                    </div>
+                    <div class="invite-created" id="inviteCreated" hidden>
+                        <strong id="inviteTitle">连接设备</strong>
+                        <p id="inviteHelp">用另一台设备扫码，或把链接发过去。</p>
+                        <p id="inviteExpiry"></p>
+                        <canvas id="inviteQR" width="160" height="160" aria-label="邀请二维码"></canvas>
+                        <div class="invite-url"><input id="inviteUrl" aria-label="邀请链接" type="text" readonly hidden><button id="copyInviteBtn" type="button">复制链接</button></div>
+                    </div>
+                    <p id="roomStatus" class="room-status" role="status" aria-live="polite" hidden></p>
+                </div>
+                <div class="devices-stage simple-device">
+                    <x-peers aria-label="对方设备"></x-peers>
+                </div>
+                <button id="leaveRoomBtn" type="button" class="quiet-action leave-room" hidden>取消连接</button>
+                <section id="transferSection" class="transfer-section" hidden aria-label="文件传输"><h2>文件传输</h2><div id="transfers" aria-live="polite"></div></section>
             </section>
         </main>
-        <section id="transferSection" class="transfer-section" hidden aria-label="传输记录"><h2>文件传输</h2><p>当前连接内可暂停和继续，短时重连可保留本页断点；实验性本地暂存需接收时主动选择。只有校验通过才显示完成。</p><div id="transfers" aria-live="polite"></div></section>
-
         <footer class="site-footer">
-            <div id="displayName" class="local-device" placeholder="正在识别当前设备"></div>
-            <div class="footer-note"><span class="privacy-dot"></span> 不上传文件 · 不使用服务器中转 <span class="footer-separator">/</span> 受限网络可能无法直连</div>
+            <div id="displayName" class="local-device"></div>
+            <div>设备直传 · 文件不经服务器</div>
         </footer>
     </div>
     <!-- Incoming P2P file request: no file bytes may be sent until accepted. -->
     <x-dialog id="fileOfferDialog">
         <x-background class="full center">
             <x-paper shadow="2">
-                <div class="offer-mark" aria-hidden="true">↓</div>
-                <h3>对方想给你发送文件</h3>
-                <p class="offer-explainer">请确认是否接收，确认后文件才开始通过设备直连传输。</p>
+                <h3>接收文件？</h3>
+                <p class="offer-explainer" id="offerSender"></p>
                 <div class="offer-file">
                     <span class="offer-file-icon" aria-hidden="true">▤</span>
                     <div><strong id="offerFileName">文件名</strong><span id="offerFileSize">文件大小</span></div>
                 </div>
-                <div id="recoveryReceiveOptions" class="recovery-options" hidden>
+                <details id="recoveryReceiveOptions" class="recovery-options" hidden>
+                    <summary>接收选项</summary>
                     <label><input type="checkbox" id="durableLocalReceive"> 在本机保存断点（实验功能，占用浏览器存储；24 小时后过期，本站打开时清理）</label>
                     <label id="localResumeOption" hidden><input type="checkbox" id="useLocalCheckpoint"> 发现匹配的未完成文件：尝试从已保存位置续传</label>
                     <small>恢复时双方重新配对、核对安全码，发送方需要重新选择原文件。</small>
-                </div>
+                </details>
                 <div class="row-reverse">
-                    <button class="button offer-accept" id="acceptFileOffer" type="button" close>接收文件</button>
+                    <button class="button offer-accept" id="acceptFileOffer" type="button" close>接收</button>
                     <button class="button" id="rejectFileOffer" type="button" close>拒绝</button>
                 </div>
             </x-paper>

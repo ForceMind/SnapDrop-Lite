@@ -1180,3 +1180,64 @@ x-dialog:not([show]) { display:none; }
 }
 @media (max-width:380px) { .text-tools-entry { flex-wrap:wrap; } .text-tools-entry button { margin-left:52px; } }
 .send-queue-storage ul { padding-left: 20px; }
+
+/* Single-task transfer workspace. Pairing and the peer take the same place. */
+.app-shell { background: var(--surface-muted, #f4f7f5); }
+.app-shell::after { content: none; }
+.app-shell .topbar { width: min(960px, 100%); min-height: 68px; padding: 12px 20px; }
+.app-shell .brand { gap: 9px; }
+.app-shell .brand-symbol { width: 34px; height: 34px; border-radius: 10px; box-shadow: none; }
+.app-shell .brand-symbol svg { width: 26px; height: 26px; }
+.app-shell .brand-identity strong { font-size: 19px; }
+.app-shell .simple-workspace { display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; width: min(560px, 100%); gap: 0; padding: 20px 16px; }
+.simple-card { display: grid; justify-items: center; padding: clamp(20px, 5vw, 40px); border-radius: 18px; box-shadow: none; min-width: 0; text-align: center; }
+.simple-card .invite-panel { width: 100%; max-width: 345px; background: transparent; border: 0; padding: 0; }
+.connect-actions { display: grid; justify-items: center; gap: 10px; }
+.connect-actions h1 { font-size: clamp(25px, 5vw, 33px); line-height: 1.2; margin: 0; }
+.connect-actions p { margin: 0 0 8px; color: var(--muted); }
+.simple-card .primary-action { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: min(100%, 156px); min-height: 44px; padding: 9px 17px; box-shadow: none; }
+.simple-card .quiet-action { background: transparent; color: var(--muted); border: 1px solid transparent; font: inherit; cursor: pointer; min-height: 44px; padding: 6px 12px; border-radius: 8px; }
+.simple-card .quiet-action:hover { text-decoration: underline; }
+.simple-card .join-row, .simple-card .invite-url { width: 100%; grid-template-columns: minmax(0, 1fr) auto; }
+.simple-card .join-row input, .simple-card .invite-url input { min-width: 0; font-size: 16px; }
+.simple-card .join-row button, .simple-card .invite-url button { white-space: nowrap; min-height: 44px; }
+.simple-card .invite-created { border: 0; padding: 0; margin: 0; }
+.simple-card #inviteTitle { display: block; font-size: 22px; }
+.simple-card .room-status { margin: 8px 0 0; }
+.simple-card[data-has-peer] #pairingArea { display: none; }
+.simple-card .simple-device { min-height: 0; background: transparent; border: 0; padding: 0; width: 100%; }
+.simple-card:not([data-has-peer]) .simple-device { display: none; }
+.simple-card .simple-device x-peer { align-items: center !important; text-align: center; padding: 0; background: transparent; border: 0; box-shadow: none; transform: none; gap: 8px; }
+.simple-card .simple-device .peer-device { flex-direction: column; gap: 10px; }
+.simple-card .simple-device .name { font-size: 22px; text-align: center; overflow-wrap: anywhere; }
+.simple-card .simple-device .status { margin: 0; color: var(--muted); }
+.simple-card .simple-device .select-files { margin-top: 4px; }
+.simple-card .drop-hint { color: var(--muted); }
+.simple-card .connection-help:empty { display: none; }
+.simple-card .peer-verification { justify-items: center; padding: 3px 0; }
+.simple-card .verify-peer { background: var(--surface-muted); min-height: 44px; }
+.simple-card .send-queue { width: 100%; }
+.simple-card .transfer-section { width: 100%; max-width: none; padding: 0; margin-top: 16px; text-align: left; min-width: 0; }
+.simple-card .transfer-section > h2 { font-size: 15px; margin: 0; }
+.simple-card .transfer-row { padding: 12px; }
+.simple-card .transfer-actions { flex-wrap: wrap; }
+.app-shell .site-footer { width: min(960px, 100%); font-size: 12px; min-height: 0; padding: 12px 20px; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.more-actions { position: relative; }
+.more-actions > summary { display: grid; place-items: center; list-style: none; cursor: pointer; min-width: 58px; min-height: 44px; border: 1px solid var(--line); border-radius: 9px; }
+.more-actions > summary::-webkit-details-marker { display: none; }
+.more-panel { position: absolute; z-index: 6; right: 0; top: calc(100% + 7px); width: min(360px, calc(100vw - 40px)); box-sizing: border-box; max-height: min(70vh, 580px); overflow: auto; display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 35px #0002; }
+.more-actions:not([open]) > .more-panel { display: none; }
+.more-panel > button, .more-panel > a { text-align: left; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 7px; padding: 10px; min-height: 44px; cursor: pointer; }
+.more-panel > :is(button, a):hover { background: var(--surface-muted); }
+.more-panel > .signal-indicator { width: fit-content; margin: 4px 10px; }
+.more-panel .diagnostics-action { margin-top: 0; }
+.more-panel .send-queue-storage { margin-top: 0; }
+#fileOfferDialog .recovery-options { display: block; }
+#fileOfferDialog .recovery-options summary { min-height: 44px; line-height: 44px; cursor: pointer; }
+#fileOfferDialog .recovery-options[open] label { margin-bottom: 8px; }
+@media (pointer: coarse) {
+    .simple-card .drop-hint { display: none; }
+}
+.simple-card .invite-url { justify-content: center; }
+.more-panel .peer-diagnostics { margin: 0; padding: 0 10px; }
+#fileOfferDialog .recovery-options:not([open]) > :not(summary) { display: none; }

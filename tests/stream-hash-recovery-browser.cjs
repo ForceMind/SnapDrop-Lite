@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openRecovery } = require('./workspace-ui-helpers.cjs');
 // Native Chromium OPFS + two-context WebRTC. Only the first receiver's real
 // built SHA Worker is fault-injected. Same host/STUN off is not WAN evidence.
 const assert = require('node:assert/strict');
@@ -88,7 +89,7 @@ async function main() {
             return peer?._path?.direct && peer?._remoteHello && peer?._code && !peer?._verified;
         }, null, { timeout: 40000 });
         const pair = async url => {
-            await receiver.locator('#roomInput').fill(url); await receiver.locator('#roomBtn').click();
+            await openJoin(receiver); await receiver.locator('#roomInput').fill(url); await receiver.locator('#roomBtn').click();
             await Promise.all(pages.map(waitPeer));
             const codes = await Promise.all(pages.map(page => page.locator('.security-code').innerText())); assert.equal(codes[0], codes[1]);
             const paths = await Promise.all(pages.map(page => page.evaluate(() => [...zeydrop.peers.peers.values()][0]._path)));
@@ -159,7 +160,7 @@ async function main() {
         await receiver.evaluate(() => { window.__fault.targetId = [...zeydrop.peers.peers.values()][0]._incoming.meta.id; });
         assert.equal(await sender.evaluate(() => window.__binaryBytes), 0);
         assert.equal(await receiver.locator('#useLocalCheckpoint').isChecked(), false);
-        await receiver.locator('#durableLocalReceive').check(); report.phase = 'fault-after-native-append';
+        await openRecovery(receiver); await receiver.locator('#durableLocalReceive').check(); report.phase = 'fault-after-native-append';
         await receiver.locator('#acceptFileOffer').click();
         await receiver.waitForFunction(() => window.__fault.nativeErrors === 1 && window.__fault.releases === 1
             && [...zeydrop.peers.peers.values()].every(peer => !peer._incoming && peer._queuedBytes === 0)
@@ -242,7 +243,7 @@ async function main() {
         await sender.evaluate(() => { window.__binaryBytes = 0; });
         await sender.locator('x-peer input[type=file]').setInputFiles(file);
         await receiver.locator('#fileOfferDialog[show]').waitFor();
-        await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
+        await openRecovery(receiver); await receiver.locator('#localResumeOption').waitFor({ state: 'visible', timeout: 15000 });
         assert.equal(await receiver.locator('#useLocalCheckpoint').isChecked(), false);
         const beforeConsent = await receiver.evaluate(() => {
             const state = [...zeydrop.peers.peers.values()][0]._incoming;

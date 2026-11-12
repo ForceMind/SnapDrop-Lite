@@ -1,4 +1,5 @@
 'use strict';
+const { openMore } = require('./workspace-ui-helpers.cjs');
 // Native application UI, selected non-relay DataChannel, local QR pixels and
 // independent ZBar decoding. All inputs are disposable synthetic test content.
 const assert = require('node:assert/strict'), fs = require('node:fs/promises'), crypto = require('node:crypto');
@@ -93,7 +94,7 @@ async function main() {
         };
         const closeReceive = async page => page.locator('#receiveTextDialog button[close]').click();
         const sendText = async text => {
-            await a.locator('x-peer .send-text').click(); await a.locator('#sendTextDialog[show]').waitFor();
+            await openMore(a); await a.locator('#sendTextAction').click(); await a.locator('#sendTextDialog[show]').waitFor();
             await a.locator('#textInput').fill(text); await a.locator('#sendTextDialog button[type=submit]').click();
             await a.locator('#sendTextDialog').waitFor({ state: 'hidden' });
         };
@@ -104,7 +105,7 @@ async function main() {
         await screenshot(a,'home-desktop-dark','dark',{width:1440,height:1000});
         await screenshot(a,'home-mobile-light','light',{width:390,height:844});
         report.phase = 'local-offline-qr';
-        await a.locator('#openTextTools').click(); assert.equal(await a.locator('#generateTextQR').isDisabled(),true);
+        await openMore(a); await a.locator('#openTextTools').click(); assert.equal(await a.locator('#generateTextQR').isDisabled(),true);
         assert.equal(await a.locator('#textQR').isHidden(),true); assert.equal(await a.locator('#saveTextQR').isHidden(),true);
         await contexts[0].setOffline(true);
         const privateQr = '  LOCAL_QR_PRIVATE_SENTINEL\n中文 👋 <em>literal</em>\nhttps://example.test/a?x=1&y=2  ';
@@ -150,7 +151,7 @@ async function main() {
         report.paths=await Promise.all(pages.map(page=>page.evaluate(nativePath))); assert.ok(report.paths.every(path=>path.selected&&path.direct&&path.protocol==='udp'));
         report.phase = 'controlled-canvas-resource-fault';
         for (const mode of ['null', 'throw']) {
-            await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL canvas resource probe');
+            await openMore(a); await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL canvas resource probe');
             await a.evaluate(mode => {
                 const canvas = document.getElementById('textQR');
                 window.__canvasOwnContext = Object.getOwnPropertyDescriptor(canvas, 'getContext');
@@ -177,7 +178,7 @@ async function main() {
             }
             for (const page of pages) assert.equal(await page.evaluate(() => [...zeydrop.peers.peers.values()][0]._canSend()), true);
         }
-        await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL recovers without reconnecting'); await a.locator('#closeTextQR').click();
+        await openMore(a); await a.locator('#openTextTools').click(); await generate(a, 'LOCAL_QR_PRIVATE_SENTINEL recovers without reconnecting'); await a.locator('#closeTextQR').click();
         report.cases.push('controlled per-canvas null/throw faults retire the old QR/download, allow editing/clear/close, preserve the native verified peer and recover real encoding without reconnecting');
         report.cases.push('real native selected non-relay UDP path and matching DTLS codes; each user confirmation clicked before sending');
         report.phase = 'native-text-and-qr-return';
@@ -215,7 +216,7 @@ async function main() {
         await closeReceive(b);
         await b.evaluate(()=>{if(window.__clipHadOwn)Object.defineProperty(navigator,'clipboard',window.__clipOwn);else delete navigator.clipboard;delete window.__clipOwn;delete window.__clipHadOwn;delete window.__clipCalls;});
         report.cases.push('two delayed copies of the first real message cannot consume its queued successor');
-        await a.locator('x-peer .send-text').click(); const draft='  待发送的草稿 👋\n保持原文  '; await a.locator('#textInput').fill(draft); await a.locator('#sendTextQR').click();
+        await openMore(a); await a.locator('#sendTextAction').click(); const draft='  待发送的草稿 👋\n保持原文  '; await a.locator('#textInput').fill(draft); await a.locator('#sendTextQR').click();
         assert.equal(await a.locator('#qrTextInput').inputValue(),draft); await a.locator('#closeTextQR').click(); await a.locator('#sendTextDialog[show]').waitFor(); assert.equal(await a.locator('#textInput').inputValue(),draft);
         await a.setViewportSize({width:320,height:740}); await layout(a); await a.setViewportSize({width:1440,height:1000});
         const submit=a.locator('#sendTextDialog button[type=submit]'); await a.locator('#textInput').fill('');
@@ -226,7 +227,7 @@ async function main() {
         const newlines='\n'.repeat(4096); await sendText(newlines); await b.locator('#receiveTextDialog[show]').waitFor(); assert.equal(await b.locator('#text').textContent(),newlines); await closeReceive(b);
         report.cases.push('real Unicode/newline/HTML-literal text arrives intact; QR return preserves original drafts, incoming text does not steal QR focus, 4097 remains a draft and 4096 newlines transfer');
         report.phase = 'native-file-and-modal-queue';
-        await b.locator('#openTextTools').click(); await b.locator('#qrTextInput').fill('本机工具保持焦点');
+        await openMore(b); await b.locator('#openTextTools').click(); await b.locator('#qrTextInput').fill('本机工具保持焦点');
         const file={name:'PRIVATE_P2P_FILE_NAME_SENTINEL.txt',mimeType:'text/plain',buffer:Buffer.from('PRIVATE_P2P_FILE_BODY_SENTINEL\n'.repeat(4096))}; payloads.add(hash(file.buffer));
         await a.locator('x-peer input[type=file]').setInputFiles(file);
         await b.waitForFunction(()=>!![...zeydrop.peers.peers.values()][0]?._incoming);
@@ -240,7 +241,7 @@ async function main() {
         report.cases.push('real file offer waits behind QR without focus theft or pre-consent bytes; downloaded content and independent SHA-256 match');
         report.phase = 'native-verified-pair-screenshot';await screenshot(a,'verified-pair-desktop-light','light',{width:1440,height:1000});
         report.phase = 'native-send-failure-draft';
-        await a.locator('x-peer .send-text').click();const failedDraft='PRIVATE_P2P_TEXT_SENTINEL unsent after channel close';await a.locator('#textInput').fill(failedDraft);
+        await openMore(a); await a.locator('#sendTextAction').click();const failedDraft='PRIVATE_P2P_TEXT_SENTINEL unsent after channel close';await a.locator('#textInput').fill(failedDraft);
         await a.evaluate(()=>[...zeydrop.peers.peers.values()][0]._channel.close());await a.waitForFunction(()=>![...zeydrop.peers.peers.values()][0]?._canSend());
         if(await submit.isEnabled())await submit.click();else await a.locator('#sendTextDialog form').evaluate(form=>form.requestSubmit());
         assert.equal(await a.locator('#sendTextDialog').isVisible(),true);assert.equal(await a.locator('#textInput').inputValue(),failedDraft);

@@ -1,4 +1,5 @@
 'use strict';
+const { openJoin, openMore } = require('./workspace-ui-helpers.cjs');
 // Actual UI, two isolated browser contexts and RTCDataChannel. Same host,
 // STUN disabled: this is not public NAT, Safari hardware or picker evidence.
 const assert = require('node:assert/strict');
@@ -80,6 +81,7 @@ async function main() {
                 count, { timeout: 15000 });
         }
         async function openQueue() {
+            await openMore(sender);
             await sender.locator('#sendQueueSection').waitFor({ state: 'visible' });
             if (!await sender.locator('#sendQueueSection').evaluate(element => element.open))
                 await sender.locator('#sendQueueSection summary').click();
@@ -126,7 +128,7 @@ async function main() {
             assert.equal(await queue(), null);
         } else {
             assert.equal(report.capabilities.storeSupported, false);
-            assert.equal(await sender.locator('#sendQueueSection').isHidden(), true);
+            assert.notEqual(await sender.locator('#sendQueueSection').getAttribute('hidden'), null);
             report.queueCapability = 'unsupported'; report.unsupportedReason = 'web-locks-unavailable';
         }
         await sender.locator('#createRoomBtn').click();
@@ -137,7 +139,7 @@ async function main() {
         if (report.queueCapability === 'unsupported') {
             // A missing capability is not a passed queue test. Verify that the
             // feature stays hidden while ordinary, authorized P2P still works.
-            assert.equal(await receiver.locator('#sendQueueSection').isHidden(), true);
+            assert.notEqual(await receiver.locator('#sendQueueSection').getAttribute('hidden'), null);
             await sender.locator('x-peer input[type=file]').setInputFiles(files[0]);
             await receiver.locator('#fileOfferDialog[show]').waitFor();
             assert.equal(await receiver.evaluate(() => [...zeydrop.peers.peers.values()][0]._incoming.offset), 0);
@@ -158,7 +160,7 @@ async function main() {
         report.queueFlowExecuted = true;
         report.phase = 'first-save-user-consent';
         const originalSession = await sender.evaluate(() => zeydrop.server._peerId);
-        await sender.locator('#rememberSendQueue').check();
+        await openQueue(); await sender.locator('#rememberSendQueue').check();
         const saveStarted = Date.now();
         await choose('#saveSendQueue'); await queueCount(2);
         report.phase = 'first-save-metadata-validation';
@@ -205,7 +207,7 @@ async function main() {
         await sender.waitForFunction(previous => {
             const next = document.querySelector('#inviteUrl').value; return next.includes('#room=') && next !== previous;
         }, firstInvitation);
-        await receiver.locator('#roomInput').fill(await sender.locator('#inviteUrl').inputValue());
+        await openJoin(receiver); await receiver.locator('#roomInput').fill(await sender.locator('#inviteUrl').inputValue());
         await receiver.locator('#roomBtn').click();
         await Promise.all(pages.map(waitPeer));
         assert.equal(await sender.locator('#sendStoredQueue').isDisabled(), true);
@@ -216,7 +218,7 @@ async function main() {
         // rather than passing/failing only because file metadata is different.
         report.phase = 'reselect-originals';
         const wrong = Buffer.from(bodies[0]); wrong[wrong.length - 1] ^= 0xff;
-        await writeFile(0, wrong); await choose('#reselectSendQueue');
+        await openQueue(); await writeFile(0, wrong); await choose('#reselectSendQueue');
         await sender.waitForFunction(() => /不一致|不匹配|未恢复任何|校验失败/.test(document.querySelector('#sendQueueStatus').textContent));
         assert.deepEqual(await sender.evaluate(() => window.__lastQueueSelection), originalMetadata);
         assert.equal(await sender.locator('#sendStoredQueue').isDisabled(), true);
@@ -312,7 +314,7 @@ async function main() {
                 return setItem.call(this, name, value);
             };
         }, KEY);
-        await sender.locator('#rememberSendQueue').check(); await choose('#saveSendQueue');
+        await openQueue(); await sender.locator('#rememberSendQueue').check(); await choose('#saveSendQueue');
         await sender.waitForFunction(() => window.__queueQuotaFailures === 1);
         await sender.waitForFunction(() => /空间|存储|失败|无法/.test(document.querySelector('#sendQueueStatus').textContent));
         await sender.evaluate(() => { Storage.prototype.setItem = window.__queueSetItem; delete window.__queueSetItem; });
